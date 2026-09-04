@@ -1,0 +1,1563 @@
+import type {
+  FieldDefinition,
+  PowerSearchFilter,
+} from '@astryxdesign/core/PowerSearch';
+
+import type {
+  Contract,
+  ContractStatus,
+  PaymentFrequency,
+} from './types/contract';
+import type {Customer} from './types/customer';
+import type {Images} from './types/image';
+import type {Land} from './types/land';
+import type {Plot, Status as PlotStatus} from './types/plot';
+import {
+  formatArea,
+  formatDate,
+  formatMoney,
+} from './utils/format.ts';
+export {
+  MONTHS,
+  formatArea,
+  formatDate,
+  formatDueDay,
+  formatMoney,
+  formatNumber,
+  formatRangeLabel,
+  formatSelectedOptionValue,
+} from './utils/format.ts';
+
+export type DatasetKey = 'lands' | 'plots' | 'contracts' | 'customers';
+export type PlotStatusValue = PlotStatus | 'UNASSIGNED';
+export type TableSearchValue =
+  | string
+  | number
+  | boolean
+  | Date
+  | readonly string[];
+
+export const DATASET_KEYS: readonly DatasetKey[] = [
+  'lands',
+  'plots',
+  'contracts',
+  'customers',
+];
+
+export const DEFAULT_DATASET_KEY: DatasetKey = 'lands';
+
+export const DATASET_META: Record<
+  DatasetKey,
+  {
+    label: string;
+    singularLabel: string;
+    description: string;
+  }
+> = {
+  lands: {
+    label: 'Lands',
+    singularLabel: 'land',
+    description: 'Registered land parcels',
+  },
+  plots: {
+    label: 'Plots',
+    singularLabel: 'plot',
+    description: 'Subdivided land plots',
+  },
+  contracts: {
+    label: 'Contracts',
+    singularLabel: 'contract',
+    description: 'Customer lease contracts',
+  },
+  customers: {
+    label: 'Customers',
+    singularLabel: 'customer',
+    description: 'Customer records',
+  },
+};
+
+export type EntityTableRow = {
+  id: string;
+  dataset: DatasetKey;
+  summary: string;
+  searchText: string;
+  createdAt: string;
+  updatedAt: string;
+};
+
+export type ContractTableRow = EntityTableRow & {
+  dataset: 'contracts';
+  id: string;
+  contractId: string;
+  summary: string;
+  customer: string;
+  customerId: string;
+  customerPhone: string;
+  customerEmail: string;
+  customerAddress: string;
+  land: string;
+  landId: string;
+  landLocation: string;
+  plot: string;
+  plotId: string;
+  status: ContractStatus;
+  plotStatus: PlotStatusValue;
+  paymentFrequency: PaymentFrequency;
+  rentAmount: number;
+  depositAmount: number;
+  dueDay: number;
+  paymentDueDay: number;
+  nextPaymentDueDate: string;
+  nextPaymentDueOn: Date;
+  nextPaymentDueSort: number;
+  startDate: string;
+  startOn: Date;
+  endDate: string;
+  endOn: Date;
+  leaseDurationMonths: number;
+  areaSqm: number;
+  notes: string;
+  createdAt: string;
+  updatedAt: string;
+};
+
+export type LandTableRow = EntityTableRow & {
+  dataset: 'lands';
+  name: string;
+  location: string;
+  areaSqm: number;
+  description: string;
+  images: Images[];
+  imageCount: number;
+};
+
+export type PlotTableRow = EntityTableRow & {
+  dataset: 'plots';
+  plot: string;
+  plotNumber: string;
+  land: string;
+  landId: string;
+  landLocation: string;
+  status: PlotStatus;
+  areaSqm: number;
+  description: string;
+  images: Images[];
+  imageCount: number;
+};
+
+export type CustomerTableRow = EntityTableRow & {
+  dataset: 'customers';
+  customer: string;
+  phone: string;
+  email: string;
+  address: string;
+  notes: string;
+};
+
+export const CONTRACT_STATUS_META: Record<
+  ContractStatus,
+  {
+    label: string;
+    badge: 'neutral' | 'green' | 'red';
+  }
+> = {
+  ACTIVE: {label: 'Active', badge: 'green'},
+  COMPLETED: {label: 'Completed', badge: 'neutral'},
+  CANCELLED: {label: 'Cancelled', badge: 'red'},
+};
+
+export const STATUS_META = CONTRACT_STATUS_META;
+
+export const PLOT_STATUS_META: Record<
+  PlotStatusValue,
+  {
+    label: string;
+    badge: 'neutral' | 'blue' | 'green';
+  }
+> = {
+  AVAILABLE: {label: 'Available', badge: 'green'},
+  RENTED: {label: 'Rented', badge: 'blue'},
+  SOLD: {label: 'Sold', badge: 'neutral'},
+  UNASSIGNED: {label: 'No plot', badge: 'neutral'},
+};
+
+export const PAYMENT_FREQUENCY_META: Record<
+  PaymentFrequency,
+  {
+    label: string;
+  }
+> = {
+  MONTHLY: {label: 'Monthly'},
+  QUARTERLY: {label: 'Quarterly'},
+  YEARLY: {label: 'Yearly'},
+  CUSTOM: {label: 'Custom'},
+};
+
+export const VALUE_LABELS: Record<string, string> = {
+  ...Object.fromEntries(
+    (Object.keys(CONTRACT_STATUS_META) as ContractStatus[]).map(key => [
+      key,
+      CONTRACT_STATUS_META[key].label,
+    ]),
+  ),
+  ...Object.fromEntries(
+    (Object.keys(PLOT_STATUS_META) as PlotStatusValue[]).map(key => [
+      key,
+      PLOT_STATUS_META[key].label,
+    ]),
+  ),
+  ...Object.fromEntries(
+    (Object.keys(PAYMENT_FREQUENCY_META) as PaymentFrequency[]).map(key => [
+      key,
+      PAYMENT_FREQUENCY_META[key].label,
+    ]),
+  ),
+};
+
+const CONTRACT_STATUS_ORDER: ContractStatus[] = [
+  'ACTIVE',
+  'COMPLETED',
+  'CANCELLED',
+];
+const PLOT_STATUS_ORDER: PlotStatusValue[] = [
+  'AVAILABLE',
+  'RENTED',
+  'SOLD',
+  'UNASSIGNED',
+];
+const PAYMENT_FREQUENCY_ORDER: PaymentFrequency[] = [
+  'MONTHLY',
+  'QUARTERLY',
+  'YEARLY',
+  'CUSTOM',
+];
+
+const NO_CUSTOMER = 'No customer';
+const NO_LAND = 'No land';
+const NO_PLOT = 'No plot';
+const DAY_MS = 86_400_000;
+const INVALID_DATE_SORT = Number.MAX_SAFE_INTEGER;
+
+function parseDateSort(value: string | null | undefined): number {
+  if (value == null || value === '') {
+    return INVALID_DATE_SORT;
+  }
+  const parsed = Date.parse(value);
+  return Number.isNaN(parsed) ? INVALID_DATE_SORT : parsed;
+}
+
+function parseDate(value: string | null | undefined): Date {
+  const parsed = parseDateSort(value);
+  return new Date(parsed === INVALID_DATE_SORT ? 0 : parsed);
+}
+
+function first<T>(items: readonly T[] | null | undefined): T | null {
+  return items?.[0] ?? null;
+}
+
+function uniqueSorted(values: Iterable<string>): string[] {
+  return Array.from(
+    new Set(
+      Array.from(values)
+        .map(value => value.trim())
+        .filter(Boolean),
+    ),
+  ).sort((a, b) => a.localeCompare(b, undefined, {sensitivity: 'base'}));
+}
+
+function toOption(value: string) {
+  return {value, label: value};
+}
+
+export function buildContractRows(
+  contracts: readonly Contract[],
+): ContractTableRow[] {
+  return contracts.map(contract => {
+    const customer = first(contract.customers);
+    const plot = first(contract.plots);
+    const land = first(contract.lands) ?? first(plot?.lands);
+    const customerName = customer?.name || NO_CUSTOMER;
+    const landName = land?.name || NO_LAND;
+    const plotName = plot?.plot_number ? `Plot ${plot.plot_number}` : NO_PLOT;
+    const plotStatus = plot?.status ?? 'UNASSIGNED';
+    const nextPaymentDueSort = parseDateSort(contract.next_payment_due_date);
+
+    return {
+      id: contract.id,
+      dataset: 'contracts',
+      contractId: contract.id,
+      summary: `${customerName} - ${landName} / ${plotName}`,
+      searchText: [
+        contract.id,
+        customerName,
+        customer?.phone ?? '',
+        customer?.email ?? '',
+        customer?.address ?? '',
+        landName,
+        land?.location ?? '',
+        plotName,
+        contract.notes,
+      ].join(' '),
+      customer: customerName,
+      customerId: customer?.id ?? '',
+      customerPhone: customer?.phone ?? '',
+      customerEmail: customer?.email ?? '',
+      customerAddress: customer?.address ?? '',
+      land: landName,
+      landId: land?.id ?? '',
+      landLocation: land?.location ?? '',
+      plot: plotName,
+      plotId: plot?.id ?? '',
+      status: contract.status,
+      plotStatus,
+      paymentFrequency: contract.payment_frequency,
+      rentAmount: contract.rent_amount,
+      depositAmount: contract.deposit_amount,
+      dueDay: contract.due_day,
+      paymentDueDay: contract.payment_due_day,
+      nextPaymentDueDate: contract.next_payment_due_date,
+      nextPaymentDueOn: parseDate(contract.next_payment_due_date),
+      nextPaymentDueSort,
+      startDate: contract.start_date,
+      startOn: parseDate(contract.start_date),
+      endDate: contract.end_date,
+      endOn: parseDate(contract.end_date),
+      leaseDurationMonths: contract.lease_duration_months,
+      areaSqm: plot?.area_sqm ?? land?.area_sqm ?? 0,
+      notes: contract.notes,
+      createdAt: contract.created_at,
+      updatedAt: contract.updated_at,
+    };
+  });
+}
+
+export function buildLandRows(lands: readonly Land[]): LandTableRow[] {
+  return lands.map(land => ({
+    id: land.id,
+    dataset: 'lands',
+    summary: land.name,
+    searchText: [
+      land.name,
+      land.location,
+      land.description,
+      String(land.area_sqm),
+    ].join(' '),
+    createdAt: land.created_at,
+    updatedAt: land.updated_at,
+    name: land.name,
+    location: land.location,
+    areaSqm: land.area_sqm,
+    description: land.description,
+    images: land.images,
+    imageCount: land.images.length,
+  }));
+}
+
+export function buildPlotRows(plots: readonly Plot[]): PlotTableRow[] {
+  return plots.map(plot => {
+    const land = first(plot.lands);
+    const landName = land?.name || NO_LAND;
+    const plotName = `Plot ${plot.plot_number}`;
+
+    return {
+      id: plot.id,
+      dataset: 'plots',
+      summary: `${landName} / ${plotName}`,
+      searchText: [
+        plotName,
+        plot.plot_number,
+        landName,
+        land?.location ?? '',
+        plot.status,
+        plot.description,
+      ].join(' '),
+      createdAt: plot.created_at,
+      updatedAt: plot.updated_at,
+      plot: plotName,
+      plotNumber: plot.plot_number,
+      land: landName,
+      landId: plot.land_id,
+      landLocation: land?.location ?? '',
+      status: plot.status,
+      areaSqm: plot.area_sqm,
+      description: plot.description,
+      images: plot.images,
+      imageCount: plot.images.length,
+    };
+  });
+}
+
+export function buildCustomerRows(
+  customers: readonly Customer[],
+): CustomerTableRow[] {
+  return customers.map(customer => ({
+    id: customer.id,
+    dataset: 'customers',
+    summary: customer.name,
+    searchText: [
+      customer.name,
+      customer.phone,
+      customer.email,
+      customer.address,
+      customer.notes,
+    ].join(' '),
+    createdAt: customer.created_at,
+    updatedAt: customer.updated_at,
+    customer: customer.name,
+    phone: customer.phone,
+    email: customer.email,
+    address: customer.address,
+    notes: customer.notes,
+  }));
+}
+
+export interface FilterField {
+  key: string;
+  label: string;
+  operator: string;
+  operatorLabel: string;
+  valueType: 'enum' | 'integer';
+  options: ReadonlyArray<{value: string; label: string}>;
+}
+
+export interface MultiFilterField {
+  key: string;
+  label: string;
+  options: ReadonlyArray<{value: string; label: string}>;
+}
+
+export interface PresetFilter {
+  key: string;
+  label: string;
+  filter: PowerSearchFilter;
+}
+
+export interface RangeFilterConfig {
+  field: string;
+  label: string;
+  min: number;
+  max: number;
+  step: number;
+  valueKind: 'money' | 'area';
+}
+
+export const FILTER_FIELDS: readonly FilterField[] = [
+  {
+    key: 'paymentFrequency',
+    label: 'Frequency',
+    operator: 'is',
+    operatorLabel: 'is',
+    valueType: 'enum',
+    options: PAYMENT_FREQUENCY_ORDER.map(value => ({
+      value,
+      label: PAYMENT_FREQUENCY_META[value].label,
+    })),
+  },
+];
+
+export function createMultiFilterFields({
+  customerNames = [],
+  landNames = [],
+}: {
+  customerNames?: readonly string[];
+  landNames?: readonly string[];
+} = {}): MultiFilterField[] {
+  return [
+    {
+      key: 'status',
+      label: 'Status',
+      options: CONTRACT_STATUS_ORDER.map(value => ({
+        value,
+        label: CONTRACT_STATUS_META[value].label,
+      })),
+    },
+    {
+      key: 'plotStatus',
+      label: 'Plot status',
+      options: PLOT_STATUS_ORDER.map(value => ({
+        value,
+        label: PLOT_STATUS_META[value].label,
+      })),
+    },
+    {
+      key: 'customer',
+      label: 'Customer',
+      options: uniqueSorted(customerNames).map(toOption),
+    },
+    {
+      key: 'land',
+      label: 'Land',
+      options: uniqueSorted(landNames).map(toOption),
+    },
+  ];
+}
+
+export const MULTI_FILTER_FIELDS = createMultiFilterFields();
+
+export const PRESET_FILTERS: readonly PresetFilter[] = [
+  {
+    key: 'active',
+    label: 'Active',
+    filter: {
+      field: 'status',
+      operator: 'is',
+      value: {type: 'enum', value: 'ACTIVE'},
+    },
+  },
+];
+
+export const RENT_MIN = 0;
+export const DEFAULT_RENT_MAX = 10_000;
+export const RENT_STEP = 100;
+export const AREA_MIN = 0;
+export const DEFAULT_AREA_MAX = 10_000;
+export const AREA_STEP = 100;
+
+export function getRentMax(rows: readonly ContractTableRow[]): number {
+  const highestRent = Math.max(RENT_STEP, ...rows.map(row => row.rentAmount));
+  return Math.max(
+    RENT_STEP,
+    Math.ceil(highestRent / RENT_STEP) * RENT_STEP,
+  );
+}
+
+type AreaTableRow = EntityTableRow & {
+  areaSqm?: number;
+};
+
+export function getAreaMax(rows: readonly AreaTableRow[]): number {
+  const highestArea = Math.max(
+    AREA_STEP,
+    ...rows.map(row =>
+      typeof row.areaSqm === 'number' ? row.areaSqm : AREA_STEP,
+    ),
+  );
+  return Math.max(
+    AREA_STEP,
+    Math.ceil(highestArea / AREA_STEP) * AREA_STEP,
+  );
+}
+
+export function createFieldDefs({
+  customerNames = [],
+  landNames = [],
+}: {
+  customerNames?: readonly string[];
+  landNames?: readonly string[];
+} = {}): FieldDefinition[] {
+  return [
+    {key: 'summary', type: 'string', label: 'Contract'},
+    {
+      key: 'customer',
+      type: 'enum',
+      label: 'Customer',
+      enumValues: uniqueSorted(customerNames).map(toOption),
+    },
+    {
+      key: 'land',
+      type: 'enum',
+      label: 'Land',
+      enumValues: uniqueSorted(landNames).map(toOption),
+    },
+    {
+      key: 'plot',
+      type: 'string',
+      label: 'Plot',
+    },
+    {
+      key: 'status',
+      type: 'enum',
+      label: 'Contract status',
+      enumValues: CONTRACT_STATUS_ORDER.map(value => ({
+        value,
+        label: CONTRACT_STATUS_META[value].label,
+      })),
+    },
+    {
+      key: 'plotStatus',
+      type: 'enum',
+      label: 'Plot status',
+      enumValues: PLOT_STATUS_ORDER.map(value => ({
+        value,
+        label: PLOT_STATUS_META[value].label,
+      })),
+    },
+    {
+      key: 'paymentFrequency',
+      type: 'enum',
+      label: 'Payment frequency',
+      enumValues: PAYMENT_FREQUENCY_ORDER.map(value => ({
+        value,
+        label: PAYMENT_FREQUENCY_META[value].label,
+      })),
+    },
+    {key: 'rentAmount', type: 'number', label: 'Rent'},
+    {key: 'depositAmount', type: 'number', label: 'Deposit'},
+    {key: 'nextPaymentDueOn', type: 'date', label: 'Next payment'},
+    {key: 'startOn', type: 'date', label: 'Start date'},
+    {key: 'endOn', type: 'date', label: 'End date'},
+  ];
+}
+
+export const fieldDefs = createFieldDefs();
+
+function createLandFieldDefs(locations: readonly string[]): FieldDefinition[] {
+  return [
+    {key: 'summary', type: 'string', label: 'Land'},
+    {
+      key: 'location',
+      type: 'enum',
+      label: 'Location',
+      enumValues: uniqueSorted(locations).map(toOption),
+    },
+    {key: 'areaSqm', type: 'number', label: 'Area'},
+    {key: 'description', type: 'string', label: 'Description'},
+  ];
+}
+
+function createPlotFieldDefs(landNames: readonly string[]): FieldDefinition[] {
+  return [
+    {key: 'summary', type: 'string', label: 'Plot'},
+    {key: 'plot', type: 'string', label: 'Plot'},
+    {
+      key: 'land',
+      type: 'enum',
+      label: 'Land',
+      enumValues: uniqueSorted(landNames).map(toOption),
+    },
+    {
+      key: 'status',
+      type: 'enum',
+      label: 'Status',
+      enumValues: PLOT_STATUS_ORDER.filter(
+        status => status !== 'UNASSIGNED',
+      ).map(value => ({
+        value,
+        label: PLOT_STATUS_META[value].label,
+      })),
+    },
+    {key: 'areaSqm', type: 'number', label: 'Area'},
+    {key: 'description', type: 'string', label: 'Description'},
+  ];
+}
+
+function createCustomerFieldDefs(): FieldDefinition[] {
+  return [
+    {key: 'summary', type: 'string', label: 'Customer'},
+    {key: 'phone', type: 'string', label: 'Phone'},
+    {key: 'email', type: 'string', label: 'Email'},
+    {key: 'address', type: 'string', label: 'Address'},
+    {key: 'notes', type: 'string', label: 'Notes'},
+  ];
+}
+
+function createLocationFilterFields(
+  locations: readonly string[],
+): MultiFilterField[] {
+  const options = uniqueSorted(locations).map(toOption);
+  return options.length === 0
+    ? []
+    : [
+        {
+          key: 'location',
+          label: 'Location',
+          options,
+        },
+      ];
+}
+
+function createPlotFilterFields(
+  landNames: readonly string[],
+): MultiFilterField[] {
+  return [
+    {
+      key: 'status',
+      label: 'Status',
+      options: PLOT_STATUS_ORDER.filter(status => status !== 'UNASSIGNED').map(
+        value => ({
+          value,
+          label: PLOT_STATUS_META[value].label,
+        }),
+      ),
+    },
+    {
+      key: 'land',
+      label: 'Land',
+      options: uniqueSorted(landNames).map(toOption),
+    },
+  ];
+}
+
+export type ViewSection = 'columns' | 'density' | 'sticky' | 'grouping';
+export type Density = 'compact' | 'balanced' | 'spacious';
+export type StickyEdge = 'none' | 'one' | 'two';
+export type GroupField =
+  | 'none'
+  | 'status'
+  | 'plotStatus'
+  | 'paymentFrequency'
+  | 'customer'
+  | 'land'
+  | 'location';
+
+export const VIEW_SECTIONS: ReadonlyArray<{
+  key: ViewSection;
+  label: string;
+  title: string;
+}> = [
+  {key: 'columns', label: 'Columns', title: 'Columns'},
+  {key: 'density', label: 'Density', title: 'Density'},
+  {key: 'sticky', label: 'Sticky Columns', title: 'Sticky Columns'},
+  {key: 'grouping', label: 'Grouping', title: 'Grouping'},
+];
+
+export const DENSITY_OPTIONS: ReadonlyArray<{value: Density; label: string}> = [
+  {value: 'compact', label: 'Compact'},
+  {value: 'balanced', label: 'Balanced'},
+  {value: 'spacious', label: 'Spacious'},
+];
+
+export const STICKY_START_OPTIONS: ReadonlyArray<{
+  value: StickyEdge;
+  label: string;
+}> = [
+  {value: 'none', label: 'None'},
+  {value: 'one', label: 'First column'},
+  {value: 'two', label: 'First two columns'},
+];
+
+export const STICKY_END_OPTIONS: ReadonlyArray<{
+  value: StickyEdge;
+  label: string;
+}> = [
+  {value: 'none', label: 'None'},
+  {value: 'one', label: 'Last column'},
+  {value: 'two', label: 'Last two columns'},
+];
+
+export const GROUPING_OPTIONS: ReadonlyArray<{
+  value: GroupField;
+  label: string;
+}> = [
+  {value: 'none', label: 'None'},
+  {value: 'status', label: 'Contract status'},
+  {value: 'plotStatus', label: 'Plot status'},
+  {value: 'paymentFrequency', label: 'Payment frequency'},
+  {value: 'customer', label: 'Customer'},
+  {value: 'land', label: 'Land'},
+  {value: 'location', label: 'Location'},
+];
+
+function groupOption(value: GroupField, label: string) {
+  return {value, label};
+}
+
+function stringFieldValues(
+  rows: readonly EntityTableRow[],
+  key: string,
+): string[] {
+  return rows.map(row =>
+    typeof rowValue(row, key) === 'string' ? String(rowValue(row, key)) : '',
+  );
+}
+
+export function groupKeyOf(row: EntityTableRow, field: GroupField): string {
+  if (field === 'none') {
+    return '';
+  }
+  const stored = String(rowValue(row, field) ?? '');
+  return VALUE_LABELS[stored] ?? stored;
+}
+
+function rowValue(
+  row: EntityTableRow,
+  key: string,
+): TableSearchValue | undefined {
+  return (row as Record<string, TableSearchValue | undefined>)[key];
+}
+
+export function createGroupOrders(
+  rows: readonly EntityTableRow[],
+  {
+    customerNames = [],
+    landNames = [],
+    locations = [],
+    statusLabels = CONTRACT_STATUS_ORDER.map(key => VALUE_LABELS[key] ?? key),
+  }: {
+    customerNames?: readonly string[];
+    landNames?: readonly string[];
+    locations?: readonly string[];
+    statusLabels?: readonly string[];
+  } = {},
+): Record<GroupField, string[]> {
+  return {
+    none: [],
+    status: [...statusLabels],
+    plotStatus: PLOT_STATUS_ORDER.map(key => VALUE_LABELS[key] ?? key),
+    paymentFrequency: PAYMENT_FREQUENCY_ORDER.map(
+      key => VALUE_LABELS[key] ?? key,
+    ),
+    customer: uniqueSorted([
+      ...customerNames,
+      ...stringFieldValues(rows, 'customer'),
+    ]),
+    land: uniqueSorted([...landNames, ...stringFieldValues(rows, 'land')]),
+    location: uniqueSorted([
+      ...locations,
+      ...stringFieldValues(rows, 'location'),
+    ]),
+  };
+}
+
+export const GROUP_ORDERS = createGroupOrders([]);
+export const GROUP_ROW_KEY_PREFIX = '__group_';
+export const NO_ROWS: EntityTableRow[] = [];
+
+export const COLUMN_LABELS: Record<string, string> = {
+  summary: 'Contract',
+  customer: 'Customer',
+  land: 'Land',
+  plot: 'Plot',
+  status: 'Status',
+  plotStatus: 'Plot status',
+  paymentFrequency: 'Frequency',
+  rentAmount: 'Rent',
+  depositAmount: 'Deposit',
+  nextPaymentDueDate: 'Next payment',
+  areaSqm: 'Area',
+  startDate: 'Start',
+  endDate: 'End',
+  updatedAt: 'Updated',
+};
+
+export const ALL_COLUMN_KEYS = [
+  'summary',
+  'customer',
+  'land',
+  'plot',
+  'status',
+  'plotStatus',
+  'paymentFrequency',
+  'rentAmount',
+  'depositAmount',
+  'nextPaymentDueDate',
+  'areaSqm',
+  'startDate',
+  'endDate',
+  'updatedAt',
+];
+
+export const DEFAULT_COLUMN_KEYS = [
+  'summary',
+  'customer',
+  'land',
+  'plot',
+  'status',
+  'rentAmount',
+  'nextPaymentDueDate',
+  'areaSqm',
+];
+
+export const LOCKED_COLUMN_KEY = 'summary';
+export const LOCKED_COLUMN_MESSAGE =
+  'Contract names every row, so it cannot be removed.';
+export const REORDER_DRAG_THRESHOLD = 5;
+
+export interface ColumnReorderSession {
+  key: string;
+  mode: 'keyboard' | 'pointer';
+  originalKeys: string[];
+  fromIndex: number;
+  toIndex: number;
+  pointerId?: number;
+  pointerStartY?: number;
+  hasPointerMoved?: boolean;
+}
+
+export interface ViewState {
+  columnKeys: string[];
+  density: Density;
+  stickyStart: StickyEdge;
+  stickyEnd: StickyEdge;
+  grouping: GroupField;
+}
+
+export type TableSortState = Array<{
+  sortKey: string;
+  direction: 'ascending' | 'descending';
+}>;
+
+export const INITIAL_VIEW: ViewState = {
+  columnKeys: DEFAULT_COLUMN_KEYS,
+  density: 'balanced',
+  stickyStart: 'one',
+  stickyEnd: 'none',
+  grouping: 'status',
+};
+
+export const INITIAL_FILTERS: PowerSearchFilter[] = [PRESET_FILTERS[0].filter];
+
+export const SORT_RANKS: Record<string, Record<string, number>> = {
+  status: {
+    ACTIVE: 0,
+    AVAILABLE: 0,
+    COMPLETED: 1,
+    RENTED: 1,
+    CANCELLED: 2,
+    SOLD: 2,
+  },
+  plotStatus: {AVAILABLE: 0, RENTED: 1, SOLD: 2, UNASSIGNED: 3},
+  paymentFrequency: {MONTHLY: 0, QUARTERLY: 1, YEARLY: 2, CUSTOM: 3},
+};
+
+export const PAGE_SIZE = 15;
+export const SELECTION_COLUMN_KEY = '__xds_selection';
+export const SKELETON_ROWS = 5;
+export const SELECTION_COLUMN_WIDTH = 48;
+
+export const DENSITY_PADDING: Record<Density, number> = {
+  compact: 8,
+  balanced: 12,
+  spacious: 16,
+};
+
+export interface SavedView {
+  id: string;
+  name: string;
+  filters: PowerSearchFilter[];
+  view: ViewState;
+}
+
+export const INITIAL_SAVED_VIEWS: SavedView[] = [
+  {
+    id: 'active-contracts',
+    name: 'Active contracts',
+    filters: [PRESET_FILTERS[0].filter],
+    view: INITIAL_VIEW,
+  },
+  {
+    id: 'monthly-rent',
+    name: 'Monthly rent',
+    filters: [
+      {
+        field: 'paymentFrequency',
+        operator: 'is',
+        value: {type: 'enum', value: 'MONTHLY'},
+      },
+    ],
+    view: {
+      ...INITIAL_VIEW,
+      grouping: 'land',
+    },
+  },
+  {
+    id: 'high-rent',
+    name: 'High rent',
+    filters: [
+      {
+        field: 'rentAmount',
+        operator: 'greater_than_or_equal',
+        value: {type: 'integer', value: 1000},
+      },
+    ],
+    view: {...INITIAL_VIEW, density: 'compact', stickyEnd: 'one'},
+  },
+];
+
+const LAND_COLUMN_LABELS: Record<string, string> = {
+  summary: 'Land',
+  location: 'Location',
+  areaSqm: 'Area',
+  description: 'Description',
+  imageCount: 'Images',
+  createdAt: 'Created',
+  updatedAt: 'Updated',
+};
+
+const PLOT_COLUMN_LABELS: Record<string, string> = {
+  summary: 'Plot',
+  plot: 'Plot',
+  plotNumber: 'Plot no.',
+  land: 'Land',
+  landLocation: 'Location',
+  status: 'Status',
+  areaSqm: 'Area',
+  description: 'Description',
+  imageCount: 'Images',
+  createdAt: 'Created',
+  updatedAt: 'Updated',
+};
+
+const CUSTOMER_COLUMN_LABELS: Record<string, string> = {
+  summary: 'Customer',
+  customer: 'Customer',
+  phone: 'Phone',
+  email: 'Email',
+  address: 'Address',
+  notes: 'Notes',
+  createdAt: 'Created',
+  updatedAt: 'Updated',
+};
+
+export const DATASET_COLUMN_LABELS: Record<DatasetKey, Record<string, string>> = {
+  lands: LAND_COLUMN_LABELS,
+  plots: PLOT_COLUMN_LABELS,
+  contracts: COLUMN_LABELS,
+  customers: CUSTOMER_COLUMN_LABELS,
+};
+
+const DATASET_ALL_COLUMN_KEYS: Record<DatasetKey, readonly string[]> = {
+  lands: [
+    'summary',
+    'location',
+    'areaSqm',
+    'description',
+    'imageCount',
+    'createdAt',
+    'updatedAt',
+  ],
+  plots: [
+    'summary',
+    'land',
+    'landLocation',
+    'status',
+    'areaSqm',
+    'description',
+    'imageCount',
+    'createdAt',
+    'updatedAt',
+  ],
+  contracts: ALL_COLUMN_KEYS,
+  customers: [
+    'summary',
+    'phone',
+    'email',
+    'address',
+    'notes',
+    'createdAt',
+    'updatedAt',
+  ],
+};
+
+const DATASET_DEFAULT_COLUMN_KEYS: Record<DatasetKey, readonly string[]> = {
+  lands: ['summary', 'location', 'areaSqm', 'description', 'updatedAt'],
+  plots: ['summary', 'land', 'status', 'areaSqm', 'description', 'updatedAt'],
+  contracts: DEFAULT_COLUMN_KEYS,
+  customers: ['summary', 'phone', 'email', 'address', 'updatedAt'],
+};
+
+const DATASET_INITIAL_VIEWS: Record<DatasetKey, ViewState> = {
+  lands: {
+    columnKeys: [...DATASET_DEFAULT_COLUMN_KEYS.lands],
+    density: 'balanced',
+    stickyStart: 'one',
+    stickyEnd: 'none',
+    grouping: 'none',
+  },
+  plots: {
+    columnKeys: [...DATASET_DEFAULT_COLUMN_KEYS.plots],
+    density: 'balanced',
+    stickyStart: 'one',
+    stickyEnd: 'none',
+    grouping: 'status',
+  },
+  contracts: INITIAL_VIEW,
+  customers: {
+    columnKeys: [...DATASET_DEFAULT_COLUMN_KEYS.customers],
+    density: 'balanced',
+    stickyStart: 'one',
+    stickyEnd: 'none',
+    grouping: 'none',
+  },
+};
+
+const PLOT_PRESET_FILTERS: readonly PresetFilter[] = [
+  {
+    key: 'available',
+    label: 'Available',
+    filter: {
+      field: 'status',
+      operator: 'is',
+      value: {type: 'enum', value: 'AVAILABLE'},
+    },
+  },
+];
+
+const EMPTY_FILTERS: readonly PowerSearchFilter[] = [];
+const EMPTY_FILTER_FIELDS: readonly FilterField[] = [];
+const EMPTY_MULTI_FILTER_FIELDS: readonly MultiFilterField[] = [];
+const EMPTY_PRESET_FILTERS: readonly PresetFilter[] = [];
+
+const DATASET_INITIAL_FILTERS: Record<DatasetKey, readonly PowerSearchFilter[]> = {
+  lands: EMPTY_FILTERS,
+  plots: EMPTY_FILTERS,
+  contracts: INITIAL_FILTERS,
+  customers: EMPTY_FILTERS,
+};
+
+const DATASET_INITIAL_SORTS: Record<DatasetKey, TableSortState> = {
+  lands: [{sortKey: 'summary', direction: 'ascending'}],
+  plots: [
+    {sortKey: 'status', direction: 'ascending'},
+    {sortKey: 'plotNumber', direction: 'ascending'},
+  ],
+  contracts: [
+    {sortKey: 'status', direction: 'ascending'},
+    {sortKey: 'nextPaymentDueSort', direction: 'ascending'},
+  ],
+  customers: [{sortKey: 'summary', direction: 'ascending'}],
+};
+
+const DATASET_GROUPING_OPTIONS: Record<
+  DatasetKey,
+  ReadonlyArray<{value: GroupField; label: string}>
+> = {
+  lands: [groupOption('none', 'None'), groupOption('location', 'Location')],
+  plots: [
+    groupOption('none', 'None'),
+    groupOption('status', 'Status'),
+    groupOption('land', 'Land'),
+  ],
+  contracts: GROUPING_OPTIONS,
+  customers: [groupOption('none', 'None')],
+};
+
+const DATASET_SAVED_VIEWS: Record<DatasetKey, readonly SavedView[]> = {
+  lands: [
+    {
+      id: 'lands-by-location',
+      name: 'By location',
+      filters: [],
+      view: {
+        ...DATASET_INITIAL_VIEWS.lands,
+        grouping: 'location',
+      },
+    },
+  ],
+  plots: [
+    {
+      id: 'available-plots',
+      name: 'Available plots',
+      filters: [PLOT_PRESET_FILTERS[0].filter],
+      view: DATASET_INITIAL_VIEWS.plots,
+    },
+  ],
+  contracts: INITIAL_SAVED_VIEWS,
+  customers: [],
+};
+
+function cloneFilters(filters: readonly PowerSearchFilter[]): PowerSearchFilter[] {
+  return [...filters];
+}
+
+function cloneView(view: ViewState): ViewState {
+  return {...view, columnKeys: [...view.columnKeys]};
+}
+
+function cloneSavedView(saved: SavedView): SavedView {
+  return {
+    ...saved,
+    filters: cloneFilters(saved.filters),
+    view: cloneView(saved.view),
+  };
+}
+
+export function getDatasetInitialFilters(
+  dataset: DatasetKey,
+): PowerSearchFilter[] {
+  return cloneFilters(DATASET_INITIAL_FILTERS[dataset]);
+}
+
+export function getDatasetInitialView(dataset: DatasetKey): ViewState {
+  return cloneView(DATASET_INITIAL_VIEWS[dataset]);
+}
+
+export function getDatasetInitialSort(dataset: DatasetKey): TableSortState {
+  return DATASET_INITIAL_SORTS[dataset].map(sortItem => ({...sortItem}));
+}
+
+export function createInitialSavedViewsByDataset(): Record<
+  DatasetKey,
+  SavedView[]
+> {
+  return {
+    lands: DATASET_SAVED_VIEWS.lands.map(cloneSavedView),
+    plots: DATASET_SAVED_VIEWS.plots.map(cloneSavedView),
+    contracts: DATASET_SAVED_VIEWS.contracts.map(cloneSavedView),
+    customers: DATASET_SAVED_VIEWS.customers.map(cloneSavedView),
+  };
+}
+
+export interface DatasetTableData {
+  key: DatasetKey;
+  label: string;
+  singularLabel: string;
+  description: string;
+  rows: EntityTableRow[];
+  fieldDefs: FieldDefinition[];
+  filterFields: readonly FilterField[];
+  multiFilterFields: readonly MultiFilterField[];
+  presetFilters: readonly PresetFilter[];
+  groupOrders: Record<GroupField, string[]>;
+  groupingOptions: ReadonlyArray<{value: GroupField; label: string}>;
+  rangeFilter: RangeFilterConfig | null;
+  view: ViewState;
+  filters: PowerSearchFilter[];
+  sort: TableSortState;
+  columnLabels: Record<string, string>;
+  allColumnKeys: readonly string[];
+  defaultColumnKeys: readonly string[];
+  lockedColumnKey: string;
+  lockedColumnMessage: string;
+  searchPlaceholder: string;
+  powerSearchPlaceholder: string;
+  emptyTitle: string;
+  emptyDescription: string;
+  loadingLabel: string;
+  layoutLabel: string;
+  newButtonLabel: string;
+}
+
+export function filterValueText(filter: PowerSearchFilter): string {
+  const raw = filter.value as {value?: unknown; unixSeconds?: number};
+  if (typeof raw.unixSeconds === 'number') {
+    return formatDate(new Date(raw.unixSeconds * 1000), true);
+  }
+
+  const label = (value: unknown) => {
+    const key = String(value ?? '');
+    return VALUE_LABELS[key] ?? key;
+  };
+  return Array.isArray(raw.value)
+    ? raw.value.map(label).join(', ')
+    : label(raw.value);
+}
+
+export const OPERATOR_LABELS: Record<string, string> = {
+  is: 'is',
+  is_any_of: 'is any of',
+  greater_than_or_equal: '>=',
+  less_than_or_equal: '<=',
+  after: 'after',
+  before: 'before',
+};
+
+const FIELD_LABELS: Record<string, string> = {
+  summary: 'Name',
+  customer: 'Customer',
+  land: 'Land',
+  plot: 'Plot',
+  phone: 'Phone',
+  email: 'Email',
+  address: 'Address',
+  location: 'Location',
+  description: 'Description',
+  notes: 'Notes',
+  status: 'Status',
+  plotStatus: 'Plot status',
+  paymentFrequency: 'Payment frequency',
+  rentAmount: 'Rent',
+  depositAmount: 'Deposit',
+  areaSqm: 'Area',
+  nextPaymentDueOn: 'Next payment',
+  startOn: 'Start date',
+  endOn: 'End date',
+};
+
+export function filterTokenLabel(filter: PowerSearchFilter): string {
+  const name = FIELD_LABELS[filter.field] ?? filter.field;
+  const operator = OPERATOR_LABELS[filter.operator] ?? filter.operator;
+  const raw = filter.value as {value?: unknown; unixSeconds?: number};
+  let value: string;
+
+  if (typeof raw.unixSeconds === 'number') {
+    value = formatDate(new Date(raw.unixSeconds * 1000), true);
+  } else if (Array.isArray(raw.value) && raw.value.length > 1) {
+    const [firstValue, ...rest] = raw.value.map(
+      item => VALUE_LABELS[String(item)] ?? item,
+    );
+    value = `${firstValue} +${rest.length}`;
+  } else if (
+    (filter.field === 'rentAmount' || filter.field === 'depositAmount') &&
+    typeof raw.value === 'number'
+  ) {
+    value = formatMoney(raw.value);
+  } else if (filter.field === 'areaSqm' && typeof raw.value === 'number') {
+    value = formatArea(raw.value);
+  } else {
+    value = filterValueText(filter);
+  }
+
+  return `${name} ${operator} ${value}`;
+}
+
+export interface ContractTableData {
+  rows: ContractTableRow[];
+  fieldDefs: ReturnType<typeof createFieldDefs>;
+  filterFields: readonly FilterField[];
+  multiFilterFields: readonly MultiFilterField[];
+  presetFilters: readonly PresetFilter[];
+  groupOrders: Record<GroupField, string[]>;
+  rentMax: number;
+}
+
+export function buildContractTableData({
+  contracts,
+  customers,
+  lands,
+  plots,
+}: {
+  contracts: readonly Contract[];
+  customers: readonly Customer[];
+  lands: readonly Land[];
+  plots: readonly Plot[];
+}): ContractTableData {
+  const rows = buildContractRows(contracts);
+  const customerNames = uniqueSorted([
+    ...customers.map(customer => customer.name),
+    ...rows.map(row => row.customer),
+  ]);
+  const landNames = uniqueSorted([
+    ...lands.map(land => land.name),
+    ...plots.flatMap(plot => plot.lands.map(land => land.name)),
+    ...rows.map(row => row.land),
+  ]);
+
+  return {
+    rows,
+    fieldDefs: createFieldDefs({customerNames, landNames}),
+    filterFields: FILTER_FIELDS,
+    multiFilterFields: createMultiFilterFields({customerNames, landNames}),
+    presetFilters: PRESET_FILTERS,
+    groupOrders: createGroupOrders(rows, {customerNames, landNames}),
+    rentMax: rows.length === 0 ? DEFAULT_RENT_MAX : getRentMax(rows),
+  };
+}
+
+export function buildDatasetTableData({
+  dataset,
+  contracts,
+  customers,
+  lands,
+  plots,
+}: {
+  dataset: DatasetKey;
+  contracts: readonly Contract[];
+  customers: readonly Customer[];
+  lands: readonly Land[];
+  plots: readonly Plot[];
+}): DatasetTableData {
+  const meta = DATASET_META[dataset];
+  const common = {
+    key: dataset,
+    label: meta.label,
+    singularLabel: meta.singularLabel,
+    description: meta.description,
+    view: getDatasetInitialView(dataset),
+    filters: getDatasetInitialFilters(dataset),
+    sort: getDatasetInitialSort(dataset),
+    columnLabels: DATASET_COLUMN_LABELS[dataset],
+    allColumnKeys: DATASET_ALL_COLUMN_KEYS[dataset],
+    defaultColumnKeys: DATASET_DEFAULT_COLUMN_KEYS[dataset],
+    lockedColumnKey: 'summary',
+    lockedColumnMessage: `${meta.singularLabel[0].toUpperCase()}${meta.singularLabel.slice(1)} names every row, so it cannot be removed.`,
+    groupingOptions: DATASET_GROUPING_OPTIONS[dataset],
+    loadingLabel: `Loading ${meta.label.toLowerCase()}`,
+    layoutLabel: meta.label,
+    newButtonLabel: `New ${meta.singularLabel}`,
+    searchPlaceholder:
+      dataset === 'contracts'
+        ? 'Customer, land, plot'
+        : `Search ${meta.label.toLowerCase()}`,
+    emptyTitle: `No ${meta.label.toLowerCase()} match these filters`,
+    emptyDescription:
+      'Try clearing a filter, or switch to power search to build a broader query.',
+  };
+
+  if (dataset === 'contracts') {
+    const contractData = buildContractTableData({
+      contracts,
+      customers,
+      lands,
+      plots,
+    });
+    return {
+      ...common,
+      rows: contractData.rows,
+      fieldDefs: contractData.fieldDefs,
+      filterFields: contractData.filterFields,
+      multiFilterFields: contractData.multiFilterFields,
+      presetFilters: contractData.presetFilters,
+      groupOrders: contractData.groupOrders,
+      rangeFilter: {
+        field: 'rentAmount',
+        label: 'Rent',
+        min: RENT_MIN,
+        max: contractData.rentMax,
+        step: RENT_STEP,
+        valueKind: 'money',
+      },
+      powerSearchPlaceholder: 'Try "rent > 1000" or "status is Active"',
+    };
+  }
+
+  if (dataset === 'plots') {
+    const rows = buildPlotRows(plots);
+    const landNames = uniqueSorted([
+      ...lands.map(land => land.name),
+      ...rows.map(row => row.land),
+    ]);
+    const areaMax = rows.length === 0 ? DEFAULT_AREA_MAX : getAreaMax(rows);
+
+    return {
+      ...common,
+      rows,
+      fieldDefs: createPlotFieldDefs(landNames),
+      filterFields: EMPTY_FILTER_FIELDS,
+      multiFilterFields: createPlotFilterFields(landNames),
+      presetFilters: PLOT_PRESET_FILTERS,
+      groupOrders: createGroupOrders(rows, {
+        landNames,
+        statusLabels: PLOT_STATUS_ORDER.filter(
+          status => status !== 'UNASSIGNED',
+        ).map(key => VALUE_LABELS[key] ?? key),
+      }),
+      rangeFilter: {
+        field: 'areaSqm',
+        label: 'Area',
+        min: AREA_MIN,
+        max: areaMax,
+        step: AREA_STEP,
+        valueKind: 'area',
+      },
+      powerSearchPlaceholder: 'Try "status is Available" or "area > 1000"',
+    };
+  }
+
+  if (dataset === 'customers') {
+    const rows = buildCustomerRows(customers);
+
+    return {
+      ...common,
+      rows,
+      fieldDefs: createCustomerFieldDefs(),
+      filterFields: EMPTY_FILTER_FIELDS,
+      multiFilterFields: EMPTY_MULTI_FILTER_FIELDS,
+      presetFilters: EMPTY_PRESET_FILTERS,
+      groupOrders: createGroupOrders(rows, {
+        customerNames: rows.map(row => row.customer),
+      }),
+      rangeFilter: null,
+      powerSearchPlaceholder: 'Try "email contains .com" or "address contains Main"',
+    };
+  }
+
+  const rows = buildLandRows(lands);
+  const locations = uniqueSorted(rows.map(row => row.location));
+  const areaMax = rows.length === 0 ? DEFAULT_AREA_MAX : getAreaMax(rows);
+
+  return {
+    ...common,
+    rows,
+    fieldDefs: createLandFieldDefs(locations),
+    filterFields: EMPTY_FILTER_FIELDS,
+    multiFilterFields: createLocationFilterFields(locations),
+    presetFilters: EMPTY_PRESET_FILTERS,
+    groupOrders: createGroupOrders(rows, {locations}),
+    rangeFilter: {
+      field: 'areaSqm',
+      label: 'Area',
+      min: AREA_MIN,
+      max: areaMax,
+      step: AREA_STEP,
+      valueKind: 'area',
+    },
+    powerSearchPlaceholder: 'Try "location is District 9" or "area > 1000"',
+  };
+}
+
+export function contractsForCustomer(
+  rows: readonly ContractTableRow[],
+  active: ContractTableRow,
+): ContractTableRow[] {
+  return rows
+    .filter(
+      row =>
+        row.id !== active.id &&
+        row.customerId !== '' &&
+        row.customerId === active.customerId,
+    )
+    .sort((a, b) => b.createdAt.localeCompare(a.createdAt));
+}
+
+export function contractsForCustomerRecord(
+  rows: readonly ContractTableRow[],
+  active: Pick<CustomerTableRow, 'id'>,
+): ContractTableRow[] {
+  return rows
+    .filter(row => row.customerId !== '' && row.customerId === active.id)
+    .sort((a, b) => b.createdAt.localeCompare(a.createdAt));
+}
+
+export function contractsForLandRecord(
+  rows: readonly ContractTableRow[],
+  active: Pick<LandTableRow, 'id'>,
+): ContractTableRow[] {
+  return rows
+    .filter(row => row.landId !== '' && row.landId === active.id)
+    .sort((a, b) => b.createdAt.localeCompare(a.createdAt));
+}
+
+export function contractsForPlotRecord(
+  rows: readonly ContractTableRow[],
+  active: Pick<PlotTableRow, 'id'>,
+): ContractTableRow[] {
+  return rows
+    .filter(row => row.plotId !== '' && row.plotId === active.id)
+    .sort((a, b) => b.createdAt.localeCompare(a.createdAt));
+}
+
+export function plotsForLand(
+  plots: readonly Plot[],
+  active: ContractTableRow,
+): Plot[] {
+  return plots
+    .filter(plot => active.landId !== '' && plot.land_id === active.landId)
+    .sort((a, b) => a.plot_number.localeCompare(b.plot_number));
+}
+
+export function plotsForLandRecord(
+  plots: readonly Plot[],
+  active: Pick<LandTableRow, 'id'>,
+): Plot[] {
+  return plots
+    .filter(plot => plot.land_id === active.id)
+    .sort((a, b) => a.plot_number.localeCompare(b.plot_number));
+}
+
+export function landForPlotRecord(
+  lands: readonly Land[],
+  active: Pick<PlotTableRow, 'landId'>,
+): Land | null {
+  return lands.find(land => land.id === active.landId) ?? null;
+}
+
+export function daysUntil(value: string): number | null {
+  const sortValue = parseDateSort(value);
+  if (sortValue === INVALID_DATE_SORT) {
+    return null;
+  }
+  return Math.ceil((sortValue - Date.now()) / DAY_MS);
+}
+
+export const stickyKeys = (
+  edge: StickyEdge,
+  keys: string[],
+  fromEnd: boolean,
+): string[] => {
+  const count = edge === 'one' ? 1 : edge === 'two' ? 2 : 0;
+  if (count === 0) {
+    return [];
+  }
+  return fromEnd ? keys.slice(-count) : keys.slice(0, count);
+};
