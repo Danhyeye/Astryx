@@ -1,10 +1,8 @@
 import {type FormEvent, useEffect, useMemo, useRef, useState} from 'react';
 import {Banner} from '@astryxdesign/core/Banner';
-import {Button} from '@astryxdesign/core/Button';
-import {Divider} from '@astryxdesign/core/Divider';
 import {Dialog, DialogHeader} from '@astryxdesign/core/Dialog';
 import {FileInput} from '@astryxdesign/core/FileInput';
-import {FormLayout} from '@astryxdesign/core/FormLayout';
+import {GridSpan} from '@astryxdesign/core/Grid';
 import {
   HStack,
   Layout,
@@ -30,8 +28,10 @@ import {
   buildPlotPayload,
   createPlotFormFromPlot,
   isPlotFormValid,
+  isPlotFormStepValid,
 } from './entityForms';
 import {LandImageGallery} from './LandImageGallery';
+import {EntityFormActions, EntityFormStepper} from './EntityFormStepper';
 
 const MAX_IMAGE_SIZE = 5 * 1024 * 1024;
 const MAX_IMAGE_FILES = 12;
@@ -57,7 +57,7 @@ function errorMessageOf(error: unknown): string {
     return error.message;
   }
 
-  return 'Please check the plot details and try again.';
+  return 'Vui lòng kiểm tra thông tin lô đất và thử lại.';
 }
 
 export function EditPlotDialog({
@@ -75,6 +75,7 @@ export function EditPlotDialog({
 }) {
   const formId = `edit-plot-${plot.id}`;
   const [form, setForm] = useState(() => createPlotFormFromPlot(plot));
+  const [activeStep, setActiveStep] = useState(0);
   const [retainedImages, setRetainedImages] = useState(() => plot.images);
   const [selectedImages, setSelectedImages] = useState<SelectedPlotImage[]>([]);
   const [submitError, setSubmitError] = useState<string | null>(null);
@@ -92,7 +93,7 @@ export function EditPlotDialog({
       lands.map(land => ({
         value: land.id,
         label: land.name,
-        description: land.location || 'No location',
+        description: land.location || 'Chưa có vị trí',
       })),
     [lands],
   );
@@ -176,13 +177,21 @@ export function EditPlotDialog({
       return;
     }
 
+    if (!open) {
+      setForm(createPlotFormFromPlot(plot));
+      setRetainedImages(plot.images);
+      clearSelectedImages();
+      setActiveStep(0);
+      setSubmitError(null);
+    }
+
     onOpenChange(open);
   };
 
   const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
 
-    if (!isFormValid || isSubmitting) {
+    if (activeStep !== 2 || !isFormValid || isSubmitting) {
       return;
     }
 
@@ -226,84 +235,33 @@ export function EditPlotDialog({
         height="fill"
         header={
           <DialogHeader
-            title="Edit plot"
+            title="Chỉnh sửa lô đất"
             subtitle={plot.summary}
             onOpenChange={handleOpenChange}
           />
         }
         content={
-          <LayoutContent padding={4} label="Edit plot form">
+          <LayoutContent padding={4} label="Biểu mẫu chỉnh sửa lô đất">
             <form id={formId} onSubmit={handleSubmit}>
               <VStack gap={4}>
                 {submitError != null && (
                   <Banner
                     status="error"
-                    title="Could not update plot"
+                    title="Không thể cập nhật lô đất"
                     description={submitError}
                     container="section"
                   />
                 )}
 
-                <LandImageGallery
-                  images={retainedImages}
-                  emptyLabel="No current images"
-                  onRemoveImage={image => removeRetainedImage(image.id)}
-                  showRemoveOn="always"
-                />
-
-                <FormLayout defaultOptionality="optional">
-                  <FileInput
-                    label="New images"
-                    value={imageFiles}
-                    onChange={changeSelectedImages}
-                    accept="image/png,image/jpeg,image/webp"
-                    description="Choose files to add to the saved images. Remove current thumbnails above to delete them."
-                    maxSize={MAX_IMAGE_SIZE}
-                    maxFiles={MAX_IMAGE_FILES}
-                    mode="input"
-                    isMultiple
-                    isLoading={uploadImage.isPending}
-                    isDisabled={isSubmitting}
-                  />
-
-                  {selectedImages.length > 0 && (
-                    <HStack gap={2} wrap="wrap">
-                      {selectedImages.map(image => (
-                        <Thumbnail
-                          key={image.id}
-                          src={image.previewUrl}
-                          alt={`Preview for ${image.file.name}`}
-                          label={image.file.name}
-                          isLoading={isSubmitting}
-                          onRemove={event => {
-                            event.preventDefault();
-                            removeSelectedImage(image.id);
-                          }}
-                          showRemoveOn="always"
-                        />
-                      ))}
-                    </HStack>
-                  )}
-
-                  {selectedImages.length > 0 && (
-                    <TextInput
-                      label="Image caption"
-                      value={form.imageCaption}
-                      onChange={imageCaption =>
-                        setForm(current => ({
-                          ...current,
-                          imageCaption,
-                        }))
-                      }
-                      isDisabled={isSubmitting}
-                      hasClear
-                    />
-                  )}
-
-                  <Divider />
-
-                  <Selector
-                    label="Land"
+                <EntityFormStepper
+                  activeStep={activeStep}
+                  onStepChange={setActiveStep}
+                  steps={[
+                    {
+                      label: 'Khu đất và mã lô',
+                      content: <>
+                        <Selector
+                    label="Khu đất"
                     value={form.landId}
                     options={landOptions}
                     onChange={landId =>
@@ -312,14 +270,13 @@ export function EditPlotDialog({
                         landId,
                       }))
                     }
-                    placeholder="Choose land"
+                    placeholder="Chọn khu đất"
                     hasSearch
                     isRequired
                     isDisabled={isSubmitting}
-                  />
-
-                  <TextInput
-                    label="Plot number"
+                        />
+                        <TextInput
+                    label="Mã lô đất"
                     value={form.plotNumber}
                     onChange={plotNumber =>
                       setForm(current => ({
@@ -331,10 +288,14 @@ export function EditPlotDialog({
                     hasAutoFocus
                     isDisabled={isSubmitting}
                     hasClear
-                  />
-
-                  <Selector
-                    label="Status"
+                        />
+                      </>,
+                    },
+                    {
+                      label: 'Trạng thái và diện tích',
+                      content: <>
+                        <Selector
+                    label="Trạng thái"
                     value={form.status}
                     options={PLOT_STATUS_OPTIONS.map(status => ({
                       value: status,
@@ -347,10 +308,9 @@ export function EditPlotDialog({
                       }))
                     }
                     isDisabled={isSubmitting}
-                  />
-
-                  <NumberInput
-                    label="Area"
+                        />
+                        <NumberInput
+                    label="Diện tích"
                     value={form.areaSqm}
                     onChange={areaSqm =>
                       setForm(current => ({
@@ -360,14 +320,18 @@ export function EditPlotDialog({
                     }
                     min={0}
                     step={0.01}
-                    units="sqm"
+                    units="m²"
                     hasClear
                     isWheelEnabled={false}
                     isDisabled={isSubmitting}
-                  />
-
-                  <TextArea
-                    label="Description"
+                        />
+                      </>,
+                    },
+                    {
+                      label: 'Mô tả và hình ảnh',
+                      content: <>
+                        <TextArea
+                    label="Mô tả"
                     value={form.description}
                     onChange={description =>
                       setForm(current => ({
@@ -377,30 +341,84 @@ export function EditPlotDialog({
                     }
                     rows={3}
                     isDisabled={isSubmitting}
-                  />
-                </FormLayout>
+                        />
+                        <FileInput
+                          label="Ảnh mới"
+                          value={imageFiles}
+                          onChange={changeSelectedImages}
+                          accept="image/png,image/jpeg,image/webp"
+                          description="Chọn tệp để thêm ảnh. Xóa ảnh thu nhỏ phía dưới để bỏ ảnh đã lưu."
+                          maxSize={MAX_IMAGE_SIZE}
+                          maxFiles={MAX_IMAGE_FILES}
+                          mode="input"
+                          isMultiple
+                          isLoading={uploadImage.isPending}
+                          isDisabled={isSubmitting}
+                        />
+                        <GridSpan columns="full">
+                          <LandImageGallery
+                            images={retainedImages}
+                            emptyLabel="Chưa có hình ảnh"
+                            onRemoveImage={image => removeRetainedImage(image.id)}
+                            showRemoveOn="always"
+                          />
+                        </GridSpan>
+                        {selectedImages.length > 0 && (
+                          <GridSpan columns="full">
+                            <HStack gap={2} wrap="wrap">
+                              {selectedImages.map(image => (
+                                <Thumbnail
+                                  key={image.id}
+                                  src={image.previewUrl}
+                                  alt={`Xem trước ảnh ${image.file.name}`}
+                                  label={image.file.name}
+                                  isLoading={isSubmitting}
+                                  onRemove={event => {
+                                    event.preventDefault();
+                                    removeSelectedImage(image.id);
+                                  }}
+                                  showRemoveOn="always"
+                                />
+                              ))}
+                            </HStack>
+                          </GridSpan>
+                        )}
+                        {selectedImages.length > 0 && (
+                          <TextInput
+                            label="Chú thích ảnh"
+                            value={form.imageCaption}
+                            onChange={imageCaption =>
+                              setForm(current => ({...current, imageCaption}))
+                            }
+                            isDisabled={isSubmitting}
+                            hasClear
+                          />
+                        )}
+                      </>,
+                    },
+                  ]}
+                />
               </VStack>
             </form>
           </LayoutContent>
         }
         footer={
           <LayoutFooter hasDivider>
-            <HStack gap={2} hAlign="end" wrap="wrap">
-              <Button
-                label="Cancel"
-                variant="secondary"
-                isDisabled={isSubmitting}
-                onClick={() => handleOpenChange(false)}
-              />
-              <Button
-                label="Save changes"
-                type="submit"
-                form={formId}
-                variant="primary"
-                isDisabled={!isFormValid || isSubmitting}
-                isLoading={isSubmitting}
-              />
-            </HStack>
+            <EntityFormActions
+              activeStep={activeStep}
+              formId={formId}
+              isStepValid={isPlotFormStepValid(form, activeStep)}
+              isSubmitting={isSubmitting}
+              onBack={() => setActiveStep(step => Math.max(0, step - 1))}
+              onCancel={() => handleOpenChange(false)}
+              onNext={() =>
+                setActiveStep(step =>
+                  isPlotFormStepValid(form, step) ? step + 1 : step,
+                )
+              }
+              submitLabel="Lưu thay đổi"
+              stepCount={3}
+            />
           </LayoutFooter>
         }
       />

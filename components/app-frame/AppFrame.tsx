@@ -1,5 +1,7 @@
 'use client';
 
+import {InternationalizationProvider} from '@astryxdesign/core/i18n';
+import vi from '@astryxdesign/core/locales/vi-VN.json';
 import type {ReactNode} from 'react';
 import {AppShell, type AppShellProps} from '@astryxdesign/core/AppShell';
 import {
@@ -23,6 +25,7 @@ export function AppFrame({
   const pathname = usePathname();
 
   return (
+    <InternationalizationProvider locale="vi-VN" messages={{'vi-VN': vi}}>
     <AppShell
       height="fill"
       variant="section"
@@ -30,17 +33,17 @@ export function AppFrame({
       mobileNav={{breakpoint: 'md'}}
       sideNav={
         <SideNav
-          aria-label="Primary navigation"
+          aria-label="Điều hướng chính"
           collapsible={{hasButton: false}}
           header={
             <SideNavHeading
-              heading="Land Manager"
+              heading="Quản lý đất đai"
               headingHref="/dashboard"
-              subheading="Portfolio workspace"
+              subheading="Không gian quản lý"
             />
           }
           footerIcons={<SideNavCollapseButton />}>
-          <SideNavSection title="Main" isHeaderHidden>
+          <SideNavSection title="Chính" isHeaderHidden>
             {getAppNavItems().map(item => (
               <SideNavItem
                 key={item.href}
@@ -55,5 +58,6 @@ export function AppFrame({
       }>
       {children}
     </AppShell>
+    </InternationalizationProvider>
   );
 }

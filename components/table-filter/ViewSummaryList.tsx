@@ -39,9 +39,9 @@ export function ViewSummaryList({
 
   return (
     <MetadataList columns="single" label={{position: 'start', width: 104}}>
-      <MetadataListItem label="Filters">
+      <MetadataListItem label="Bộ lọc">
         {filters.length === 0 ? (
-          <Text type="body">None</Text>
+          <Text type="body">Không có</Text>
         ) : (
           <HStack gap={1} xstyle={styles.tokenWrap}>
             {filters.map(filter => (
@@ -56,21 +56,21 @@ export function ViewSummaryList({
           </HStack>
         )}
       </MetadataListItem>
-      <MetadataListItem label="Columns">
+      <MetadataListItem label="Cột">
         <Text type="body">
           {view.columnKeys.length} of {allColumnKeys.length}
         </Text>
       </MetadataListItem>
-      <MetadataListItem label="Density">
+      <MetadataListItem label="Mật độ">
         <Text type="body">{density?.label ?? view.density}</Text>
       </MetadataListItem>
-      <MetadataListItem label="Grouping">
+      <MetadataListItem label="Nhóm">
         <Text type="body">{grouping?.label ?? view.grouping}</Text>
       </MetadataListItem>
-      <MetadataListItem label="Frozen start">
+      <MetadataListItem label="Cố định đầu">
         <Text type="body">{stickyStart?.label ?? view.stickyStart}</Text>
       </MetadataListItem>
-      <MetadataListItem label="Frozen end">
+      <MetadataListItem label="Cố định cuối">
         <Text type="body">{stickyEnd?.label ?? view.stickyEnd}</Text>
       </MetadataListItem>
     </MetadataList>

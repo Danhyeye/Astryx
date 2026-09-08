@@ -18,7 +18,7 @@ function errorMessageOf(error: unknown): string {
     return error.message;
   }
 
-  return 'Please try deleting the selected land again.';
+  return 'Vui lòng thử xóa khu đất đã chọn lần nữa.';
 }
 
 export function DeleteLandsDialog({
@@ -37,10 +37,10 @@ export function DeleteLandsDialog({
   const isDeleting = deleteLand.isPending;
   const count = lands.length;
   const isSingle = count === 1;
-  const targetLabel = isSingle ? lands[0]?.name ?? 'this land' : `${count} lands`;
+  const targetLabel = isSingle ? lands[0]?.name ?? 'khu đất này' : `${count} khu đất`;
   const description =
     submitError ??
-    `This will permanently delete ${targetLabel}. This action cannot be undone.`;
+    `Xóa vĩnh viễn ${targetLabel}. Không thể hoàn tác thao tác này.`;
 
   const handleOpenChange = (open: boolean) => {
     if (!open && isDeleting) {
@@ -73,9 +73,9 @@ export function DeleteLandsDialog({
     <AlertDialog
       isOpen={isOpen}
       onOpenChange={handleOpenChange}
-      title={submitError == null ? 'Delete land?' : 'Could not delete land'}
+      title={submitError == null ? 'Xóa khu đất?' : 'Không thể xóa khu đất'}
       description={description}
-      actionLabel={isSingle ? 'Delete land' : 'Delete lands'}
+      actionLabel={isSingle ? 'Xóa khu đất' : 'Xóa khu đất'}
       onAction={handleDelete}
       isActionLoading={isDeleting}
       width={420}

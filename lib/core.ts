@@ -27,6 +27,16 @@ export interface RequestParams {
   [key: string]: string | number | boolean | undefined | null | string[];
 }
 
+function requestErrorMessage(message: string | undefined, status: number | undefined): string {
+  // Preserve translated validation feedback; keep raw provider diagnostics in error.data.
+  if (message && /[À-ỹ]/u.test(message)) return message;
+  if (status === 400) return 'Dữ liệu không hợp lệ. Vui lòng kiểm tra thông tin và thử lại.';
+  if (status === 404) return 'Không tìm thấy dữ liệu được yêu cầu.';
+  if (status === 409) return 'Dữ liệu đã tồn tại hoặc đang được sử dụng.';
+  if (status === 401 || status === 403) return 'Bạn chưa có quyền thực hiện thao tác này.';
+  return 'Không thể hoàn tất yêu cầu. Vui lòng thử lại.';
+}
+
 // API service class
 export class ApiService {
   private client: AxiosInstance;
@@ -83,7 +93,7 @@ export class ApiService {
         // Standardize error format
         const apiError: ApiError = {
           status: error.response?.status,
-          message: error.response?.data?.message || error.message || 'Unknown error occurred',
+          message: requestErrorMessage(error.response?.data?.message, error.response?.status),
           error: error.response?.data || { message: error.message },
         };
 
@@ -245,6 +255,6 @@ export class ApiService {
 }
 
 // Create and export the default API service instance
-const apiService = new ApiService(process.env.NEXT_PUBLIC_API_URL_BACKEND || '', 600000);
+const apiService = new ApiService('/api', 30000);
 
 export default apiService;

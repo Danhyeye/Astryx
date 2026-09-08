@@ -1,6 +1,7 @@
+import {fetchAllPages} from '@/lib/api/fetchAllPages';
 import {NextResponse} from 'next/server';
 
-import {buildContractCalendarEvents} from '@/components/calendar/contractCalendarData';
+import {buildSelectedDaySync, parseSyncDate} from '@/lib/google-calendar/selectedDaySync';
 import {
   buildGoogleDueEvent,
   deleteGoogleEvent,
@@ -11,7 +12,6 @@ import {
   tokenExpiresAt,
   updateGoogleEvent,
 } from '@/lib/google-calendar/googleCalendar';
-import {findStaleGoogleEventMappings} from '@/lib/google-calendar/syncCleanup';
 import {contractStatusFromDatabase, paymentFrequencyFromDatabase} from '@/lib/contractDbValues';
 import {mapCustomer, mapLand, mapPlot} from '@/lib/mappers';
 import {createAdminClient} from '@/lib/supabase/admin';
@@ -32,13 +32,14 @@ type CalendarOauthTokenRow =
 type CalendarSyncEventRow =
   Database['public']['Tables']['calendar_sync_events']['Row'];
 type ContractRowWithRelations = ContractRow & {
+  contract_payments: Database['public']['Tables']['contract_payments']['Row'][] | null;
   customers: CustomerRow | null;
   lands: LandRow | null;
   plots: (PlotRow & {lands: LandRow | null}) | null;
 };
 
 const CONTRACT_SELECT = `*,
-  customers (*),
+  contract_payments (*), customers (*),
   lands (*),
   plots (*, lands(*))`;
 
@@ -50,7 +51,7 @@ function apiError(message: string, status: number) {
 }
 
 function messageOf(error: unknown): string {
-  return error instanceof Error ? error.message : 'Google Calendar sync failed.';
+  return error instanceof Error ? error.message : 'Đồng bộ Lịch Google thất bại.';
 }
 
 function toContract(row: ContractRowWithRelations): Contract {
@@ -72,6 +73,7 @@ function toContract(row: ContractRowWithRelations): Contract {
     notes: contract.notes ?? '',
     created_at: contract.created_at,
     updated_at: contract.updated_at,
+    payments: row.contract_payments ?? [],
     customers: customers ? [mapCustomer(customers)] : [],
     lands: lands ? [mapLand(lands)] : [],
     plots: plots ? [mapPlot(plots, plotLand ? [plotLand] : [])] : [],
@@ -79,16 +81,13 @@ function toContract(row: ContractRowWithRelations): Contract {
 }
 
 async function loadContracts(supabase: AdminClient): Promise<Contract[]> {
-  const {data, error} = await supabase
-    .from('contracts')
-    .select(CONTRACT_SELECT)
-    .order('start_date', {ascending: true});
-
-  if (error) {
-    throw new Error(error.message);
-  }
-
-  return ((data ?? []) as ContractRowWithRelations[]).map(toContract);
+  const {data} = await fetchAllPages<ContractRowWithRelations>(async (page, size) => {
+    const {data, error} = await supabase.from('contracts').select(CONTRACT_SELECT)
+      .order('id', {ascending: true}).range((page - 1) * size, page * size - 1);
+    if (error) throw new Error(error.message);
+    return {data: data as ContractRowWithRelations[] | null};
+  });
+  return data.map(toContract);
 }
 
 async function loadIntegration(supabase: AdminClient) {
@@ -129,15 +128,13 @@ async function loadEventMappings(
   supabase: AdminClient,
   integrationId: string,
 ): Promise<Map<string, CalendarSyncEventRow>> {
-  const {data, error} = await supabase
-    .from('calendar_sync_events')
-    .select('*')
-    .eq('integration_id', integrationId)
-    .not('local_event_key', 'is', null);
-
-  if (error) {
-    throw new Error(error.message);
-  }
+  const {data} = await fetchAllPages<CalendarSyncEventRow>(async (page, size) => {
+    const {data, error} = await supabase.from('calendar_sync_events').select('*')
+      .eq('integration_id', integrationId).not('local_event_key', 'is', null)
+      .order('id', {ascending: true}).range((page - 1) * size, page * size - 1);
+    if (error) throw new Error(error.message);
+    return {data};
+  });
 
   return new Map(
     (data ?? [])
@@ -156,7 +153,7 @@ async function getAccessToken(
   }
 
   if (token.refresh_token == null) {
-    throw new Error('Google Calendar needs reconnect.');
+    throw new Error('Vui lòng kết nối lại Lịch Google.');
   }
 
   const refreshed = await refreshGoogleAccessToken(config, token.refresh_token);
@@ -266,12 +263,16 @@ async function markSyncEventFailed(
   }
 }
 
-export async function POST() {
+export async function POST(request: Request) {
+  const date = parseSyncDate(await request.json().catch(() => null));
+  if (date == null) {
+    return apiError('Vui lòng chọn ngày đồng bộ hợp lệ (YYYY-MM-DD).', 400);
+  }
   const config = getGoogleCalendarEnv();
 
   if (!config.isConfigured) {
     return apiError(
-      `Missing Google Calendar env: ${config.missing.join(', ')}`,
+      `Thiếu cấu hình Lịch Google: ${config.missing.join(', ')}`,
       400,
     );
   }
@@ -281,20 +282,19 @@ export async function POST() {
     const integration = await loadIntegration(supabase);
 
     if (integration == null) {
-      return apiError('Google Calendar is not connected.', 409);
+      return apiError('Chưa kết nối Lịch Google.', 409);
     }
 
     const token = await loadOauthToken(supabase, integration.id);
 
     if (token == null) {
-      return apiError('Google Calendar needs reconnect.', 409);
+      return apiError('Vui lòng kết nối lại Lịch Google.', 409);
     }
 
     const accessToken = await getAccessToken(supabase, config, token);
     const contracts = await loadContracts(supabase);
-    const dueEvents = buildContractCalendarEvents(contracts);
-    const dueEventKeys = dueEvents.map(event => event.id);
     const mappings = await loadEventMappings(supabase, integration.id);
+    const {events: dueEvents, staleMappings} = buildSelectedDaySync(contracts, [...mappings.values()], date);
     const errors: string[] = [];
     let created = 0;
     let updated = 0;
@@ -357,11 +357,6 @@ export async function POST() {
       }
     }
 
-    const staleMappings = findStaleGoogleEventMappings(
-      [...mappings.values()],
-      dueEventKeys,
-    );
-
     for (const staleMapping of staleMappings) {
       const externalEventId = staleMapping.external_event_id;
 
@@ -377,7 +372,7 @@ export async function POST() {
         const message = messageOf(error);
         failed += 1;
         errors.push(
-          `${staleMapping.local_event_key ?? 'Stale Google event'}: ${message}`,
+          `${staleMapping.local_event_key ?? 'Sự kiện Google cũ'}: ${message}`,
         );
         await markSyncEventFailed(supabase, staleMapping, message);
       }
@@ -400,9 +395,10 @@ export async function POST() {
       code: 200,
       message:
         failed === 0
-          ? 'Google Calendar sync completed.'
-          : 'Google Calendar sync completed with errors.',
+          ? 'Đã đồng bộ Lịch Google.'
+          : 'Đã đồng bộ Lịch Google nhưng có lỗi.',
       data: {
+        date,
         total: dueEvents.length,
         created,
         updated,

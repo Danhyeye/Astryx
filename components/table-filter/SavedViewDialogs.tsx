@@ -44,21 +44,21 @@ export function SavedViewDialogs({
         purpose="form"
         width={400}>
         <DialogHeader
-          title="Create new saved view"
-          subtitle="Captures the filters and the table configuration as they are now."
+          title="Tạo chế độ xem"
+          subtitle="Lưu bộ lọc và cấu hình bảng hiện tại."
           onOpenChange={open => setCreatingName(open ? '' : null)}
           xstyle={styles.dialogHeaderBleed}
         />
         <Section variant="transparent" padding={4}>
           <VStack gap={4}>
             <TextInput
-              label="Name"
+              label="Tên"
               value={creatingName ?? ''}
               onChange={setCreatingName}
               hasAutoFocus
             />
             <VStack gap={1}>
-              <Text type="label">This view saves</Text>
+              <Text type="label">Chế độ xem này lưu</Text>
               <ViewSummaryList
                 view={view}
                 filters={filters}
@@ -68,7 +68,7 @@ export function SavedViewDialogs({
             </VStack>
             <HStack hAlign="end">
               <Button
-                label="Create"
+                label="Tạo"
                 variant="primary"
                 isDisabled={(creatingName ?? '').trim() === ''}
                 onClick={() => onCreate(creatingName ?? '')}
@@ -84,15 +84,15 @@ export function SavedViewDialogs({
         purpose="form"
         width={400}>
         <DialogHeader
-          title="Edit saved view"
-          subtitle="Renaming only. The configuration is what was captured when the view was saved."
+          title="Chỉnh sửa chế độ xem"
+          subtitle="Chỉ đổi tên. Cấu hình giữ nguyên như khi lưu chế độ xem."
           onOpenChange={open => !open && setEditing(null)}
           xstyle={styles.dialogHeaderBleed}
         />
         <Section variant="transparent" padding={4}>
           <VStack gap={4}>
             <TextInput
-              label="Name"
+              label="Tên"
               value={editing?.name ?? ''}
               onChange={value =>
                 setEditing(current =>
@@ -101,10 +101,10 @@ export function SavedViewDialogs({
               }
             />
             <VStack gap={1}>
-              <Text type="label">This view saves</Text>
+              <Text type="label">Chế độ xem này lưu</Text>
               {editing == null ? (
                 <Text type="supporting" color="secondary">
-                  (Empty)
+                  Trống
                 </Text>
               ) : (
                 <ViewSummaryList
@@ -117,14 +117,14 @@ export function SavedViewDialogs({
             </VStack>
             <HStack gap={2} vAlign="center">
               <Button
-                label="Delete"
+                label="Xóa"
                 variant="destructive"
                 onClick={() => editing && onDelete(editing.id)}
               />
               <StackItem size="fill">
                 <HStack hAlign="end">
                   <Button
-                    label="Save"
+                    label="Lưu"
                     variant="primary"
                     onClick={() => editing && onSaveEdited(editing)}
                   />

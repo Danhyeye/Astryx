@@ -25,7 +25,7 @@ export async function GET(
 
   if (error) {
     return NextResponse.json<ApiErrorResponse>(
-      { code: 404, message: "Land not found", data: null },
+      { code: 404, message: "Không tìm thấy khu đất", data: null },
       { status: 404 }
     );
   }
@@ -37,7 +37,7 @@ export async function GET(
 
   return NextResponse.json<LandResponse>({
     code: 200,
-    message: "Success",
+    message: "Thành công",
     data: mapLand(landRow, images),
   });
 }
@@ -53,7 +53,7 @@ export async function PATCH(
     json = await request.json();
   } catch {
     return NextResponse.json<ApiErrorResponse>(
-      { code: 400, message: "Invalid JSON body", data: null },
+      { code: 400, message: "Nội dung yêu cầu không hợp lệ", data: null },
       { status: 400 }
     );
   }
@@ -61,7 +61,7 @@ export async function PATCH(
   const body = landUpdateSchema.safeParse(json);
   if (!body.success) {
     return NextResponse.json<ApiErrorResponse>(
-      { code: 400, message: body.error.message, data: null },
+      { code: 400, message: body.error.issues.map(issue => issue.message).join(". "), data: null },
       { status: 400 }
     );
   }
@@ -129,7 +129,7 @@ export async function PATCH(
 
   if (error) {
     return NextResponse.json<ApiErrorResponse>(
-      { code: 404, message: "Land not found", data: null },
+      { code: 404, message: "Không tìm thấy khu đất", data: null },
       { status: 404 }
     );
   }
@@ -139,7 +139,7 @@ export async function PATCH(
 
   return NextResponse.json<LandResponse>({
     code: 200,
-    message: "Updated",
+    message: "Đã cập nhật",
     data: mapLand(landRow, responseImages),
   });
 }
@@ -162,7 +162,7 @@ export async function DELETE(
 
   return NextResponse.json<LandResponse>({
     code: 200,
-    message: "Deleted",
+    message: "Đã xóa",
     data: null,
   });
 }

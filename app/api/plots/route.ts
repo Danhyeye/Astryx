@@ -26,7 +26,7 @@ export async function GET(request: NextRequest) {
   let query = supabase
     .from("plots")
     .select("*, lands(*), land_images(*)")
-    .order("created_at", { ascending: false })
+    .order("created_at", { ascending: false }).order("id", { ascending: true })
     .range(from, to);
 
   if (status) {
@@ -50,7 +50,7 @@ export async function GET(request: NextRequest) {
 
   return NextResponse.json<PlotsResponse>({
     code: 200,
-    message: "Success",
+    message: "Thành công",
     data: plots,
   });
 }
@@ -61,7 +61,7 @@ export async function POST(request: NextRequest) {
     json = await request.json();
   } catch {
     return NextResponse.json<ApiErrorResponse>(
-      { code: 400, message: "Invalid JSON body", data: null },
+      { code: 400, message: "Nội dung yêu cầu không hợp lệ", data: null },
       { status: 400 }
     );
   }
@@ -69,7 +69,7 @@ export async function POST(request: NextRequest) {
   const body = plotSchema.safeParse(json);
   if (!body.success) {
     return NextResponse.json<ApiErrorResponse>(
-      { code: 400, message: body.error.message, data: null },
+      { code: 400, message: body.error.issues.map(issue => issue.message).join(". "), data: null },
       { status: 400 }
     );
   }
@@ -125,7 +125,7 @@ export async function POST(request: NextRequest) {
   }
 
   return NextResponse.json<PlotResponse>(
-    { code: 201, message: "Created", data: mapPlot(plot, [], images) },
+    { code: 201, message: "Đã tạo", data: mapPlot(plot, [], images) },
     { status: 201 }
   );
 }

@@ -1,3 +1,4 @@
+import {createAdminClient} from '@/lib/supabase/admin';
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { mapCustomer, mapImage, mapLand, mapPlot } from "@/lib/mappers";
@@ -8,7 +9,11 @@ import {
   paymentFrequencyFromDatabase,
   paymentFrequencyToDatabase,
 } from "@/lib/contractDbValues";
-import { contractUpdateSchema } from "@/lib/validations/contract";
+import {
+  contractUpdateSchema,
+  validateContractUpdate,
+  type ContractInput,
+} from "@/lib/validations/contract";
 import type { Contract, ContractResponse } from "@/types/contract";
 import type { ApiErrorResponse } from "@/types/api-response";
 import type { Database } from "@/types/database.types";
@@ -19,6 +24,7 @@ type LandRow = Database["public"]["Tables"]["lands"]["Row"];
 type PlotRow = Database["public"]["Tables"]["plots"]["Row"];
 type LandImageRow = Database["public"]["Tables"]["land_images"]["Row"];
 type ContractRowWithRelations = ContractRow & {
+  contract_payments: Database['public']['Tables']['contract_payments']['Row'][] | null;
   customers: CustomerRow | null;
   lands: (LandRow & { land_images: LandImageRow[] | null }) | null;
   plots:
@@ -50,6 +56,7 @@ function toContract(row: ContractRowWithRelations): Contract {
     notes: c.notes ?? "",
     created_at: c.created_at,
     updated_at: c.updated_at,
+    payments: row.contract_payments ?? [],
     customers: customers ? [mapCustomer(customers)] : [],
     lands: lands ? [mapLand(lands, landImages)] : [],
     plots: plots ? [mapPlot(plots, plotLand ? [plotLand] : [], plotImages)] : [],
@@ -57,7 +64,7 @@ function toContract(row: ContractRowWithRelations): Contract {
 }
 
 const CONTRACT_SELECT = `*,
-  customers (*),
+  contract_payments (*), customers (*),
   lands (*, land_images(*)),
   plots (*, land_images(*), lands(*))`;
 
@@ -76,14 +83,14 @@ export async function GET(
 
   if (error) {
     return NextResponse.json<ApiErrorResponse>(
-      { code: 404, message: "Contract not found", data: null },
+      { code: 404, message: "Không tìm thấy hợp đồng", data: null },
       { status: 404 }
     );
   }
 
   return NextResponse.json<ContractResponse>({
     code: 200,
-    message: "Success",
+    message: "Thành công",
     data: toContract(data as ContractRowWithRelations),
   });
 }
@@ -99,7 +106,7 @@ export async function PATCH(
     json = await request.json();
   } catch {
     return NextResponse.json<ApiErrorResponse>(
-      { code: 400, message: "Invalid JSON body", data: null },
+      { code: 400, message: "Nội dung yêu cầu không hợp lệ", data: null },
       { status: 400 }
     );
   }
@@ -107,12 +114,57 @@ export async function PATCH(
   const body = contractUpdateSchema.safeParse(json);
   if (!body.success) {
     return NextResponse.json<ApiErrorResponse>(
-      { code: 400, message: body.error.message, data: null },
+      { code: 400, message: body.error.issues.map(issue => issue.message).join(". "), data: null },
       { status: 400 }
     );
   }
 
   const supabase = await createClient();
+  const {data: persistedData, error: persistedError} = await supabase
+    .from('contracts')
+    .select(CONTRACT_SELECT)
+    .eq('id', id)
+    .single();
+
+  if (persistedError || persistedData == null) {
+    return NextResponse.json<ApiErrorResponse>(
+      {code: 404, message: 'Không tìm thấy hợp đồng.', data: null},
+      {status: 404},
+    );
+  }
+
+  const persisted = persistedData as ContractRowWithRelations;
+  const persistedInput: ContractInput = {
+    customer: {id: persisted.customer_id},
+    land: persisted.land_id == null ? null : {id: persisted.land_id},
+    plot: persisted.plot_id == null ? null : {id: persisted.plot_id},
+    deposit_amount: persisted.deposit_amount,
+    rent_amount: persisted.rent_amount,
+    due_day: persisted.due_day,
+    lease_duration_months: persisted.lease_duration_months,
+    payment_frequency: paymentFrequencyFromDatabase(
+      persisted.payment_frequency,
+    ),
+    payment_due_day: persisted.payment_due_day,
+    next_payment_due_date: persisted.next_payment_due_date,
+    start_date: persisted.start_date,
+    end_date: persisted.end_date,
+    status: contractStatusFromDatabase(persisted.status),
+    notes: persisted.notes,
+  };
+  const mergedValidation = validateContractUpdate(
+    persistedInput,
+    body.data,
+    {hasPersistedPayments: (persisted.contract_payments?.length ?? 0) > 0},
+  );
+
+  if (!mergedValidation.success) {
+    return NextResponse.json<ApiErrorResponse>(
+      {code: 400, message: mergedValidation.error.issues.map(issue => issue.message).join(". "), data: null},
+      {status: 400},
+    );
+  }
+
   const updatePayload: Partial<ContractRow> = {};
   const targetPatch = contractTargetPatchToDatabase({
     land: body.data.land,
@@ -166,16 +218,48 @@ export async function PATCH(
 
   if (error) {
     return NextResponse.json<ApiErrorResponse>(
-      { code: 404, message: "Contract not found", data: null },
+      { code: 404, message: "Không tìm thấy hợp đồng", data: null },
       { status: 404 }
     );
   }
 
   return NextResponse.json<ContractResponse>({
     code: 200,
-    message: "Updated",
+    message: "Đã cập nhật",
     data: toContract(data as ContractRowWithRelations),
   });
 }
 
 export const PUT = PATCH;
+
+export async function DELETE(request: NextRequest, {params}: {params:Promise<{id:string}>}) {
+  const {id}=await params;
+  const supabase=await createClient();
+  const {data:contract,error:loadError}=await supabase.from('contracts').select('id').eq('id',id).maybeSingle();
+  if(loadError || !contract) return NextResponse.json({message:'Không tìm thấy hợp đồng.'},{status:404});
+  try {
+    const admin=createAdminClient();
+    const bucket=admin.storage.from('contract-file');
+    const paths:string[]=[];
+    for(let offset=0;;offset+=100){
+      const {data,error}=await bucket.list(id,{limit:100,offset});
+      if(error)throw error;
+      paths.push(...data.filter(file=>file.id).map(file=>id+'/'+file.name));
+      if(data.length<100)break;
+    }
+    if(paths.length){
+      const {error}=await bucket.remove(paths);
+      if(error)throw error;
+    }
+    // Keep external event mappings for selected-day sync cleanup after the contract is gone.
+    const {error:mappingError}=await admin.from('calendar_sync_events')
+      .update({contract_id:null,contract_payment_id:null}).eq('contract_id',id);
+    if(mappingError)throw mappingError;
+    const {data:deleted,error}=await supabase.from('contracts').delete().eq('id',id).select('id').maybeSingle();
+    if(error)throw error;
+    if(!deleted)return NextResponse.json({message:'Không thể xóa hợp đồng.'},{status:409});
+    return NextResponse.json({data:{id},message:'Đã xóa hợp đồng.'});
+  }catch{
+    return NextResponse.json({message:'Không thể hoàn tất xóa hợp đồng. Vui lòng thử lại.'},{status:500});
+  }
+}

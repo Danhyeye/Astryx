@@ -93,7 +93,7 @@ function formBody(values: Record<string, string>): URLSearchParams {
 
 function requireConfigured(config: GoogleCalendarEnv): void {
   if (!config.isConfigured) {
-    throw new Error(`Missing Google Calendar env: ${config.missing.join(', ')}`);
+    throw new Error(`Thiếu cấu hình Lịch Google: ${config.missing.join(', ')}`);
   }
 }
 
@@ -108,7 +108,7 @@ async function readGoogleJson<T>(response: Response): Promise<T> {
         ? String(payload.error_description)
         : typeof payload === 'object' && payload != null && 'error' in payload
           ? String(payload.error)
-          : 'Google Calendar request failed.';
+          : 'Yêu cầu đến Lịch Google thất bại.';
 
     throw new Error(message);
   }
@@ -130,7 +130,7 @@ function calendarDeleteEventUrl(calendarId: string, eventId: string): string {
 }
 
 function formatMoney(amount: number): string {
-  return `$${Math.round(amount || 0).toLocaleString('en-US')}`;
+  return new Intl.NumberFormat('vi-VN', {style: 'currency', currency: 'VND', maximumFractionDigits: 0}).format(amount || 0);
 }
 
 export function getGoogleCalendarEnv(
@@ -184,14 +184,14 @@ export function buildGoogleDueEvent(
   event: GoogleDueEventInput,
 ): GoogleCalendarEventPayload {
   return {
-    summary: `Rent due: ${event.customerName}`,
+    summary: `Đến hạn thanh toán: ${event.customerName}`,
     description: [
-      `Contract: ${event.contractLabel}`,
-      `Target: ${event.targetLabel}`,
-      `Amount: ${formatMoney(event.amount)}`,
-      `Frequency: ${event.frequency}`,
-      `Contract status: ${event.status}`,
-      `Contract period: ${event.startDate} to ${event.endDate}`,
+      `Hợp đồng: ${event.contractLabel}`,
+      `Khu đất / lô đất: ${event.targetLabel}`,
+      `Số tiền: ${formatMoney(event.amount)}`,
+      `Chu kỳ: ${{MONTHLY: 'Hằng tháng', QUARTERLY: 'Hằng quý', YEARLY: 'Hằng năm', CUSTOM: 'Tùy chỉnh'}[event.frequency] ?? event.frequency}`,
+      `Trạng thái: ${{ACTIVE: 'Đang hiệu lực', COMPLETED: 'Đã hoàn tất', CANCELLED: 'Đã hủy'}[event.status] ?? event.status}`,
+      `Thời hạn: ${event.startDate} đến ${event.endDate || 'Chưa thiết lập'}`,
     ].join('\n'),
     start: {
       date: event.date,

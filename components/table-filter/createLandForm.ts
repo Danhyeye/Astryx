@@ -72,7 +72,22 @@ export function clearReplacementImageForm(
 }
 
 export function isCreateLandFormValid(form: CreateLandFormState): boolean {
-  return form.name.trim().length > 0;
+  return isLandFormStepValid(form, 0) && isLandFormStepValid(form, 1);
+}
+
+export function isLandFormStepValid(
+  form: CreateLandFormState,
+  step: number,
+): boolean {
+  if (step === 0) {
+    return form.name.trim().length > 0;
+  }
+
+  if (step === 1) {
+    return form.areaSqm == null || form.areaSqm >= 0;
+  }
+
+  return true;
 }
 
 export function buildCreateLandPayload(

@@ -20,7 +20,7 @@ async function request<T>(url: string, init?: RequestInit): Promise<T> {
       payload != null &&
       'message' in payload
         ? String(payload.message)
-        : 'Google Calendar request failed.';
+        : 'Yêu cầu đến Lịch Google thất bại.';
 
     throw new Error(message);
   }
@@ -32,8 +32,9 @@ export const googleCalendarService = {
   getStatus: async (): Promise<GoogleCalendarStatusResponse> =>
     request<GoogleCalendarStatusResponse>('/api/calendar/google/status'),
 
-  sync: async (): Promise<GoogleCalendarSyncResponse> =>
+  sync: async (date: string): Promise<GoogleCalendarSyncResponse> =>
     request<GoogleCalendarSyncResponse>('/api/calendar/google/sync', {
       method: 'POST',
+      body: JSON.stringify({date}),
     }),
 };

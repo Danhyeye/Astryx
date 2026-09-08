@@ -1,4 +1,10 @@
 import type {Contract, PaymentFrequency} from '@/types/contract';
+import {
+  contractDateFromParts,
+  formatContractDate,
+  parseContractDate,
+  resolveContractEndDate,
+} from '../../lib/contractDates.ts';
 
 export type ContractCalendarEvent = {
   id: string;
@@ -25,75 +31,21 @@ const FREQUENCY_MONTH_STEP: Partial<Record<PaymentFrequency, number>> = {
   YEARLY: 12,
 };
 
-const DAY_MS = 86_400_000;
-
-function parseUtcDate(value: string | null | undefined): Date | null {
-  if (value == null || value === '') {
-    return null;
-  }
-
-  const date = new Date(`${value.slice(0, 10)}T00:00:00.000Z`);
-  return Number.isNaN(date.getTime()) ? null : date;
-}
-
-function toIsoDate(date: Date): string {
-  return date.toISOString().slice(0, 10);
-}
-
-function daysInUtcMonth(year: number, monthIndex: number): number {
-  return new Date(Date.UTC(year, monthIndex + 1, 0)).getUTCDate();
-}
-
-function dateFromParts(
-  year: number,
-  monthIndex: number,
-  day: number,
-): Date {
-  const clampedDay = Math.min(day, daysInUtcMonth(year, monthIndex));
-  return new Date(Date.UTC(year, monthIndex, clampedDay));
-}
-
-function addUtcDays(date: Date, days: number): Date {
-  return new Date(date.getTime() + days * DAY_MS);
-}
-
-function addUtcMonths(date: Date, months: number): Date {
-  return dateFromParts(
-    date.getUTCFullYear(),
-    date.getUTCMonth() + months,
-    date.getUTCDate(),
-  );
-}
-
-function resolveContractEndDate(contract: Contract, startDate: Date): Date | null {
-  const endDate = parseUtcDate(contract.end_date);
-
-  if (endDate != null) {
-    return endDate;
-  }
-
-  if (contract.lease_duration_months > 0) {
-    return addUtcDays(addUtcMonths(startDate, contract.lease_duration_months), -1);
-  }
-
-  return null;
-}
-
 function first<T>(items: readonly T[] | null | undefined): T | null {
   return items?.[0] ?? null;
 }
 
 function customerNameOf(contract: Contract): string {
-  return first(contract.customers)?.name || 'Unknown customer';
+  return first(contract.customers)?.name || 'Khách hàng chưa xác định';
 }
 
 function targetLabelOf(contract: Contract): string {
   const plot = first(contract.plots);
   const land = first(contract.lands) ?? first(plot?.lands);
-  const landName = land?.name ?? 'No land';
+  const landName = land?.name ?? 'Chưa có khu đất';
 
   if (plot?.plot_number) {
-    return `${landName} / Plot ${plot.plot_number}`;
+    return `${landName} / Lô đất ${plot.plot_number}`;
   }
 
   return landName;
@@ -110,8 +62,8 @@ function dueDayOf(contract: Contract): number {
 }
 
 export function eventDateKey(value: string | Date): string {
-  const date = value instanceof Date ? value : parseUtcDate(value);
-  return date == null ? '' : toIsoDate(date);
+  const date = value instanceof Date ? value : parseContractDate(value);
+  return date == null ? '' : formatContractDate(date);
 }
 
 export function buildContractOptions(
@@ -127,65 +79,116 @@ export function buildContractOptions(
     }));
 }
 
+/** One nearest unpaid date per active contract. Payment rows are authoritative when present. */
 export function buildContractCalendarEvents(
   contracts: readonly Contract[],
+  now: Date = new Date(),
 ): ContractCalendarEvent[] {
+  // Business dates follow Vietnam, including around UTC midnight.
+  const todayKey = new Intl.DateTimeFormat('en-CA', {
+    timeZone: 'Asia/Ho_Chi_Minh', year: 'numeric', month: '2-digit', day: '2-digit',
+  }).format(now);
+  const today = parseContractDate(todayKey)!;
   const events: ContractCalendarEvent[] = [];
-
   for (const contract of contracts) {
-    const startDate = parseUtcDate(contract.start_date);
-    const endDate =
-      startDate == null ? null : resolveContractEndDate(contract, startDate);
-    const monthStep = FREQUENCY_MONTH_STEP[contract.payment_frequency];
-
-    if (startDate == null || endDate == null || monthStep == null) {
-      continue;
+    const start = parseContractDate(contract.start_date);
+    if (!start || contract.status !== 'ACTIVE') continue;
+    const end = parseContractDate(
+      resolveContractEndDate({
+        startDate: contract.start_date,
+        endDate: contract.end_date,
+        leaseDurationMonths: contract.lease_duration_months,
+      }),
+    );
+    const valid = (date: Date | null): date is Date => date != null && date >= today && date >= start && (end == null || date <= end);
+    let due: Date | null = null;
+    let amount = contract.rent_amount;
+    if (contract.payments?.length) {
+      const payment = [...contract.payments]
+        .filter(payment => payment.status.toUpperCase() !== 'PAID' && !payment.paid_at && valid(parseContractDate(payment.due_date)))
+        .sort((a, b) => a.due_date.localeCompare(b.due_date))[0];
+      if (payment) {due = parseContractDate(payment.due_date); amount = payment.amount;}
+    } else {
+      const explicit = parseContractDate(contract.next_payment_due_date);
+      if (valid(explicit)) due = explicit;
+      else {
+        const step = FREQUENCY_MONTH_STEP[contract.payment_frequency];
+        const day = dueDayOf(contract);
+        if (step != null && day >= 1 && day <= 31) {
+          const months = Math.max(0, (today.getUTCFullYear() - start.getUTCFullYear()) * 12 + today.getUTCMonth() - start.getUTCMonth());
+          const offset = Math.floor(months / step) * step;
+          // At most the current anchored period and the next are needed.
+          for (const monthOffset of [offset, offset + step]) {
+            const candidate = contractDateFromParts(start.getUTCFullYear(), start.getUTCMonth() + monthOffset, day);
+            if (valid(candidate)) {due = candidate; break;}
+          }
+        }
+      }
     }
+    if (due == null) continue;
+    const date = formatContractDate(due);
+    events.push({id: `${contract.id}:${date}`, contractId: contract.id,
+      contractLabel: contractLabelOf(contract), customerName: customerNameOf(contract),
+      targetLabel: targetLabelOf(contract), date, amount, frequency: contract.payment_frequency,
+      status: contract.status, startDate: formatContractDate(start), endDate: end ? formatContractDate(end) : '',
+    });
+  }
+  return events.sort((a, b) => a.date.localeCompare(b.date) || a.contractLabel.localeCompare(b.contractLabel, 'vi'));
+}
 
-    const dueDay = dueDayOf(contract);
-    const contractLabel = contractLabelOf(contract);
-    const customerName = customerNameOf(contract);
-    const targetLabel = targetLabelOf(contract);
-
-    for (let monthOffset = 0; ; monthOffset += monthStep) {
-      const dueDate = dateFromParts(
-        startDate.getUTCFullYear(),
-        startDate.getUTCMonth() + monthOffset,
-        dueDay,
-      );
-
-      if (dueDate > endDate) {
-        break;
+/** Full due-day schedule for the displayed month, including payment history. */
+export function buildContractMonthEvents(
+  contracts: readonly Contract[],
+  month: string,
+): ContractCalendarEvent[] {
+  const monthStart = parseContractDate(month.slice(0, 7) + '-01');
+  if (!monthStart) return [];
+  const year = monthStart.getUTCFullYear();
+  const monthIndex = monthStart.getUTCMonth();
+  const monthEnd = contractDateFromParts(year, monthIndex, 31);
+  const events: ContractCalendarEvent[] = [];
+  for (const contract of contracts) {
+    const start = parseContractDate(contract.start_date);
+    if (!start || contract.status === 'CANCELLED') continue;
+    const end = parseContractDate(resolveContractEndDate({
+      startDate: contract.start_date, endDate: contract.end_date,
+      leaseDurationMonths: contract.lease_duration_months,
+    }));
+    const valid = (date: Date | null): date is Date =>
+      date != null && date >= start && (!end || date <= end) &&
+      date >= monthStart && date <= monthEnd;
+    const dates = new Map<string, number>();
+    const step = FREQUENCY_MONTH_STEP[contract.payment_frequency];
+    if (step) {
+      const offset = (year - start.getUTCFullYear()) * 12 + monthIndex - start.getUTCMonth();
+      const day = dueDayOf(contract);
+      if (offset >= 0 && offset % step === 0 && Number.isInteger(day) && day >= 1 && day <= 31) {
+        const due = contractDateFromParts(year, monthIndex, day);
+        if (valid(due)) {
+          const key = formatContractDate(due);
+          const payment = contract.payments?.find(payment => payment.due_date === key);
+          dates.set(key, payment?.amount ?? contract.rent_amount);
+        }
       }
-
-      if (dueDate >= startDate) {
-        const date = toIsoDate(dueDate);
-
-        events.push({
-          id: `${contract.id}:${date}`,
-          contractId: contract.id,
-          contractLabel,
-          customerName,
-          targetLabel,
-          date,
-          amount: contract.rent_amount,
-          frequency: contract.payment_frequency,
-          status: contract.status,
-          startDate: toIsoDate(startDate),
-          endDate: toIsoDate(endDate),
-        });
+    } else if (contract.payment_frequency === 'CUSTOM') {
+      for (const payment of contract.payments ?? []) {
+        const due = parseContractDate(payment.due_date);
+        if (valid(due)) dates.set(formatContractDate(due), payment.amount);
       }
+      if (!contract.payments?.length) {
+        const due = parseContractDate(contract.next_payment_due_date);
+        if (valid(due)) dates.set(formatContractDate(due), contract.rent_amount);
+      }
+    }
+    for (const [date, amount] of dates) {
+      events.push({
+        id: `${contract.id}:${date}`, contractId: contract.id,
+        contractLabel: contractLabelOf(contract), customerName: customerNameOf(contract),
+        targetLabel: targetLabelOf(contract), date, amount,
+        frequency: contract.payment_frequency, status: contract.status,
+        startDate: formatContractDate(start), endDate: end ? formatContractDate(end) : '',
+      });
     }
   }
-
-  return events.sort((a, b) => {
-    const dateCompare = a.date.localeCompare(b.date);
-    if (dateCompare !== 0) {
-      return dateCompare;
-    }
-
-    return a.contractLabel.localeCompare(b.contractLabel, undefined, {
-      sensitivity: 'base',
-    });
-  });
+  return events.sort((a, b) => a.date.localeCompare(b.date) || a.contractLabel.localeCompare(b.contractLabel, 'vi'));
 }

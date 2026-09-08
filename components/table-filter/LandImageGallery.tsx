@@ -4,7 +4,7 @@ import {HStack} from '@astryxdesign/core/Layout';
 import type {Images} from '@/types/image';
 
 function imageLabel(image: Images, index: number): string {
-  return image.caption || image.path || `Land image ${index + 1}`;
+  return image.caption || image.path || `Ảnh khu đất ${index + 1}`;
 }
 
 export function LandImageGallery({

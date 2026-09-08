@@ -27,20 +27,20 @@ export type DashboardData = {
 };
 
 const DAY_MS = 86_400_000;
-const WEEKDAY_LABELS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+const WEEKDAY_LABELS = ['CN', 'T2', 'T3', 'T4', 'T5', 'T6', 'T7'];
 const MONTH_LABELS = [
-  'Jan',
-  'Feb',
-  'Mar',
-  'Apr',
-  'May',
-  'Jun',
-  'Jul',
-  'Aug',
-  'Sep',
-  'Oct',
-  'Nov',
-  'Dec',
+  'Th1',
+  'Th2',
+  'Th3',
+  'Th4',
+  'Th5',
+  'Th6',
+  'Th7',
+  'Th8',
+  'Th9',
+  'Th10',
+  'Th11',
+  'Th12',
 ];
 
 function startOfUtcDay(date: Date): Date {
@@ -156,9 +156,9 @@ export function buildDashboardData({
     weeklyRevenue: buildWeeklyRevenue(contracts, today),
     monthlyRevenue: buildMonthlyRevenue(contracts, today),
     entityCounts: [
-      {label: 'Lands', value: metrics.landCount},
-      {label: 'Contracts', value: metrics.contractCount},
-      {label: 'Customers', value: metrics.customerCount},
+      {label: 'Khu đất', value: metrics.landCount},
+      {label: 'Hợp đồng', value: metrics.contractCount},
+      {label: 'Khách hàng', value: metrics.customerCount},
     ],
   };
 }

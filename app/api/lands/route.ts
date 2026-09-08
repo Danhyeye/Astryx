@@ -21,7 +21,7 @@ export async function GET(request: NextRequest) {
   const { data, error } = await supabase
     .from("lands")
     .select("*, land_images(*)")
-    .order("created_at", { ascending: false })
+    .order("created_at", { ascending: false }).order("id", { ascending: true })
     .range(from, to);
 
   if (error) {
@@ -41,7 +41,7 @@ export async function GET(request: NextRequest) {
 
   return NextResponse.json<LandsResponse>({
     code: 200,
-    message: "Success",
+    message: "Thành công",
     data: lands,
   });
 }
@@ -51,7 +51,7 @@ export async function POST(request: NextRequest) {
 
   if (!body.success) {
     return NextResponse.json<ApiErrorResponse>(
-      { code: 400, message: body.error.message, data: null },
+      { code: 400, message: body.error.issues.map(issue => issue.message).join(". "), data: null },
       { status: 400 }
     );
   }
@@ -106,7 +106,7 @@ export async function POST(request: NextRequest) {
   }
 
   return NextResponse.json<LandResponse>(
-    { code: 201, message: "Created land successfully", data: mapLand(land, images) },
+    { code: 201, message: "Đã tạo khu đất", data: mapLand(land, images) },
     { status: 201 }
   );
 }

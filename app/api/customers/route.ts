@@ -16,7 +16,7 @@ export async function GET(request: NextRequest) {
   const { data, error } = await supabase
     .from("customers")
     .select("*")
-    .order("created_at", { ascending: false })
+    .order("created_at", { ascending: false }).order("id", { ascending: true })
     .range(from, to);
 
   if (error) {
@@ -28,7 +28,7 @@ export async function GET(request: NextRequest) {
 
   return NextResponse.json<CustomersResponse>({
     code: 200,
-    message: "Success",
+    message: "Thành công",
     data: data.map(mapCustomer),
   });
 }
@@ -39,7 +39,7 @@ export async function POST(request: NextRequest) {
     json = await request.json();
   } catch {
     return NextResponse.json<ApiErrorResponse>(
-      { code: 400, message: "Invalid JSON body", data: null },
+      { code: 400, message: "Nội dung yêu cầu không hợp lệ", data: null },
       { status: 400 }
     );
   }
@@ -47,7 +47,7 @@ export async function POST(request: NextRequest) {
   const body = customerSchema.safeParse(json);
   if (!body.success) {
     return NextResponse.json<ApiErrorResponse>(
-      { code: 400, message: body.error.message, data: null },
+      { code: 400, message: body.error.issues.map(issue => issue.message).join(". "), data: null },
       { status: 400 }
     );
   }
@@ -73,7 +73,7 @@ export async function POST(request: NextRequest) {
   }
 
   return NextResponse.json<CustomerResponse>(
-    { code: 201, message: "Created", data: mapCustomer(data) },
+    { code: 201, message: "Đã tạo", data: mapCustomer(data) },
     { status: 201 }
   );
 }

@@ -3,17 +3,17 @@ import type {ChartOptions, TooltipItem} from 'chart.js';
 export const DASHBOARD_CHART_LAYOUT = [
   {
     id: 'weekly-payments-due',
-    title: 'Weekly payments due',
+    title: 'Thanh toán đến hạn trong tuần',
     group: 'primary',
   },
   {
     id: 'records-summary',
-    title: 'Records summary',
+    title: 'Tổng hợp hồ sơ',
     group: 'secondary',
   },
   {
     id: 'monthly-revenue',
-    title: 'Monthly revenue',
+    title: 'Doanh thu hằng tháng',
     group: 'secondary',
   },
 ] as const;
@@ -33,7 +33,7 @@ export type DashboardChartColors = {
 };
 
 export function formatCompactNumber(value: number): string {
-  return Math.round(value).toLocaleString('en-US');
+  return Math.round(value).toLocaleString('vi-VN');
 }
 
 export function getSecondaryChartLayout(

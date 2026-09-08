@@ -1,3 +1,4 @@
+import {EntityStatus} from './EntityStatus';
 import {Badge} from '@astryxdesign/core/Badge';
 import {Button} from '@astryxdesign/core/Button';
 import {Divider} from '@astryxdesign/core/Divider';
@@ -43,13 +44,13 @@ export function CustomerDetailPanel({
         resizable={resizable}
         isReversed
         isAlwaysVisible={false}
-        label="Resize customer details"
+        label="Thay đổi kích thước chi tiết khách hàng"
       />
       <LayoutPanel
         resizable={resizable}
         hasDivider
         padding={0}
-        label="Customer details">
+        label="Chi tiết khách hàng">
         <VStack gap={0} xstyle={styles.detailPanel}>
           <Section variant="transparent" padding={4}>
             <VStack gap={4}>
@@ -60,7 +61,7 @@ export function CustomerDetailPanel({
                       <Badge
                         variant="neutral"
                         label={`${contracts.length} ${
-                          contracts.length === 1 ? 'contract' : 'contracts'
+                          'hợp đồng'
                         }`}
                       />
                       <Text type="supporting" color="secondary">
@@ -69,12 +70,12 @@ export function CustomerDetailPanel({
                     </HStack>
                     <Heading level={2}>{customer.summary}</Heading>
                     <Text type="supporting" color="secondary">
-                      {customer.email || customer.phone || 'No contact info'}
+                      {customer.email || customer.phone || 'Chưa có thông tin liên hệ'}
                     </Text>
                   </VStack>
                 </StackItem>
                 <IconButton
-                  label="Close details"
+                  label="Đóng chi tiết"
                   variant="ghost"
                   size="sm"
                   icon={<Icon icon={X} size="sm" />}
@@ -84,13 +85,13 @@ export function CustomerDetailPanel({
 
               <HStack gap={2}>
                 <Button
-                  label="Edit customer"
+                  label="Chỉnh sửa khách hàng"
                   size="sm"
                   width="100%"
                   onClick={() => onEditCustomer(customer)}
                 />
                 <Button
-                  label="Delete"
+                  label="Xóa"
                   variant="destructive"
                   size="sm"
                   width="100%"
@@ -104,23 +105,23 @@ export function CustomerDetailPanel({
 
           <Section variant="transparent" padding={4}>
             <MetadataList columns="single" label={{position: 'start', width: 116}}>
-              <MetadataListItem label="Phone">
-                <Text type="body">{customer.phone || 'Not set'}</Text>
+              <MetadataListItem label="Số điện thoại">
+                <Text type="body">{customer.phone || 'Chưa thiết lập'}</Text>
               </MetadataListItem>
               <MetadataListItem label="Email">
-                <Text type="body">{customer.email || 'Not set'}</Text>
+                <Text type="body">{customer.email || 'Chưa thiết lập'}</Text>
               </MetadataListItem>
-              <MetadataListItem label="Address">
-                <Text type="body">{customer.address || 'Not set'}</Text>
+              <MetadataListItem label="Địa chỉ">
+                <Text type="body">{customer.address || 'Chưa thiết lập'}</Text>
               </MetadataListItem>
-              <MetadataListItem label="Created">
+              <MetadataListItem label="Ngày tạo">
                 <Text type="body">{formatDate(customer.createdAt, true)}</Text>
               </MetadataListItem>
-              <MetadataListItem label="Updated">
+              <MetadataListItem label="Ngày cập nhật">
                 <Text type="body">{formatDate(customer.updatedAt, true)}</Text>
               </MetadataListItem>
-              <MetadataListItem label="Notes">
-                <Text type="body">{customer.notes || 'None'}</Text>
+              <MetadataListItem label="Ghi chú">
+                <Text type="body">{customer.notes || 'Không có'}</Text>
               </MetadataListItem>
             </MetadataList>
           </Section>
@@ -129,10 +130,10 @@ export function CustomerDetailPanel({
 
           <Section variant="transparent" padding={4}>
             <VStack gap={2}>
-              <Heading level={3}>Contracts</Heading>
+              <Heading level={3}>Hợp đồng</Heading>
               {contracts.length === 0 ? (
                 <Text type="supporting" color="secondary">
-                  No contracts found for this customer.
+                  Khách hàng chưa có hợp đồng.
                 </Text>
               ) : (
                 <VStack gap={0}>
@@ -148,7 +149,7 @@ export function CustomerDetailPanel({
                           contract.rentAmount,
                         )}`}
                         endContent={
-                          <Badge variant={meta.badge} label={meta.label} />
+                          <EntityStatus variant={meta.badge} label={meta.label} />
                         }
                         onClick={() => onSelectContract(contract.id)}
                       />

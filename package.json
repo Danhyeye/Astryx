@@ -6,7 +6,9 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint"
+    "lint": "eslint",
+    "seed": "node --env-file=.env.local scripts/seed/import.mjs",
+    "test": "node --experimental-strip-types --test scripts/seed/*.test.mjs components/calendar/*.test.mjs components/table-filter/*.test.mjs lib/api/*.test.mjs lib/validations/*.test.mjs lib/*.test.mjs ./*.test.mjs"
   },
   "dependencies": {
     "@astryxdesign/cli": "^0.5.2",

@@ -1,3 +1,4 @@
+import {EntityStatus} from './EntityStatus';
 import {Badge} from '@astryxdesign/core/Badge';
 import {Button} from '@astryxdesign/core/Button';
 import {Divider} from '@astryxdesign/core/Divider';
@@ -50,13 +51,13 @@ export function LandDetailPanel({
         resizable={resizable}
         isReversed
         isAlwaysVisible={false}
-        label="Resize land details"
+        label="Thay đổi kích thước chi tiết khu đất"
       />
       <LayoutPanel
         resizable={resizable}
         hasDivider
         padding={0}
-        label="Land details">
+        label="Chi tiết khu đất">
         <VStack gap={0} xstyle={styles.detailPanel}>
           <Section variant="transparent" padding={4}>
             <VStack gap={4}>
@@ -67,13 +68,13 @@ export function LandDetailPanel({
                       <Badge
                         variant="neutral"
                         label={`${plots.length} ${
-                          plots.length === 1 ? 'plot' : 'plots'
+                          'lô đất'
                         }`}
                       />
                       <Badge
                         variant="neutral"
                         label={`${contracts.length} ${
-                          contracts.length === 1 ? 'contract' : 'contracts'
+                          'hợp đồng'
                         }`}
                       />
                       <Text type="supporting" color="secondary">
@@ -82,12 +83,12 @@ export function LandDetailPanel({
                     </HStack>
                     <Heading level={2}>{land.summary}</Heading>
                     <Text type="supporting" color="secondary">
-                      {land.location || 'No location'}
+                      {land.location || 'Chưa có vị trí'}
                     </Text>
                   </VStack>
                 </StackItem>
                 <IconButton
-                  label="Close details"
+                  label="Đóng chi tiết"
                   variant="ghost"
                   size="sm"
                   icon={<Icon icon={X} size="sm" />}
@@ -97,13 +98,13 @@ export function LandDetailPanel({
 
               <HStack gap={2}>
                 <Button
-                  label="Edit land"
+                  label="Chỉnh sửa khu đất"
                   size="sm"
                   width="100%"
                   onClick={() => onEditLand(land)}
                 />
                 <Button
-                  label="Delete"
+                  label="Xóa"
                   variant="destructive"
                   size="sm"
                   width="100%"
@@ -119,31 +120,31 @@ export function LandDetailPanel({
             <VStack gap={3}>
               <LandImageGallery
                 images={land.images}
-                emptyLabel="No land images"
+                emptyLabel="Chưa có hình ảnh khu đất"
               />
               <Divider />
               <MetadataList
                 columns="single"
                 label={{position: 'start', width: 116}}>
-                <MetadataListItem label="Location">
-                  <Text type="body">{land.location || 'Not set'}</Text>
+                <MetadataListItem label="Vị trí">
+                  <Text type="body">{land.location || 'Chưa thiết lập'}</Text>
                 </MetadataListItem>
-                <MetadataListItem label="Area">
+                <MetadataListItem label="Diện tích">
                   <Text type="body">{formatArea(land.areaSqm)}</Text>
                 </MetadataListItem>
-                <MetadataListItem label="Images">
+                <MetadataListItem label="Hình ảnh">
                   <Text type="body">
-                    {land.imageCount.toLocaleString('en-US')}
+                    {land.imageCount.toLocaleString('vi-VN')}
                   </Text>
                 </MetadataListItem>
-                <MetadataListItem label="Created">
+                <MetadataListItem label="Ngày tạo">
                   <Text type="body">{formatDate(land.createdAt, true)}</Text>
                 </MetadataListItem>
-                <MetadataListItem label="Updated">
+                <MetadataListItem label="Ngày cập nhật">
                   <Text type="body">{formatDate(land.updatedAt, true)}</Text>
                 </MetadataListItem>
-                <MetadataListItem label="Description">
-                  <Text type="body">{land.description || 'None'}</Text>
+                <MetadataListItem label="Mô tả">
+                  <Text type="body">{land.description || 'Không có'}</Text>
                 </MetadataListItem>
               </MetadataList>
             </VStack>
@@ -153,10 +154,10 @@ export function LandDetailPanel({
 
           <Section variant="transparent" padding={4}>
             <VStack gap={2}>
-              <Heading level={3}>Plots</Heading>
+              <Heading level={3}>Lô đất</Heading>
               {plots.length === 0 ? (
                 <Text type="supporting" color="secondary">
-                  No plots found for this land.
+                  Khu đất chưa có lô đất.
                 </Text>
               ) : (
                 <VStack gap={0}>
@@ -166,13 +167,13 @@ export function LandDetailPanel({
                       <Item
                         key={plot.id}
                         align="center"
-                        label={`Plot ${plot.plot_number}`}
+                        label={`Lô đất ${plot.plot_number}`}
                         labelLines={2}
                         description={`${formatArea(plot.area_sqm)} - ${
-                          plot.description || 'No description'
+                          plot.description || 'Chưa có mô tả'
                         }`}
                         endContent={
-                          <Badge variant={meta.badge} label={meta.label} />
+                          <EntityStatus variant={meta.badge} label={meta.label} />
                         }
                         onClick={() => onSelectPlot(plot.id)}
                       />
@@ -187,10 +188,10 @@ export function LandDetailPanel({
 
           <Section variant="transparent" padding={4}>
             <VStack gap={2}>
-              <Heading level={3}>Contracts</Heading>
+              <Heading level={3}>Hợp đồng</Heading>
               {contracts.length === 0 ? (
                 <Text type="supporting" color="secondary">
-                  No contracts found for this land.
+                  Khu đất chưa có hợp đồng.
                 </Text>
               ) : (
                 <VStack gap={0}>
@@ -206,7 +207,7 @@ export function LandDetailPanel({
                           contract.rentAmount,
                         )}`}
                         endContent={
-                          <Badge variant={meta.badge} label={meta.label} />
+                          <EntityStatus variant={meta.badge} label={meta.label} />
                         }
                         onClick={() => onSelectContract(contract.id)}
                       />

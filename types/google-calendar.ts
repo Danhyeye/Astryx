@@ -11,6 +11,7 @@ export type GoogleCalendarStatus = {
 };
 
 export type GoogleCalendarSyncSummary = {
+  date: string;
   total: number;
   created: number;
   updated: number;

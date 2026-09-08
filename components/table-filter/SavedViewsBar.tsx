@@ -27,9 +27,9 @@ export function SavedViewsBar({
       wrap="wrap"
       minHeight={32}
       xstyle={styles.bar}>
-      <Text type="label">Saved views:</Text>
+      <Text type="label">Chế độ xem đã lưu:</Text>
       <ToggleButton
-        label="All"
+        label="Tất cả"
         size="sm"
         isPressed={activeSavedViewId == null}
         xstyle={[
@@ -61,8 +61,8 @@ export function SavedViewsBar({
       })}
       {activeSavedViewId != null && (
         <IconButton
-          label="Edit saved view"
-          tooltip="Edit saved view"
+          label="Chỉnh sửa chế độ xem"
+          tooltip="Chỉnh sửa chế độ xem"
           variant="ghost"
           size="sm"
           icon={<Icon icon={Pencil} size="sm" />}
@@ -82,8 +82,8 @@ export function SavedViewsToggle({
 }) {
   return (
     <ToggleButton
-      label="Saved views"
-      tooltip="Saved views"
+      label="Chế độ xem đã lưu"
+      tooltip="Chế độ xem đã lưu"
       isIconOnly
       size="sm"
       isPressed={isOpen}

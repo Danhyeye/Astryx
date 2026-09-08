@@ -50,29 +50,34 @@ export const DATASET_META: Record<
   DatasetKey,
   {
     label: string;
+    href: string;
     singularLabel: string;
     description: string;
   }
 > = {
   lands: {
-    label: 'Lands',
-    singularLabel: 'land',
-    description: 'Registered land parcels',
+    href: '/lands',
+    label: 'Khu đất',
+    singularLabel: 'khu đất',
+    description: 'Khu đất đã đăng ký',
   },
   plots: {
-    label: 'Plots',
-    singularLabel: 'plot',
-    description: 'Subdivided land plots',
+    href: '/plots',
+    label: 'Lô đất',
+    singularLabel: 'lô đất',
+    description: 'Lô đất đã phân chia',
   },
   contracts: {
-    label: 'Contracts',
-    singularLabel: 'contract',
-    description: 'Customer lease contracts',
+    href: '/contracts',
+    label: 'Hợp đồng',
+    singularLabel: 'hợp đồng',
+    description: 'Hợp đồng cho thuê của khách hàng',
   },
   customers: {
-    label: 'Customers',
-    singularLabel: 'customer',
-    description: 'Customer records',
+    href: '/customers',
+    label: 'Khách hàng',
+    singularLabel: 'khách hàng',
+    description: 'Hồ sơ khách hàng',
   },
 };
 
@@ -103,6 +108,7 @@ export type ContractTableRow = EntityTableRow & {
   status: ContractStatus;
   plotStatus: PlotStatusValue;
   paymentFrequency: PaymentFrequency;
+  hasPayments?: boolean;
   rentAmount: number;
   depositAmount: number;
   dueDay: number;
@@ -161,9 +167,9 @@ export const CONTRACT_STATUS_META: Record<
     badge: 'neutral' | 'green' | 'red';
   }
 > = {
-  ACTIVE: {label: 'Active', badge: 'green'},
-  COMPLETED: {label: 'Completed', badge: 'neutral'},
-  CANCELLED: {label: 'Cancelled', badge: 'red'},
+  ACTIVE: {label: 'Đang hiệu lực', badge: 'green'},
+  COMPLETED: {label: 'Đã hoàn tất', badge: 'neutral'},
+  CANCELLED: {label: 'Đã hủy', badge: 'red'},
 };
 
 export const STATUS_META = CONTRACT_STATUS_META;
@@ -175,10 +181,10 @@ export const PLOT_STATUS_META: Record<
     badge: 'neutral' | 'blue' | 'green';
   }
 > = {
-  AVAILABLE: {label: 'Available', badge: 'green'},
-  RENTED: {label: 'Rented', badge: 'blue'},
-  SOLD: {label: 'Sold', badge: 'neutral'},
-  UNASSIGNED: {label: 'No plot', badge: 'neutral'},
+  AVAILABLE: {label: 'Còn trống', badge: 'green'},
+  RENTED: {label: 'Đang cho thuê', badge: 'blue'},
+  SOLD: {label: 'Đã bán', badge: 'neutral'},
+  UNASSIGNED: {label: 'Chưa có lô đất', badge: 'neutral'},
 };
 
 export const PAYMENT_FREQUENCY_META: Record<
@@ -187,10 +193,10 @@ export const PAYMENT_FREQUENCY_META: Record<
     label: string;
   }
 > = {
-  MONTHLY: {label: 'Monthly'},
-  QUARTERLY: {label: 'Quarterly'},
-  YEARLY: {label: 'Yearly'},
-  CUSTOM: {label: 'Custom'},
+  MONTHLY: {label: 'Hằng tháng'},
+  QUARTERLY: {label: 'Hằng quý'},
+  YEARLY: {label: 'Hằng năm'},
+  CUSTOM: {label: 'Tùy chỉnh'},
 };
 
 export const VALUE_LABELS: Record<string, string> = {
@@ -232,9 +238,9 @@ const PAYMENT_FREQUENCY_ORDER: PaymentFrequency[] = [
   'CUSTOM',
 ];
 
-const NO_CUSTOMER = 'No customer';
-const NO_LAND = 'No land';
-const NO_PLOT = 'No plot';
+const NO_CUSTOMER = 'Chưa có khách hàng';
+const NO_LAND = 'Chưa có khu đất';
+const NO_PLOT = 'Chưa có lô đất';
 const DAY_MS = 86_400_000;
 const INVALID_DATE_SORT = Number.MAX_SAFE_INTEGER;
 
@@ -278,7 +284,7 @@ export function buildContractRows(
     const land = first(contract.lands) ?? first(plot?.lands);
     const customerName = customer?.name || NO_CUSTOMER;
     const landName = land?.name || NO_LAND;
-    const plotName = plot?.plot_number ? `Plot ${plot.plot_number}` : NO_PLOT;
+    const plotName = plot?.plot_number ? `Lô đất ${plot.plot_number}` : NO_PLOT;
     const plotStatus = plot?.status ?? 'UNASSIGNED';
     const nextPaymentDueSort = parseDateSort(contract.next_payment_due_date);
 
@@ -311,6 +317,7 @@ export function buildContractRows(
       status: contract.status,
       plotStatus,
       paymentFrequency: contract.payment_frequency,
+      hasPayments: (contract.payments?.length ?? 0) > 0,
       rentAmount: contract.rent_amount,
       depositAmount: contract.deposit_amount,
       dueDay: contract.due_day,
@@ -357,7 +364,7 @@ export function buildPlotRows(plots: readonly Plot[]): PlotTableRow[] {
   return plots.map(plot => {
     const land = first(plot.lands);
     const landName = land?.name || NO_LAND;
-    const plotName = `Plot ${plot.plot_number}`;
+    const plotName = `Lô đất ${plot.plot_number}`;
 
     return {
       id: plot.id,
@@ -444,7 +451,7 @@ export interface RangeFilterConfig {
 export const FILTER_FIELDS: readonly FilterField[] = [
   {
     key: 'paymentFrequency',
-    label: 'Frequency',
+    label: 'Chu kỳ',
     operator: 'is',
     operatorLabel: 'is',
     valueType: 'enum',
@@ -465,7 +472,7 @@ export function createMultiFilterFields({
   return [
     {
       key: 'status',
-      label: 'Status',
+      label: 'Trạng thái',
       options: CONTRACT_STATUS_ORDER.map(value => ({
         value,
         label: CONTRACT_STATUS_META[value].label,
@@ -473,7 +480,7 @@ export function createMultiFilterFields({
     },
     {
       key: 'plotStatus',
-      label: 'Plot status',
+      label: 'Trạng thái lô đất',
       options: PLOT_STATUS_ORDER.map(value => ({
         value,
         label: PLOT_STATUS_META[value].label,
@@ -481,12 +488,12 @@ export function createMultiFilterFields({
     },
     {
       key: 'customer',
-      label: 'Customer',
+      label: 'Khách hàng',
       options: uniqueSorted(customerNames).map(toOption),
     },
     {
       key: 'land',
-      label: 'Land',
+      label: 'Khu đất',
       options: uniqueSorted(landNames).map(toOption),
     },
   ];
@@ -497,7 +504,7 @@ export const MULTI_FILTER_FIELDS = createMultiFilterFields();
 export const PRESET_FILTERS: readonly PresetFilter[] = [
   {
     key: 'active',
-    label: 'Active',
+    label: 'Đang hiệu lực',
     filter: {
       field: 'status',
       operator: 'is',
@@ -546,28 +553,28 @@ export function createFieldDefs({
   landNames?: readonly string[];
 } = {}): FieldDefinition[] {
   return [
-    {key: 'summary', type: 'string', label: 'Contract'},
+    {key: 'summary', type: 'string', label: 'Hợp đồng'},
     {
       key: 'customer',
       type: 'enum',
-      label: 'Customer',
+      label: 'Khách hàng',
       enumValues: uniqueSorted(customerNames).map(toOption),
     },
     {
       key: 'land',
       type: 'enum',
-      label: 'Land',
+      label: 'Khu đất',
       enumValues: uniqueSorted(landNames).map(toOption),
     },
     {
       key: 'plot',
       type: 'string',
-      label: 'Plot',
+      label: 'Lô đất',
     },
     {
       key: 'status',
       type: 'enum',
-      label: 'Contract status',
+      label: 'Trạng thái hợp đồng',
       enumValues: CONTRACT_STATUS_ORDER.map(value => ({
         value,
         label: CONTRACT_STATUS_META[value].label,
@@ -576,7 +583,7 @@ export function createFieldDefs({
     {
       key: 'plotStatus',
       type: 'enum',
-      label: 'Plot status',
+      label: 'Trạng thái lô đất',
       enumValues: PLOT_STATUS_ORDER.map(value => ({
         value,
         label: PLOT_STATUS_META[value].label,
@@ -585,17 +592,17 @@ export function createFieldDefs({
     {
       key: 'paymentFrequency',
       type: 'enum',
-      label: 'Payment frequency',
+      label: 'Chu kỳ thanh toán',
       enumValues: PAYMENT_FREQUENCY_ORDER.map(value => ({
         value,
         label: PAYMENT_FREQUENCY_META[value].label,
       })),
     },
-    {key: 'rentAmount', type: 'number', label: 'Rent'},
-    {key: 'depositAmount', type: 'number', label: 'Deposit'},
-    {key: 'nextPaymentDueOn', type: 'date', label: 'Next payment'},
-    {key: 'startOn', type: 'date', label: 'Start date'},
-    {key: 'endOn', type: 'date', label: 'End date'},
+    {key: 'rentAmount', type: 'number', label: 'Tiền thuê'},
+    {key: 'depositAmount', type: 'number', label: 'Tiền đặt cọc'},
+    {key: 'nextPaymentDueOn', type: 'date', label: 'Thanh toán tiếp theo'},
+    {key: 'startOn', type: 'date', label: 'Ngày bắt đầu'},
+    {key: 'endOn', type: 'date', label: 'Ngày kết thúc'},
   ];
 }
 
@@ -603,32 +610,32 @@ export const fieldDefs = createFieldDefs();
 
 function createLandFieldDefs(locations: readonly string[]): FieldDefinition[] {
   return [
-    {key: 'summary', type: 'string', label: 'Land'},
+    {key: 'summary', type: 'string', label: 'Khu đất'},
     {
       key: 'location',
       type: 'enum',
-      label: 'Location',
+      label: 'Vị trí',
       enumValues: uniqueSorted(locations).map(toOption),
     },
-    {key: 'areaSqm', type: 'number', label: 'Area'},
-    {key: 'description', type: 'string', label: 'Description'},
+    {key: 'areaSqm', type: 'number', label: 'Diện tích'},
+    {key: 'description', type: 'string', label: 'Mô tả'},
   ];
 }
 
 function createPlotFieldDefs(landNames: readonly string[]): FieldDefinition[] {
   return [
-    {key: 'summary', type: 'string', label: 'Plot'},
-    {key: 'plot', type: 'string', label: 'Plot'},
+    {key: 'summary', type: 'string', label: 'Lô đất'},
+    {key: 'plot', type: 'string', label: 'Lô đất'},
     {
       key: 'land',
       type: 'enum',
-      label: 'Land',
+      label: 'Khu đất',
       enumValues: uniqueSorted(landNames).map(toOption),
     },
     {
       key: 'status',
       type: 'enum',
-      label: 'Status',
+      label: 'Trạng thái',
       enumValues: PLOT_STATUS_ORDER.filter(
         status => status !== 'UNASSIGNED',
       ).map(value => ({
@@ -636,18 +643,18 @@ function createPlotFieldDefs(landNames: readonly string[]): FieldDefinition[] {
         label: PLOT_STATUS_META[value].label,
       })),
     },
-    {key: 'areaSqm', type: 'number', label: 'Area'},
-    {key: 'description', type: 'string', label: 'Description'},
+    {key: 'areaSqm', type: 'number', label: 'Diện tích'},
+    {key: 'description', type: 'string', label: 'Mô tả'},
   ];
 }
 
 function createCustomerFieldDefs(): FieldDefinition[] {
   return [
-    {key: 'summary', type: 'string', label: 'Customer'},
-    {key: 'phone', type: 'string', label: 'Phone'},
+    {key: 'summary', type: 'string', label: 'Khách hàng'},
+    {key: 'phone', type: 'string', label: 'Số điện thoại'},
     {key: 'email', type: 'string', label: 'Email'},
-    {key: 'address', type: 'string', label: 'Address'},
-    {key: 'notes', type: 'string', label: 'Notes'},
+    {key: 'address', type: 'string', label: 'Địa chỉ'},
+    {key: 'notes', type: 'string', label: 'Ghi chú'},
   ];
 }
 
@@ -660,7 +667,7 @@ function createLocationFilterFields(
     : [
         {
           key: 'location',
-          label: 'Location',
+          label: 'Vị trí',
           options,
         },
       ];
@@ -672,7 +679,7 @@ function createPlotFilterFields(
   return [
     {
       key: 'status',
-      label: 'Status',
+      label: 'Trạng thái',
       options: PLOT_STATUS_ORDER.filter(status => status !== 'UNASSIGNED').map(
         value => ({
           value,
@@ -682,7 +689,7 @@ function createPlotFilterFields(
     },
     {
       key: 'land',
-      label: 'Land',
+      label: 'Khu đất',
       options: uniqueSorted(landNames).map(toOption),
     },
   ];
@@ -705,47 +712,47 @@ export const VIEW_SECTIONS: ReadonlyArray<{
   label: string;
   title: string;
 }> = [
-  {key: 'columns', label: 'Columns', title: 'Columns'},
-  {key: 'density', label: 'Density', title: 'Density'},
-  {key: 'sticky', label: 'Sticky Columns', title: 'Sticky Columns'},
-  {key: 'grouping', label: 'Grouping', title: 'Grouping'},
+  {key: 'columns', label: 'Cột', title: 'Cột'},
+  {key: 'density', label: 'Mật độ', title: 'Mật độ'},
+  {key: 'sticky', label: 'Cột cố định', title: 'Cột cố định'},
+  {key: 'grouping', label: 'Nhóm', title: 'Nhóm'},
 ];
 
 export const DENSITY_OPTIONS: ReadonlyArray<{value: Density; label: string}> = [
-  {value: 'compact', label: 'Compact'},
-  {value: 'balanced', label: 'Balanced'},
-  {value: 'spacious', label: 'Spacious'},
+  {value: 'compact', label: 'Gọn'},
+  {value: 'balanced', label: 'Vừa phải'},
+  {value: 'spacious', label: 'Rộng'},
 ];
 
 export const STICKY_START_OPTIONS: ReadonlyArray<{
   value: StickyEdge;
   label: string;
 }> = [
-  {value: 'none', label: 'None'},
-  {value: 'one', label: 'First column'},
-  {value: 'two', label: 'First two columns'},
+  {value: 'none', label: 'Không có'},
+  {value: 'one', label: 'Cột đầu tiên'},
+  {value: 'two', label: 'Hai cột đầu'},
 ];
 
 export const STICKY_END_OPTIONS: ReadonlyArray<{
   value: StickyEdge;
   label: string;
 }> = [
-  {value: 'none', label: 'None'},
-  {value: 'one', label: 'Last column'},
-  {value: 'two', label: 'Last two columns'},
+  {value: 'none', label: 'Không có'},
+  {value: 'one', label: 'Cột cuối cùng'},
+  {value: 'two', label: 'Hai cột cuối'},
 ];
 
 export const GROUPING_OPTIONS: ReadonlyArray<{
   value: GroupField;
   label: string;
 }> = [
-  {value: 'none', label: 'None'},
-  {value: 'status', label: 'Contract status'},
-  {value: 'plotStatus', label: 'Plot status'},
-  {value: 'paymentFrequency', label: 'Payment frequency'},
-  {value: 'customer', label: 'Customer'},
-  {value: 'land', label: 'Land'},
-  {value: 'location', label: 'Location'},
+  {value: 'none', label: 'Không có'},
+  {value: 'status', label: 'Trạng thái hợp đồng'},
+  {value: 'plotStatus', label: 'Trạng thái lô đất'},
+  {value: 'paymentFrequency', label: 'Chu kỳ thanh toán'},
+  {value: 'customer', label: 'Khách hàng'},
+  {value: 'land', label: 'Khu đất'},
+  {value: 'location', label: 'Vị trí'},
 ];
 
 function groupOption(value: GroupField, label: string) {
@@ -814,20 +821,20 @@ export const GROUP_ROW_KEY_PREFIX = '__group_';
 export const NO_ROWS: EntityTableRow[] = [];
 
 export const COLUMN_LABELS: Record<string, string> = {
-  summary: 'Contract',
-  customer: 'Customer',
-  land: 'Land',
-  plot: 'Plot',
-  status: 'Status',
-  plotStatus: 'Plot status',
-  paymentFrequency: 'Frequency',
-  rentAmount: 'Rent',
-  depositAmount: 'Deposit',
-  nextPaymentDueDate: 'Next payment',
-  areaSqm: 'Area',
-  startDate: 'Start',
-  endDate: 'End',
-  updatedAt: 'Updated',
+  summary: 'Hợp đồng',
+  customer: 'Khách hàng',
+  land: 'Khu đất',
+  plot: 'Lô đất',
+  status: 'Trạng thái',
+  plotStatus: 'Trạng thái lô đất',
+  paymentFrequency: 'Chu kỳ',
+  rentAmount: 'Tiền thuê',
+  depositAmount: 'Tiền đặt cọc',
+  nextPaymentDueDate: 'Thanh toán tiếp theo',
+  areaSqm: 'Diện tích',
+  startDate: 'Bắt đầu',
+  endDate: 'Kết thúc',
+  updatedAt: 'Ngày cập nhật',
 };
 
 export const ALL_COLUMN_KEYS = [
@@ -849,18 +856,17 @@ export const ALL_COLUMN_KEYS = [
 
 export const DEFAULT_COLUMN_KEYS = [
   'summary',
-  'customer',
-  'land',
-  'plot',
   'status',
   'rentAmount',
+  'paymentFrequency',
   'nextPaymentDueDate',
   'areaSqm',
+
 ];
 
 export const LOCKED_COLUMN_KEY = 'summary';
 export const LOCKED_COLUMN_MESSAGE =
-  'Contract names every row, so it cannot be removed.';
+  'Cột hợp đồng xác định mỗi hàng nên không thể ẩn.';
 export const REORDER_DRAG_THRESHOLD = 5;
 
 export interface ColumnReorderSession {
@@ -892,7 +898,7 @@ export const INITIAL_VIEW: ViewState = {
   density: 'balanced',
   stickyStart: 'one',
   stickyEnd: 'none',
-  grouping: 'status',
+  grouping: 'none',
 };
 
 export const INITIAL_FILTERS: PowerSearchFilter[] = [PRESET_FILTERS[0].filter];
@@ -931,13 +937,13 @@ export interface SavedView {
 export const INITIAL_SAVED_VIEWS: SavedView[] = [
   {
     id: 'active-contracts',
-    name: 'Active contracts',
+    name: 'Hợp đồng đang hiệu lực',
     filters: [PRESET_FILTERS[0].filter],
     view: INITIAL_VIEW,
   },
   {
     id: 'monthly-rent',
-    name: 'Monthly rent',
+    name: 'Tiền thuê hằng tháng',
     filters: [
       {
         field: 'paymentFrequency',
@@ -952,7 +958,7 @@ export const INITIAL_SAVED_VIEWS: SavedView[] = [
   },
   {
     id: 'high-rent',
-    name: 'High rent',
+    name: 'Tiền thuê cao',
     filters: [
       {
         field: 'rentAmount',
@@ -965,38 +971,38 @@ export const INITIAL_SAVED_VIEWS: SavedView[] = [
 ];
 
 const LAND_COLUMN_LABELS: Record<string, string> = {
-  summary: 'Land',
-  location: 'Location',
-  areaSqm: 'Area',
-  description: 'Description',
-  imageCount: 'Images',
-  createdAt: 'Created',
-  updatedAt: 'Updated',
+  summary: 'Khu đất',
+  location: 'Vị trí',
+  areaSqm: 'Diện tích',
+  description: 'Mô tả',
+  imageCount: 'Hình ảnh',
+  createdAt: 'Ngày tạo',
+  updatedAt: 'Ngày cập nhật',
 };
 
 const PLOT_COLUMN_LABELS: Record<string, string> = {
-  summary: 'Plot',
-  plot: 'Plot',
-  plotNumber: 'Plot no.',
-  land: 'Land',
-  landLocation: 'Location',
-  status: 'Status',
-  areaSqm: 'Area',
-  description: 'Description',
-  imageCount: 'Images',
-  createdAt: 'Created',
-  updatedAt: 'Updated',
+  summary: 'Lô đất',
+  plot: 'Lô đất',
+  plotNumber: 'Mã lô đất',
+  land: 'Khu đất',
+  landLocation: 'Vị trí',
+  status: 'Trạng thái',
+  areaSqm: 'Diện tích',
+  description: 'Mô tả',
+  imageCount: 'Hình ảnh',
+  createdAt: 'Ngày tạo',
+  updatedAt: 'Ngày cập nhật',
 };
 
 const CUSTOMER_COLUMN_LABELS: Record<string, string> = {
-  summary: 'Customer',
-  customer: 'Customer',
-  phone: 'Phone',
+  summary: 'Khách hàng',
+  customer: 'Khách hàng',
+  phone: 'Số điện thoại',
   email: 'Email',
-  address: 'Address',
-  notes: 'Notes',
-  createdAt: 'Created',
-  updatedAt: 'Updated',
+  address: 'Địa chỉ',
+  notes: 'Ghi chú',
+  createdAt: 'Ngày tạo',
+  updatedAt: 'Ngày cập nhật',
 };
 
 export const DATASET_COLUMN_LABELS: Record<DatasetKey, Record<string, string>> = {
@@ -1059,7 +1065,7 @@ const DATASET_INITIAL_VIEWS: Record<DatasetKey, ViewState> = {
     density: 'balanced',
     stickyStart: 'one',
     stickyEnd: 'none',
-    grouping: 'status',
+    grouping: 'none',
   },
   contracts: INITIAL_VIEW,
   customers: {
@@ -1074,7 +1080,7 @@ const DATASET_INITIAL_VIEWS: Record<DatasetKey, ViewState> = {
 const PLOT_PRESET_FILTERS: readonly PresetFilter[] = [
   {
     key: 'available',
-    label: 'Available',
+    label: 'Còn trống',
     filter: {
       field: 'status',
       operator: 'is',
@@ -1091,7 +1097,7 @@ const EMPTY_PRESET_FILTERS: readonly PresetFilter[] = [];
 const DATASET_INITIAL_FILTERS: Record<DatasetKey, readonly PowerSearchFilter[]> = {
   lands: EMPTY_FILTERS,
   plots: EMPTY_FILTERS,
-  contracts: INITIAL_FILTERS,
+  contracts: EMPTY_FILTERS,
   customers: EMPTY_FILTERS,
 };
 
@@ -1112,21 +1118,21 @@ const DATASET_GROUPING_OPTIONS: Record<
   DatasetKey,
   ReadonlyArray<{value: GroupField; label: string}>
 > = {
-  lands: [groupOption('none', 'None'), groupOption('location', 'Location')],
+  lands: [groupOption('none', 'Không có'), groupOption('location', 'Vị trí')],
   plots: [
-    groupOption('none', 'None'),
-    groupOption('status', 'Status'),
-    groupOption('land', 'Land'),
+    groupOption('none', 'Không có'),
+    groupOption('status', 'Trạng thái'),
+    groupOption('land', 'Khu đất'),
   ],
   contracts: GROUPING_OPTIONS,
-  customers: [groupOption('none', 'None')],
+  customers: [groupOption('none', 'Không có')],
 };
 
 const DATASET_SAVED_VIEWS: Record<DatasetKey, readonly SavedView[]> = {
   lands: [
     {
       id: 'lands-by-location',
-      name: 'By location',
+      name: 'Theo vị trí',
       filters: [],
       view: {
         ...DATASET_INITIAL_VIEWS.lands,
@@ -1137,7 +1143,7 @@ const DATASET_SAVED_VIEWS: Record<DatasetKey, readonly SavedView[]> = {
   plots: [
     {
       id: 'available-plots',
-      name: 'Available plots',
+      name: 'Lô đất còn trống',
       filters: [PLOT_PRESET_FILTERS[0].filter],
       view: DATASET_INITIAL_VIEWS.plots,
     },
@@ -1243,25 +1249,25 @@ export const OPERATOR_LABELS: Record<string, string> = {
 };
 
 const FIELD_LABELS: Record<string, string> = {
-  summary: 'Name',
-  customer: 'Customer',
-  land: 'Land',
-  plot: 'Plot',
-  phone: 'Phone',
+  summary: 'Tên',
+  customer: 'Khách hàng',
+  land: 'Khu đất',
+  plot: 'Lô đất',
+  phone: 'Số điện thoại',
   email: 'Email',
-  address: 'Address',
-  location: 'Location',
-  description: 'Description',
-  notes: 'Notes',
-  status: 'Status',
-  plotStatus: 'Plot status',
-  paymentFrequency: 'Payment frequency',
-  rentAmount: 'Rent',
-  depositAmount: 'Deposit',
-  areaSqm: 'Area',
-  nextPaymentDueOn: 'Next payment',
-  startOn: 'Start date',
-  endOn: 'End date',
+  address: 'Địa chỉ',
+  location: 'Vị trí',
+  description: 'Mô tả',
+  notes: 'Ghi chú',
+  status: 'Trạng thái',
+  plotStatus: 'Trạng thái lô đất',
+  paymentFrequency: 'Chu kỳ thanh toán',
+  rentAmount: 'Tiền thuê',
+  depositAmount: 'Tiền đặt cọc',
+  areaSqm: 'Diện tích',
+  nextPaymentDueOn: 'Thanh toán tiếp theo',
+  startOn: 'Ngày bắt đầu',
+  endOn: 'Ngày kết thúc',
 };
 
 export function filterTokenLabel(filter: PowerSearchFilter): string {
@@ -1360,18 +1366,18 @@ export function buildDatasetTableData({
     allColumnKeys: DATASET_ALL_COLUMN_KEYS[dataset],
     defaultColumnKeys: DATASET_DEFAULT_COLUMN_KEYS[dataset],
     lockedColumnKey: 'summary',
-    lockedColumnMessage: `${meta.singularLabel[0].toUpperCase()}${meta.singularLabel.slice(1)} names every row, so it cannot be removed.`,
+    lockedColumnMessage: `${meta.singularLabel[0].toUpperCase()}${meta.singularLabel.slice(1)} xác định mỗi hàng nên không thể ẩn.`,
     groupingOptions: DATASET_GROUPING_OPTIONS[dataset],
-    loadingLabel: `Loading ${meta.label.toLowerCase()}`,
+    loadingLabel: `Đang tải ${meta.label.toLowerCase()}`,
     layoutLabel: meta.label,
-    newButtonLabel: `New ${meta.singularLabel}`,
+    newButtonLabel: `Thêm ${meta.singularLabel}`,
     searchPlaceholder:
       dataset === 'contracts'
-        ? 'Customer, land, plot'
-        : `Search ${meta.label.toLowerCase()}`,
-    emptyTitle: `No ${meta.label.toLowerCase()} match these filters`,
+        ? 'Khách hàng, khu đất, lô đất'
+        : `Tìm ${meta.label.toLowerCase()}`,
+    emptyTitle: `Không có ${meta.label.toLowerCase()} phù hợp`,
     emptyDescription:
-      'Try clearing a filter, or switch to power search to build a broader query.',
+      'Thử xóa bộ lọc hoặc dùng từ khóa khác.',
   };
 
   if (dataset === 'contracts') {
@@ -1391,7 +1397,7 @@ export function buildDatasetTableData({
       groupOrders: contractData.groupOrders,
       rangeFilter: {
         field: 'rentAmount',
-        label: 'Rent',
+        label: 'Tiền thuê',
         min: RENT_MIN,
         max: contractData.rentMax,
         step: RENT_STEP,
@@ -1424,7 +1430,7 @@ export function buildDatasetTableData({
       }),
       rangeFilter: {
         field: 'areaSqm',
-        label: 'Area',
+        label: 'Diện tích',
         min: AREA_MIN,
         max: areaMax,
         step: AREA_STEP,
@@ -1466,7 +1472,7 @@ export function buildDatasetTableData({
     groupOrders: createGroupOrders(rows, {locations}),
     rangeFilter: {
       field: 'areaSqm',
-      label: 'Area',
+      label: 'Diện tích',
       min: AREA_MIN,
       max: areaMax,
       step: AREA_STEP,

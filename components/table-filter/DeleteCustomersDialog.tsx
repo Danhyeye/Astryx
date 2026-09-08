@@ -18,7 +18,7 @@ function errorMessageOf(error: unknown): string {
     return error.message;
   }
 
-  return 'Please try deleting the selected customer again.';
+  return 'Vui lòng thử xóa khách hàng đã chọn lần nữa.';
 }
 
 export function DeleteCustomersDialog({
@@ -38,11 +38,11 @@ export function DeleteCustomersDialog({
   const count = customers.length;
   const isSingle = count === 1;
   const targetLabel = isSingle
-    ? customers[0]?.customer ?? 'this customer'
-    : `${count} customers`;
+    ? customers[0]?.customer ?? 'khách hàng này'
+    : `${count} khách hàng`;
   const description =
     submitError ??
-    `This will permanently delete ${targetLabel}. This action cannot be undone.`;
+    `Xóa vĩnh viễn ${targetLabel}. Không thể hoàn tác thao tác này.`;
 
   const handleOpenChange = (open: boolean) => {
     if (!open && isDeleting) {
@@ -76,10 +76,10 @@ export function DeleteCustomersDialog({
       isOpen={isOpen}
       onOpenChange={handleOpenChange}
       title={
-        submitError == null ? 'Delete customer?' : 'Could not delete customer'
+        submitError == null ? 'Xóa khách hàng?' : 'Không thể xóa khách hàng'
       }
       description={description}
-      actionLabel={isSingle ? 'Delete customer' : 'Delete customers'}
+      actionLabel={isSingle ? 'Xóa khách hàng' : 'Xóa khách hàng'}
       onAction={handleDelete}
       isActionLoading={isDeleting}
       width={420}

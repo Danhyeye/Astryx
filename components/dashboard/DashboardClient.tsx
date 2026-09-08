@@ -35,9 +35,9 @@ import {
 } from 'chart.js';
 import {Bar, Line, Pie} from 'react-chartjs-2';
 
-import {useContracts} from '@/hooks/useContract';
-import {useCustomers} from '@/hooks/useCustomers';
-import {useLands} from '@/hooks/useLands';
+import {useAllContracts} from '@/hooks/useAllRecords';
+import {useAllCustomers} from '@/hooks/useAllRecords';
+import {useAllLands} from '@/hooks/useAllRecords';
 import {formatMoney} from '@/utils/format';
 import {buildDashboardData} from './dashboardData';
 import {
@@ -60,7 +60,6 @@ ChartJS.register(
   Legend,
 );
 
-const DATA_PAGE = {page: 1, pageSize: 100};
 
 function errorMessageOf(error: unknown): string | null {
   if (error == null) {
@@ -71,7 +70,7 @@ function errorMessageOf(error: unknown): string | null {
     return error.message;
   }
 
-  return 'Could not load dashboard data.';
+  return 'Không thể tải dữ liệu tổng quan.';
 }
 
 export function DashboardClient() {
@@ -82,19 +81,19 @@ export function DashboardClient() {
     error: contractsError,
     isPending: isContractsPending,
     isFetching: isContractsFetching,
-  } = useContracts(DATA_PAGE);
+  } = useAllContracts();
   const {
     data: landsResponse,
     error: landsError,
     isPending: isLandsPending,
     isFetching: isLandsFetching,
-  } = useLands(DATA_PAGE);
+  } = useAllLands();
   const {
     data: customersResponse,
     error: customersError,
     isPending: isCustomersPending,
     isFetching: isCustomersFetching,
-  } = useCustomers(DATA_PAGE);
+  } = useAllCustomers();
 
   const contracts = useMemo(
     () => contractsResponse?.data ?? [],
@@ -153,7 +152,7 @@ export function DashboardClient() {
           borderWidth: 1,
           callbacks: {
             label: (context: TooltipItem<'bar'>) =>
-              `Rent amount: ${formatMoney(Number(context.parsed.y ?? 0))}`,
+              `Tiền thuê: ${formatMoney(Number(context.parsed.y ?? 0))}`,
           },
         },
       },
@@ -198,7 +197,7 @@ export function DashboardClient() {
           borderWidth: 1,
           callbacks: {
             label: (context: TooltipItem<'line'>) =>
-              `Rent amount: ${formatMoney(Number(context.parsed.y ?? 0))}`,
+              `Tiền thuê: ${formatMoney(Number(context.parsed.y ?? 0))}`,
           },
         },
       },
@@ -231,7 +230,7 @@ export function DashboardClient() {
       labels: dashboardData.weeklyRevenue.map(point => point.label),
       datasets: [
         {
-          label: 'Weekly rent due',
+          label: 'Tiền thuê đến hạn trong tuần',
           data: dashboardData.weeklyRevenue.map(point => point.amount),
           backgroundColor: chartColors.blueFill,
           borderColor: chartColors.blue,
@@ -248,7 +247,7 @@ export function DashboardClient() {
       labels: dashboardData.monthlyRevenue.map(point => point.label),
       datasets: [
         {
-          label: 'Monthly revenue',
+          label: 'Doanh thu hằng tháng',
           data: dashboardData.monthlyRevenue.map(point => point.amount),
           borderColor: chartColors.green,
           backgroundColor: chartColors.greenFill,
@@ -268,7 +267,7 @@ export function DashboardClient() {
       labels: dashboardData.entityCounts.map(item => item.label),
       datasets: [
         {
-          label: 'Total records',
+          label: 'Tổng số hồ sơ',
           data: dashboardData.entityCounts.map(item => item.value),
           backgroundColor: [
             chartColors.tealFill,
@@ -298,8 +297,8 @@ export function DashboardClient() {
       <Card key="weekly-payments-due" padding={4}>
         <VStack gap={4}>
           <VStack gap={1}>
-            <Heading level={2}>Weekly payments due</Heading>
-            <Text color="secondary">Current week by payment due date.</Text>
+            <Heading level={2}>Thanh toán đến hạn trong tuần</Heading>
+            <Text color="secondary">Hạn thanh toán trong tuần hiện tại.</Text>
           </VStack>
           <Bar data={weeklyChartData} options={weeklyChartOptions} />
         </VStack>
@@ -309,8 +308,8 @@ export function DashboardClient() {
       <Card key="records-summary" padding={4}>
         <VStack gap={4} className="flex">
           <VStack gap={1}>
-            <Heading level={2}>Records summary</Heading>
-            <Text color="secondary">Lands, contracts, and customers.</Text>
+            <Heading level={2}>Tổng hợp hồ sơ</Heading>
+            <Text color="secondary">Khu đất, hợp đồng và khách hàng.</Text>
           </VStack>
           <Pie data={entityChartData} options={entityChartOptions} />
         </VStack>
@@ -320,9 +319,9 @@ export function DashboardClient() {
       <Card key="monthly-revenue" padding={4}>
         <VStack gap={4}>
           <VStack gap={1}>
-            <Heading level={2}>Monthly revenue</Heading>
+            <Heading level={2}>Doanh thu hằng tháng</Heading>
             <Text color="secondary">
-              Expected rent by due month for the current year.
+              Tiền thuê dự kiến theo tháng đến hạn trong năm hiện tại.
             </Text>
           </VStack>
           <Line data={monthlyChartData} options={monthlyChartOptions} />
@@ -343,24 +342,24 @@ export function DashboardClient() {
       padding={6}
       contentWidth="fill"
       header={
-        <LayoutHeader label="Dashboard header">
+        <LayoutHeader label="Tiêu đề tổng quan">
           <VStack gap={1}>
             <HStack gap={2} vAlign="center" wrap="wrap">
-              <Heading level={1}>Dashboard</Heading>
-              {isRefreshing && <Badge variant="neutral" label="Refreshing" />}
+              <Heading level={1}>Tổng quan</Heading>
+              {isRefreshing && <Badge variant="neutral" label="Đang làm mới" />}
             </HStack>
             <Text color="secondary">
-              Land records, active leases, due payments, and expected revenue.
+              Khu đất, hợp đồng đang hiệu lực, thanh toán đến hạn và doanh thu dự kiến.
             </Text>
           </VStack>
         </LayoutHeader>
       }
       content={
-        <LayoutContent label="Dashboard charts">
+        <LayoutContent label="Biểu đồ tổng quan">
           <VStack gap={2}>
             {isLoading && (
               <ProgressBar
-                label="Loading dashboard"
+                label="Đang tải tổng quan"
                 isLabelHidden
                 isIndeterminate
               />
@@ -369,7 +368,7 @@ export function DashboardClient() {
             {errorMessage != null && (
               <Banner
                 status="error"
-                title="Could not load dashboard"
+                title="Không thể tải tổng quan"
                 description={errorMessage}
                 container="section"
               />
@@ -383,7 +382,7 @@ export function DashboardClient() {
               >
                 <Card padding={4} minHeight={116}>
                   <VStack gap={2}>
-                    <Text color="secondary">Lands</Text>
+                    <Text color="secondary">Khu đất</Text>
                     <div className="flex items-center gap-2">
                     <Heading level={2}>
                       {formatCompactNumber(dashboardData.metrics.landCount)} 
@@ -391,13 +390,13 @@ export function DashboardClient() {
                     <LandPlot size={20} />
                     </div>
                     <Text type="supporting" color="secondary">
-                      Registered parcels
+                      Khu đất đã đăng ký
                     </Text>
                   </VStack>
                 </Card>
                 <Card padding={4} minHeight={116}>
                   <VStack gap={2}>
-                    <Text color="secondary">Contracts</Text>
+                    <Text color="secondary">Hợp đồng</Text>
                     <div className="flex items-center gap-2">
                     <Heading level={2}>
                       {formatCompactNumber(
@@ -407,13 +406,13 @@ export function DashboardClient() {
                     <ReceiptText size={20} />
                     </div>
                     <Text type="supporting" color="secondary">
-                      Lease agreements
+                      Hợp đồng cho thuê
                     </Text>
                   </VStack>
                 </Card>
                 <Card padding={4} minHeight={116}>
                   <VStack gap={2}>
-                    <Text color="secondary">Revenue</Text>
+                    <Text color="secondary">Doanh thu</Text>
                     <div className="flex items-center gap-2">
                       <Heading level={2}>
                         {formatMoney(dashboardData.metrics.totalRevenue)}
@@ -421,7 +420,7 @@ export function DashboardClient() {
                       <HandCoins size={20} />
                     </div>
                     <Text type="supporting" color="secondary">
-                      Expected rent total
+                      Tổng tiền thuê dự kiến
                     </Text>
                   </VStack>
                 </Card>

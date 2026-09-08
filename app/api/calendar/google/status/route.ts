@@ -35,7 +35,7 @@ export async function GET() {
   if (!config.isConfigured) {
     return NextResponse.json<GoogleCalendarStatusResponse>({
       code: 200,
-      message: 'Google Calendar credentials are not configured.',
+      message: 'Chưa cấu hình kết nối Lịch Google.',
       data: inactiveStatus(config),
     });
   }
@@ -60,7 +60,7 @@ export async function GET() {
   if (integration == null) {
     return NextResponse.json<GoogleCalendarStatusResponse>({
       code: 200,
-      message: 'Google Calendar is not connected.',
+      message: 'Chưa kết nối Lịch Google.',
       data: inactiveStatus(config),
     });
   }
@@ -86,8 +86,8 @@ export async function GET() {
   return NextResponse.json<GoogleCalendarStatusResponse>({
     code: 200,
     message: isConnected
-      ? 'Google Calendar is connected.'
-      : 'Google Calendar needs reconnect.',
+      ? 'Đã kết nối Lịch Google.'
+      : 'Vui lòng kết nối lại Lịch Google.',
     data: {
       isConfigured: true,
       missing: [],

@@ -1,12 +1,9 @@
 import {type FormEvent, useEffect, useState} from 'react';
 import {Banner} from '@astryxdesign/core/Banner';
-import {Button} from '@astryxdesign/core/Button';
-import {Divider} from '@astryxdesign/core/Divider';
 import {Dialog, DialogHeader} from '@astryxdesign/core/Dialog';
 import {FileInput} from '@astryxdesign/core/FileInput';
-import {FormLayout} from '@astryxdesign/core/FormLayout';
+import {GridSpan} from '@astryxdesign/core/Grid';
 import {
-  HStack,
   Layout,
   LayoutContent,
   LayoutFooter,
@@ -26,16 +23,18 @@ import {
   createLandFormFromLand,
   getReplacementImageLifecycle,
   isCreateLandFormValid,
+  isLandFormStepValid,
   type ReplacementImageLifecycle,
 } from './createLandForm';
 import {LandImageGallery} from './LandImageGallery';
+import {EntityFormActions, EntityFormStepper} from './EntityFormStepper';
 
 const MAX_IMAGE_SIZE = 5 * 1024 * 1024;
 const REPLACEMENT_IMAGE_LABELS: Record<ReplacementImageLifecycle, string> = {
-  empty: 'No replacement image selected',
-  uploading: 'Uploading replacement image',
-  processing: 'Processing replacement image',
-  loaded: 'Replacement image loaded',
+  empty: 'Chưa chọn ảnh thay thế',
+  uploading: 'Đang tải ảnh thay thế lên',
+  processing: 'Đang xử lý ảnh thay thế',
+  loaded: 'Đã tải ảnh thay thế',
 };
 
 function errorMessageOf(error: unknown): string {
@@ -52,7 +51,7 @@ function errorMessageOf(error: unknown): string {
     return error.message;
   }
 
-  return 'Please check the land details and try again.';
+  return 'Vui lòng kiểm tra thông tin khu đất và thử lại.';
 }
 
 export function EditLandDialog({
@@ -68,6 +67,7 @@ export function EditLandDialog({
 }) {
   const formId = `edit-land-${land.id}`;
   const [form, setForm] = useState(() => createLandFormFromLand(land));
+  const [activeStep, setActiveStep] = useState(0);
   const [retainedImages, setRetainedImages] = useState(() => land.images);
   const [imageFile, setImageFile] = useState<File | null>(null);
   const [imagePreviewUrl, setImagePreviewUrl] = useState<string | null>(null);
@@ -122,13 +122,22 @@ export function EditLandDialog({
       return;
     }
 
+    if (!open) {
+      setForm(createLandFormFromLand(land));
+      setRetainedImages(land.images);
+      setImageFile(null);
+      setImagePreviewUrl(null);
+      setActiveStep(0);
+      setSubmitError(null);
+    }
+
     onOpenChange(open);
   };
 
   const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
 
-    if (!isFormValid || isSubmitting) {
+    if (activeStep !== 2 || !isFormValid || isSubmitting) {
       return;
     }
 
@@ -167,156 +176,146 @@ export function EditLandDialog({
         height="fill"
         header={
           <DialogHeader
-            title="Edit land"
+            title="Chỉnh sửa khu đất"
             subtitle={land.name}
             onOpenChange={handleOpenChange}
           />
         }
         content={
-          <LayoutContent padding={4} label="Edit land form">
+          <LayoutContent padding={4} label="Biểu mẫu chỉnh sửa khu đất">
             <form id={formId} onSubmit={handleSubmit}>
               <VStack gap={4}>
                 {submitError != null && (
                   <Banner
                     status="error"
-                    title="Could not update land"
+                    title="Không thể cập nhật khu đất"
                     description={submitError}
                     container="section"
                   />
                 )}
 
-                <LandImageGallery
-                  images={retainedImages}
-                  emptyLabel="No current images"
-                  onRemoveImage={image => removeRetainedImage(image.id)}
-                  showRemoveOn="always"
+                <EntityFormStepper
+                  activeStep={activeStep}
+                  onStepChange={setActiveStep}
+                  steps={[
+                    {
+                      label: 'Thông tin cơ bản',
+                      content: (
+                        <TextInput
+                          label="Tên khu đất"
+                          value={form.name}
+                          onChange={name =>
+                            setForm(current => ({...current, name}))
+                          }
+                          isRequired
+                          hasAutoFocus
+                          isDisabled={isSubmitting}
+                          hasClear
+                        />
+                      ),
+                    },
+                    {
+                      label: 'Vị trí và diện tích',
+                      content: <>
+                        <TextInput
+                          label="Vị trí"
+                          value={form.location}
+                          onChange={location =>
+                            setForm(current => ({...current, location}))
+                          }
+                          isDisabled={isSubmitting}
+                          hasClear
+                        />
+                        <NumberInput
+                          label="Diện tích"
+                          value={form.areaSqm}
+                          onChange={areaSqm =>
+                            setForm(current => ({...current, areaSqm}))
+                          }
+                          min={0}
+                          step={0.01}
+                          units="m²"
+                          hasClear
+                          isWheelEnabled={false}
+                          isDisabled={isSubmitting}
+                        />
+                      </>,
+                    },
+                    {
+                      label: 'Mô tả và hình ảnh',
+                      content: <>
+                        <TextArea
+                          label="Mô tả"
+                          value={form.description}
+                          onChange={description =>
+                            setForm(current => ({...current, description}))
+                          }
+                          rows={3}
+                          isDisabled={isSubmitting}
+                        />
+                        <FileInput
+                          label="Ảnh mới"
+                          value={imageFile}
+                          onChange={changeReplacementImage}
+                          accept="image/png,image/jpeg,image/webp"
+                          description="Chọn tệp để thêm ảnh. Xóa ảnh thu nhỏ phía dưới để bỏ ảnh đã lưu."
+                          maxSize={MAX_IMAGE_SIZE}
+                          mode="input"
+                          isLoading={uploadImage.isPending}
+                          isDisabled={isSubmitting}
+                        />
+                        <GridSpan columns="full">
+                          <LandImageGallery
+                            images={retainedImages}
+                            emptyLabel="Chưa có hình ảnh"
+                            onRemoveImage={image => removeRetainedImage(image.id)}
+                            showRemoveOn="always"
+                          />
+                        </GridSpan>
+                        <Thumbnail
+                          src={imagePreviewUrl ?? undefined}
+                          alt={imageFile == null ? undefined : `Xem trước ảnh mới của ${land.name}`}
+                          label={REPLACEMENT_IMAGE_LABELS[replacementLifecycle]}
+                          isLoading={isReplacementThumbnailLoading}
+                          onRemove={imageFile == null ? undefined : clearReplacementImage}
+                          showRemoveOn="always"
+                        />
+                        {imageFile != null && (
+                          <TextInput
+                            label="Chú thích ảnh"
+                            value={form.imageCaption}
+                            onChange={imageCaption =>
+                              setForm(current => ({...current, imageCaption}))
+                            }
+                            isDisabled={isSubmitting}
+                            hasClear
+                          />
+                        )}
+                      </>,
+                    },
+                  ]}
                 />
-
-                <FormLayout defaultOptionality="optional">
-                  <FileInput
-                    label="New image"
-                    value={imageFile}
-                    onChange={changeReplacementImage}
-                    accept="image/png,image/jpeg,image/webp"
-                    description="Choose a file to add it to the saved images. Remove current thumbnails above to delete them."
-                    maxSize={MAX_IMAGE_SIZE}
-                    mode="input"
-                    isLoading={uploadImage.isPending}
-                    isDisabled={isSubmitting}
-                  />
-
-                  <Thumbnail
-                    src={imagePreviewUrl ?? undefined}
-                    alt={
-                      imageFile == null
-                        ? undefined
-                        : `New image preview for ${land.name}`
-                    }
-                    label={REPLACEMENT_IMAGE_LABELS[replacementLifecycle]}
-                    isLoading={isReplacementThumbnailLoading}
-                    onRemove={
-                      imageFile == null ? undefined : clearReplacementImage
-                    }
-                    showRemoveOn="always"
-                  />
-
-                  {imageFile != null && (
-                    <TextInput
-                      label="Image caption"
-                      value={form.imageCaption}
-                      onChange={imageCaption =>
-                        setForm(current => ({
-                          ...current,
-                          imageCaption,
-                        }))
-                      }
-                      isDisabled={isSubmitting}
-                      hasClear
-                    />
-                  )}
-
-                  <Divider />
-
-                  <TextInput
-                    label="Land name"
-                    value={form.name}
-                    onChange={name =>
-                      setForm(current => ({
-                        ...current,
-                        name,
-                      }))
-                    }
-                    isRequired
-                    hasAutoFocus
-                    isDisabled={isSubmitting}
-                    hasClear
-                  />
-
-                  <TextInput
-                    label="Location"
-                    value={form.location}
-                    onChange={location =>
-                      setForm(current => ({
-                        ...current,
-                        location,
-                      }))
-                    }
-                    isDisabled={isSubmitting}
-                    hasClear
-                  />
-
-                  <NumberInput
-                    label="Area"
-                    value={form.areaSqm}
-                    onChange={areaSqm =>
-                      setForm(current => ({
-                        ...current,
-                        areaSqm,
-                      }))
-                    }
-                    min={0}
-                    step={0.01}
-                    units="sqm"
-                    hasClear
-                    isWheelEnabled={false}
-                    isDisabled={isSubmitting}
-                  />
-
-                  <TextArea
-                    label="Description"
-                    value={form.description}
-                    onChange={description =>
-                      setForm(current => ({
-                        ...current,
-                        description,
-                      }))
-                    }
-                    rows={3}
-                    isDisabled={isSubmitting}
-                  />
-                </FormLayout>
               </VStack>
             </form>
           </LayoutContent>
         }
         footer={
-          <LayoutFooter hasDivider padding={4} label="Edit land form footer">
-            <HStack gap={2} hAlign="end" wrap="wrap">
-              <Button
-                label="Cancel"
-                variant="secondary"
-                isDisabled={isSubmitting}
-                onClick={() => handleOpenChange(false)}
-              />
-              <Button
-                label="Save changes"
-                type="submit"
-                form={formId}
-                variant="primary"
-                isDisabled={!isFormValid || isSubmitting}
-                isLoading={isSubmitting}
-              />
-            </HStack>
+          <LayoutFooter hasDivider padding={4} label="Thao tác chỉnh sửa khu đất">
+            <EntityFormActions
+              activeStep={activeStep}
+              formId={formId}
+              isStepValid={isLandFormStepValid(form, activeStep)}
+              isSubmitting={isSubmitting}
+              onBack={() => setActiveStep(step => Math.max(0, step - 1))}
+              onCancel={() => handleOpenChange(false)}
+              onNext={() =>
+                setActiveStep(step =>
+                  isLandFormStepValid(form, step) ? step + 1 : step,
+                )
+              }
+              submitLabel="Lưu thay đổi"
+              stepCount={3}
+            />
           </LayoutFooter>
         }
       />

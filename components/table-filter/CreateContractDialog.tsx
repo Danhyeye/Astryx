@@ -1,12 +1,11 @@
+import {ContractFileInput} from '@/components/contracts/ContractFileInput';
+import {uploadContractFiles} from '@/lib/api/fetchContractFiles';
 import {type FormEvent, useMemo, useState} from 'react';
 import {Banner} from '@astryxdesign/core/Banner';
-import {Button} from '@astryxdesign/core/Button';
 import {DateInput} from '@astryxdesign/core/DateInput';
 import {Dialog, DialogHeader} from '@astryxdesign/core/Dialog';
-import {FormLayout} from '@astryxdesign/core/FormLayout';
 import type {ISODateString} from '@astryxdesign/core/Calendar';
 import {
-  HStack,
   Layout,
   LayoutContent,
   LayoutFooter,
@@ -21,7 +20,7 @@ import {
   PAYMENT_FREQUENCY_META,
   PLOT_STATUS_META,
 } from '@/data';
-import {useCreateContract} from '@/hooks/useContract';
+import {useCreateContract, useUpdateContract} from '@/hooks/useContract';
 import type {ContractStatus, PaymentFrequency} from '@/types/contract';
 import type {Customer} from '@/types/customer';
 import type {Land} from '@/types/land';
@@ -30,7 +29,9 @@ import {
   buildContractPayload,
   createEmptyContractForm,
   isContractFormValid,
+  isContractFormStepValid,
 } from './entityForms';
+import {EntityFormActions, EntityFormStepper} from './EntityFormStepper';
 
 const CONTRACT_STATUS_OPTIONS: ContractStatus[] = [
   'ACTIVE',
@@ -67,7 +68,7 @@ function errorMessageOf(error: unknown): string {
     return error.message;
   }
 
-  return 'Please check the contract details and try again.';
+  return 'Vui lòng kiểm tra thông tin hợp đồng và thử lại.';
 }
 
 export function CreateContractDialog({
@@ -87,16 +88,21 @@ export function CreateContractDialog({
 }) {
   const formId = 'create-contract-form';
   const [form, setForm] = useState(() => createEmptyContractForm(todayISODate()));
+  const [activeStep, setActiveStep] = useState(0);
+  const [files, setFiles] = useState<File[]>([]);
+  const [isUploading, setIsUploading] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
   const createContract = useCreateContract();
-  const isSubmitting = createContract.isPending;
+  const updateSavedContract = useUpdateContract();
+  const [savedId, setSavedId] = useState<string | null>(null);
+  const isSubmitting = createContract.isPending || isUploading;
   const isFormValid = isContractFormValid(form);
   const customerOptions = useMemo(
     () =>
       customers.map(customer => ({
         value: customer.id,
         label: customer.name,
-        description: customer.email || customer.phone || 'No contact info',
+        description: customer.email || customer.phone || 'Chưa có thông tin liên hệ',
       })),
     [customers],
   );
@@ -105,7 +111,7 @@ export function CreateContractDialog({
       lands.map(land => ({
         value: land.id,
         label: land.name,
-        description: land.location || 'No location',
+        description: land.location || 'Chưa có vị trí',
       })),
     [lands],
   );
@@ -117,8 +123,8 @@ export function CreateContractDialog({
           const land = plot.lands[0];
           return {
             value: plot.id,
-            label: `Plot ${plot.plot_number}`,
-            description: `${land?.name ?? 'No land'} - ${
+            label: `Lô đất ${plot.plot_number}`,
+            description: `${land?.name ?? 'Chưa có khu đất'} - ${
               PLOT_STATUS_META[plot.status].label
             }`,
           };
@@ -133,6 +139,9 @@ export function CreateContractDialog({
 
     if (!open) {
       setForm(createEmptyContractForm(todayISODate()));
+      setActiveStep(0);
+      setFiles([]);
+      setSavedId(null);
       setSubmitError(null);
     }
 
@@ -142,25 +151,30 @@ export function CreateContractDialog({
   const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
 
-    if (!isFormValid || isSubmitting) {
+    if (activeStep !== 2 || !isFormValid || isSubmitting) {
       return;
     }
 
     setSubmitError(null);
 
     try {
-      const response = await createContract.mutateAsync(
-        buildContractPayload(form),
-      );
+      setIsUploading(true);
+      const response = savedId
+        ? await updateSavedContract.mutateAsync({id:savedId,data:buildContractPayload(form)})
+        : await createContract.mutateAsync(buildContractPayload(form));
       const createdContract = response.data;
 
       if (createdContract?.id != null) {
+        setSavedId(createdContract.id);
+        await uploadContractFiles(createdContract.id, files);
         onCreated?.(createdContract.id);
       }
 
       handleOpenChange(false);
     } catch (error) {
       setSubmitError(errorMessageOf(error));
+    } finally {
+      setIsUploading(false);
     }
   };
 
@@ -176,27 +190,33 @@ export function CreateContractDialog({
         height="fill"
         header={
           <DialogHeader
-            title="Add new contract"
-            subtitle="Create a customer lease contract."
+            title="Thêm hợp đồng"
+            subtitle="Tạo hợp đồng cho thuê với khách hàng."
             onOpenChange={handleOpenChange}
           />
         }
         content={
-          <LayoutContent padding={4} label="Create contract form">
+          <LayoutContent padding={4} label="Biểu mẫu tạo hợp đồng">
             <form id={formId} onSubmit={handleSubmit}>
               <VStack gap={4}>
                 {submitError != null && (
                   <Banner
                     status="error"
-                    title="Could not create contract"
+                    title={savedId ? "Hợp đồng đã lưu; chưa hoàn tất tải tệp" : "Không thể tạo hợp đồng"}
                     description={submitError}
                     container="section"
                   />
                 )}
 
-                <FormLayout defaultOptionality="optional">
-                  <Selector
-                    label="Customer"
+                <EntityFormStepper
+                  activeStep={activeStep}
+                  onStepChange={setActiveStep}
+                  steps={[
+                    {
+                      label: 'Các bên',
+                      content: <>
+                        <Selector
+                    label="Khách hàng"
                     value={form.customerId}
                     options={customerOptions}
                     onChange={customerId =>
@@ -205,14 +225,13 @@ export function CreateContractDialog({
                         customerId,
                       }))
                     }
-                    placeholder="Choose customer"
+                    placeholder="Chọn khách hàng"
                     hasSearch
                     isRequired
                     isDisabled={isSubmitting}
-                  />
-
-                  <Selector
-                    label="Land"
+                        />
+                        <Selector
+                    label="Khu đất"
                     value={form.landId}
                     options={landOptions}
                     onChange={landId =>
@@ -233,14 +252,13 @@ export function CreateContractDialog({
                         };
                       })
                     }
-                    placeholder="Choose land"
+                    placeholder="Chọn khu đất"
                     hasSearch
                     hasClear
                     isDisabled={isSubmitting}
-                  />
-
-                  <Selector
-                    label="Plot"
+                        />
+                        <Selector
+                    label="Lô đất"
                     value={form.plotId}
                     options={plotOptions}
                     onChange={plotId =>
@@ -256,14 +274,67 @@ export function CreateContractDialog({
                         };
                       })
                     }
-                    placeholder="Choose plot"
+                    placeholder="Chọn lô đất"
                     hasSearch
                     hasClear
                     isDisabled={isSubmitting}
-                  />
-
-                  <NumberInput
-                    label="Rent"
+                        />
+                      </>,
+                    },
+                    {
+                      label: 'Điều khoản và ngày',
+                      content: <>
+                        <NumberInput
+                          label="Thời hạn thuê"
+                          value={form.leaseDurationMonths}
+                          onChange={leaseDurationMonths =>
+                            setForm(current => ({...current, leaseDurationMonths}))
+                          }
+                          min={1}
+                          units="tháng"
+                          hasClear
+                          isIntegerOnly
+                          isWheelEnabled={false}
+                          isDisabled={isSubmitting}
+                        />
+                        <Selector
+                          label="Trạng thái"
+                          value={form.status}
+                          options={CONTRACT_STATUS_OPTIONS.map(status => ({
+                            value: status,
+                            label: CONTRACT_STATUS_META[status].label,
+                          }))}
+                          onChange={status =>
+                            setForm(current => ({...current, status: status as ContractStatus}))
+                          }
+                          isDisabled={isSubmitting}
+                        />
+                        <DateInput
+                          label="Ngày bắt đầu"
+                          value={asISODateString(form.startDate)}
+                          onChange={startDate =>
+                            setForm(current => ({...current, startDate: startDate ?? ''}))
+                          }
+                          isRequired
+                          hasClear
+                          isDisabled={isSubmitting}
+                        />
+                        <DateInput
+                          label="Ngày kết thúc"
+                          value={asISODateString(form.endDate)}
+                          onChange={endDate =>
+                            setForm(current => ({...current, endDate: endDate ?? ''}))
+                          }
+                          hasClear
+                          isDisabled={isSubmitting}
+                        />
+                      </>,
+                    },
+                    {
+                      label: 'Thanh toán và ghi chú',
+                      content: <>
+                        <NumberInput
+                    label="Tiền thuê"
                     value={form.rentAmount}
                     onChange={rentAmount =>
                       setForm(current => ({
@@ -273,14 +344,13 @@ export function CreateContractDialog({
                     }
                     min={0}
                     step={100}
-                    units="USD"
+                    units="VND"
                     isRequired
                     isWheelEnabled={false}
                     isDisabled={isSubmitting}
-                  />
-
-                  <NumberInput
-                    label="Deposit"
+                        />
+                        <NumberInput
+                    label="Tiền đặt cọc"
                     value={form.depositAmount}
                     onChange={depositAmount =>
                       setForm(current => ({
@@ -290,15 +360,14 @@ export function CreateContractDialog({
                     }
                     min={0}
                     step={100}
-                    units="USD"
+                    units="VND"
                     isRequired
                     hasClear
                     isWheelEnabled={false}
                     isDisabled={isSubmitting}
-                  />
-
-                  <NumberInput
-                    label="Due day"
+                        />
+                        <NumberInput
+                    label="Ngày đến hạn"
                     value={form.dueDay}
                     onChange={dueDay =>
                       setForm(current => ({
@@ -307,15 +376,14 @@ export function CreateContractDialog({
                       }))
                     }
                     min={1}
-                    max={31}
+                    max={28}
                     isIntegerOnly
                     isRequired
                     isWheelEnabled={false}
                     isDisabled={isSubmitting}
-                  />
-
-                  <NumberInput
-                    label="Payment due day"
+                        />
+                        <NumberInput
+                    label="Ngày thanh toán"
                     value={form.paymentDueDay}
                     onChange={paymentDueDay =>
                       setForm(current => ({
@@ -324,32 +392,14 @@ export function CreateContractDialog({
                       }))
                     }
                     min={1}
-                    max={31}
+                    max={28}
                     isIntegerOnly
                     isRequired
                     isWheelEnabled={false}
                     isDisabled={isSubmitting}
-                  />
-
-                  <NumberInput
-                    label="Lease duration"
-                    value={form.leaseDurationMonths}
-                    onChange={leaseDurationMonths =>
-                      setForm(current => ({
-                        ...current,
-                        leaseDurationMonths,
-                      }))
-                    }
-                    min={1}
-                    units="months"
-                    hasClear
-                    isIntegerOnly
-                    isWheelEnabled={false}
-                    isDisabled={isSubmitting}
-                  />
-
-                  <Selector
-                    label="Payment frequency"
+                        />
+                        <Selector
+                    label="Chu kỳ thanh toán"
                     value={form.paymentFrequency}
                     options={PAYMENT_FREQUENCY_OPTIONS.map(frequency => ({
                       value: frequency,
@@ -362,53 +412,9 @@ export function CreateContractDialog({
                       }))
                     }
                     isDisabled={isSubmitting}
-                  />
-
-                  <Selector
-                    label="Status"
-                    value={form.status}
-                    options={CONTRACT_STATUS_OPTIONS.map(status => ({
-                      value: status,
-                      label: CONTRACT_STATUS_META[status].label,
-                    }))}
-                    onChange={status =>
-                      setForm(current => ({
-                        ...current,
-                        status: status as ContractStatus,
-                      }))
-                    }
-                    isDisabled={isSubmitting}
-                  />
-
-                  <DateInput
-                    label="Start date"
-                    value={asISODateString(form.startDate)}
-                    onChange={startDate =>
-                      setForm(current => ({
-                        ...current,
-                        startDate: startDate ?? '',
-                      }))
-                    }
-                    isRequired
-                    hasClear
-                    isDisabled={isSubmitting}
-                  />
-
-                  <DateInput
-                    label="End date"
-                    value={asISODateString(form.endDate)}
-                    onChange={endDate =>
-                      setForm(current => ({
-                        ...current,
-                        endDate: endDate ?? '',
-                      }))
-                    }
-                    hasClear
-                    isDisabled={isSubmitting}
-                  />
-
-                  <DateInput
-                    label="Next payment"
+                        />
+                        <DateInput
+                    label="Thanh toán tiếp theo"
                     value={asISODateString(form.nextPaymentDueDate)}
                     onChange={nextPaymentDueDate =>
                       setForm(current => ({
@@ -418,10 +424,10 @@ export function CreateContractDialog({
                     }
                     hasClear
                     isDisabled={isSubmitting}
-                  />
-
-                  <TextArea
-                    label="Notes"
+                        />
+                        <ContractFileInput files={files} onChange={setFiles} isDisabled={isSubmitting} />
+                        <TextArea
+                    label="Ghi chú"
                     value={form.notes}
                     onChange={notes =>
                       setForm(current => ({
@@ -431,30 +437,32 @@ export function CreateContractDialog({
                     }
                     rows={4}
                     isDisabled={isSubmitting}
-                  />
-                </FormLayout>
+                        />
+                      </>,
+                    },
+                  ]}
+                />
               </VStack>
             </form>
           </LayoutContent>
         }
         footer={
           <LayoutFooter hasDivider>
-            <HStack gap={2} hAlign="end" wrap="wrap">
-              <Button
-                label="Cancel"
-                variant="secondary"
-                isDisabled={isSubmitting}
-                onClick={() => handleOpenChange(false)}
-              />
-              <Button
-                label="Create contract"
-                type="submit"
-                form={formId}
-                variant="primary"
-                isDisabled={!isFormValid || isSubmitting}
-                isLoading={isSubmitting}
-              />
-            </HStack>
+            <EntityFormActions
+              activeStep={activeStep}
+              formId={formId}
+              isStepValid={isContractFormStepValid(form, activeStep)}
+              isSubmitting={isSubmitting}
+              onBack={() => setActiveStep(step => Math.max(0, step - 1))}
+              onCancel={() => handleOpenChange(false)}
+              onNext={() =>
+                setActiveStep(step =>
+                  isContractFormStepValid(form, step) ? step + 1 : step,
+                )
+              }
+              submitLabel="Tạo hợp đồng"
+              stepCount={3}
+            />
           </LayoutFooter>
         }
       />

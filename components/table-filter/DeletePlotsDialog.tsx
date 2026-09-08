@@ -18,7 +18,7 @@ function errorMessageOf(error: unknown): string {
     return error.message;
   }
 
-  return 'Please try deleting the selected plot again.';
+  return 'Vui lòng thử xóa lô đất đã chọn lần nữa.';
 }
 
 export function DeletePlotsDialog({
@@ -37,10 +37,10 @@ export function DeletePlotsDialog({
   const isDeleting = deletePlot.isPending;
   const count = plots.length;
   const isSingle = count === 1;
-  const targetLabel = isSingle ? plots[0]?.summary ?? 'this plot' : `${count} plots`;
+  const targetLabel = isSingle ? plots[0]?.summary ?? 'lô đất này' : `${count} lô đất`;
   const description =
     submitError ??
-    `This will permanently delete ${targetLabel}. This action cannot be undone.`;
+    `Xóa vĩnh viễn ${targetLabel}. Không thể hoàn tác thao tác này.`;
 
   const handleOpenChange = (open: boolean) => {
     if (!open && isDeleting) {
@@ -73,9 +73,9 @@ export function DeletePlotsDialog({
     <AlertDialog
       isOpen={isOpen}
       onOpenChange={handleOpenChange}
-      title={submitError == null ? 'Delete plot?' : 'Could not delete plot'}
+      title={submitError == null ? 'Xóa lô đất?' : 'Không thể xóa lô đất'}
       description={description}
-      actionLabel={isSingle ? 'Delete plot' : 'Delete plots'}
+      actionLabel={isSingle ? 'Xóa lô đất' : 'Xóa lô đất'}
       onAction={handleDelete}
       isActionLoading={isDeleting}
       width={420}

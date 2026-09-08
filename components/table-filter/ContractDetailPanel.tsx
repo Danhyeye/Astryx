@@ -1,4 +1,4 @@
-import {Badge} from '@astryxdesign/core/Badge';
+import {EntityStatus} from './EntityStatus';
 import {Button} from '@astryxdesign/core/Button';
 import {Divider} from '@astryxdesign/core/Divider';
 import {Icon} from '@astryxdesign/core/Icon';
@@ -46,16 +46,16 @@ export function ContractDetailPanel({
   const dueInDays = daysUntil(contract.nextPaymentDueDate);
   const dueDescription =
     dueInDays == null
-      ? 'No due date'
+      ? 'Chưa có hạn thanh toán'
       : dueInDays < 0
-        ? `${Math.abs(dueInDays)} days overdue`
+        ? `${Math.abs(dueInDays)} ngày quá hạn`
         : dueInDays === 0
-          ? 'Due today'
-          : `Due in ${dueInDays} days`;
+          ? 'Đến hạn hôm nay'
+          : `Đến hạn sau ${dueInDays} ngày`;
   const leaseDuration =
     contract.leaseDurationMonths > 0
-      ? `${contract.leaseDurationMonths} months`
-      : 'Not set';
+      ? `${contract.leaseDurationMonths} tháng`
+      : 'Chưa thiết lập';
 
   return (
     <>
@@ -63,13 +63,13 @@ export function ContractDetailPanel({
         resizable={resizable}
         isReversed
         isAlwaysVisible={false}
-        label="Resize contract details"
+        label="Thay đổi kích thước chi tiết hợp đồng"
       />
       <LayoutPanel
         resizable={resizable}
         hasDivider
         padding={0}
-        label="Contract details">
+        label="Chi tiết hợp đồng">
         <VStack gap={0} xstyle={styles.detailPanel}>
           <Section variant="transparent" padding={4}>
             <VStack gap={4}>
@@ -77,11 +77,11 @@ export function ContractDetailPanel({
                 <StackItem size="fill">
                   <VStack gap={2}>
                     <HStack gap={2} vAlign="center" wrap="wrap">
-                      <Badge
+                      <EntityStatus
                         variant={contractStatus.badge}
                         label={contractStatus.label}
                       />
-                      <Badge variant={plotStatus.badge} label={plotStatus.label} />
+                      <EntityStatus variant={plotStatus.badge} label={plotStatus.label} />
                       <Text type="supporting" color="secondary">
                         {contract.contractId}
                       </Text>
@@ -93,7 +93,7 @@ export function ContractDetailPanel({
                   </VStack>
                 </StackItem>
                 <IconButton
-                  label="Close details"
+                  label="Đóng chi tiết"
                   variant="ghost"
                   size="sm"
                   icon={<Icon icon={X} size="sm" />}
@@ -103,7 +103,7 @@ export function ContractDetailPanel({
 
               <HStack gap={2}>
                 <Button
-                  label="Edit contract"
+                  label="Chỉnh sửa hợp đồng"
                   size="sm"
                   width="100%"
                   onClick={() => onEditContract(contract)}
@@ -116,25 +116,25 @@ export function ContractDetailPanel({
 
           <Section variant="transparent" padding={4}>
             <MetadataList columns="single" label={{position: 'start', width: 116}}>
-              <MetadataListItem label="Customer">
+              <MetadataListItem label="Khách hàng">
                 <Text type="body">{contract.customer}</Text>
               </MetadataListItem>
-              <MetadataListItem label="Phone">
-                <Text type="body">{contract.customerPhone || 'Not set'}</Text>
+              <MetadataListItem label="Số điện thoại">
+                <Text type="body">{contract.customerPhone || 'Chưa thiết lập'}</Text>
               </MetadataListItem>
               <MetadataListItem label="Email">
-                <Text type="body">{contract.customerEmail || 'Not set'}</Text>
+                <Text type="body">{contract.customerEmail || 'Chưa thiết lập'}</Text>
               </MetadataListItem>
-              <MetadataListItem label="Land">
+              <MetadataListItem label="Khu đất">
                 <Text type="body">{contract.land}</Text>
               </MetadataListItem>
-              <MetadataListItem label="Location">
-                <Text type="body">{contract.landLocation || 'Not set'}</Text>
+              <MetadataListItem label="Vị trí">
+                <Text type="body">{contract.landLocation || 'Chưa thiết lập'}</Text>
               </MetadataListItem>
-              <MetadataListItem label="Plot">
+              <MetadataListItem label="Lô đất">
                 <Text type="body">{contract.plot}</Text>
               </MetadataListItem>
-              <MetadataListItem label="Area">
+              <MetadataListItem label="Diện tích">
                 <Text type="body">{formatArea(contract.areaSqm)}</Text>
               </MetadataListItem>
             </MetadataList>
@@ -144,32 +144,32 @@ export function ContractDetailPanel({
 
           <Section variant="transparent" padding={4}>
             <MetadataList columns="single" label={{position: 'start', width: 116}}>
-              <MetadataListItem label="Rent">
+              <MetadataListItem label="Tiền thuê">
                 <Text type="body">{formatMoney(contract.rentAmount)}</Text>
               </MetadataListItem>
-              <MetadataListItem label="Deposit">
+              <MetadataListItem label="Tiền đặt cọc">
                 <Text type="body">{formatMoney(contract.depositAmount)}</Text>
               </MetadataListItem>
-              <MetadataListItem label="Frequency">
+              <MetadataListItem label="Chu kỳ">
                 <Text type="body">{frequency.label}</Text>
               </MetadataListItem>
-              <MetadataListItem label="Due day">
+              <MetadataListItem label="Ngày đến hạn">
                 <Text type="body">{formatDueDay(contract.paymentDueDay)}</Text>
               </MetadataListItem>
-              <MetadataListItem label="Next payment">
+              <MetadataListItem label="Thanh toán tiếp theo">
                 <Text type="body">{formatDate(contract.nextPaymentDueDate, true)}</Text>
               </MetadataListItem>
-              <MetadataListItem label="Term">
+              <MetadataListItem label="Thời hạn">
                 <Text type="body">{leaseDuration}</Text>
               </MetadataListItem>
-              <MetadataListItem label="Start">
+              <MetadataListItem label="Bắt đầu">
                 <Text type="body">{formatDate(contract.startDate, true)}</Text>
               </MetadataListItem>
-              <MetadataListItem label="End">
+              <MetadataListItem label="Kết thúc">
                 <Text type="body">{formatDate(contract.endDate, true)}</Text>
               </MetadataListItem>
-              <MetadataListItem label="Notes">
-                <Text type="body">{contract.notes || 'None'}</Text>
+              <MetadataListItem label="Ghi chú">
+                <Text type="body">{contract.notes || 'Không có'}</Text>
               </MetadataListItem>
             </MetadataList>
           </Section>
@@ -178,10 +178,10 @@ export function ContractDetailPanel({
 
           <Section variant="transparent" padding={4}>
             <VStack gap={2}>
-              <Heading level={3}>Customer contracts</Heading>
+              <Heading level={3}>Hợp đồng của khách hàng</Heading>
               {relatedContracts.length === 0 ? (
                 <Text type="supporting" color="secondary">
-                  No other contracts found for this customer.
+                  Khách hàng không có hợp đồng khác.
                 </Text>
               ) : (
                 <VStack gap={0}>
@@ -195,7 +195,7 @@ export function ContractDetailPanel({
                         labelLines={2}
                         description={`${formatMoney(related.rentAmount)} - ${formatDate(related.nextPaymentDueDate, true)}`}
                         endContent={
-                          <Badge
+                          <EntityStatus
                             variant={relatedStatus.badge}
                             label={relatedStatus.label}
                           />
@@ -213,10 +213,10 @@ export function ContractDetailPanel({
 
           <Section variant="transparent" padding={4}>
             <VStack gap={2}>
-              <Heading level={3}>Land plots</Heading>
+              <Heading level={3}>Lô đất thuộc khu đất</Heading>
               {landPlots.length === 0 ? (
                 <Text type="supporting" color="secondary">
-                  No plots found for this land.
+                  Khu đất chưa có lô đất.
                 </Text>
               ) : (
                 <VStack gap={0}>
@@ -226,11 +226,11 @@ export function ContractDetailPanel({
                       <Item
                         key={plot.id}
                         align="center"
-                        label={`Plot ${plot.plot_number}`}
+                        label={`Lô đất ${plot.plot_number}`}
                         labelLines={2}
-                        description={`${formatArea(plot.area_sqm)} - ${plot.description || 'No description'}`}
+                        description={`${formatArea(plot.area_sqm)} - ${plot.description || 'Chưa có mô tả'}`}
                         endContent={
-                          <Badge variant={meta.badge} label={meta.label} />
+                          <EntityStatus variant={meta.badge} label={meta.label} />
                         }
                       />
                     );

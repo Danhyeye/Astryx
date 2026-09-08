@@ -47,7 +47,7 @@ export function BulkActionBar({
         <StackItem size="fill">
           <HStack gap={1} vAlign="center">
             <Button
-              label="Edit"
+              label="Chỉnh sửa"
               variant="ghost"
               size="sm"
               icon={<Icon icon={SquarePen} size="sm" />}
@@ -56,7 +56,7 @@ export function BulkActionBar({
               onClick={onEditSelected}
             />
             <Button
-              label="Delete"
+              label="Xóa"
               variant="destructive"
               size="sm"
               icon={<Icon icon={Trash2} size="sm" />}
@@ -69,13 +69,13 @@ export function BulkActionBar({
 
         <HStack gap={3} vAlign="center">
           <Text type="body">
-            {selectedCount} {selectionLabel} selected
+            {selectedCount} {selectionLabel} đã chọn
           </Text>
           <Text type="supporting" color="secondary">
             {'\u2022'}
           </Text>
           <Button
-            label="Unselect All"
+            label="Bỏ chọn tất cả"
             variant="ghost"
             size="sm"
             onClick={onClearSelection}

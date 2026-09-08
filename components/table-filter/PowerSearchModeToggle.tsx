@@ -11,7 +11,7 @@ export function PowerSearchModeToggle({
   isPowerSearch: boolean;
   onChange: (isPowerSearch: boolean) => void;
 }) {
-  const label = isPowerSearch ? 'Switch to filter tokens' : 'Advanced search';
+  const label = isPowerSearch ? 'Chuyển sang bộ lọc' : 'Tìm kiếm nâng cao';
 
   return (
     <ToggleButton

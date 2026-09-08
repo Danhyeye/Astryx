@@ -24,6 +24,7 @@ type LandRow = Database["public"]["Tables"]["lands"]["Row"];
 type PlotRow = Database["public"]["Tables"]["plots"]["Row"];
 type LandImageRow = Database["public"]["Tables"]["land_images"]["Row"];
 type ContractRowWithRelations = ContractRow & {
+  contract_payments: Database['public']['Tables']['contract_payments']['Row'][] | null;
   customers: CustomerRow | null;
   lands: (LandRow & { land_images: LandImageRow[] | null }) | null;
   plots:
@@ -35,7 +36,7 @@ type ContractRowWithRelations = ContractRow & {
 };
 
 const CONTRACT_SELECT = `*,
-  customers (*),
+  contract_payments (*), customers (*),
   lands (*, land_images(*)),
   plots (*, land_images(*), lands(*))`;
 
@@ -65,6 +66,7 @@ function toContract(row: ContractRowWithRelations): Contract {
     notes: c.notes ?? "",
     created_at: c.created_at,
     updated_at: c.updated_at,
+    payments: row.contract_payments ?? [],
     customers: customers ? [mapCustomer(customers)] : [],
     lands: lands ? [mapLand(lands, landImages)] : [],
     plots: plots ? [mapPlot(plots, plotLand ? [plotLand] : [], plotImages)] : [],
@@ -83,7 +85,7 @@ export async function GET(request: NextRequest) {
   let query = supabase
     .from("contracts")
     .select(CONTRACT_SELECT)
-    .order("created_at", { ascending: false })
+    .order("created_at", { ascending: false }).order("id", { ascending: true })
     .range(from, to);
 
   if (status) {
@@ -108,7 +110,7 @@ export async function GET(request: NextRequest) {
 
   return NextResponse.json<ContractsResponse>({
     code: 200,
-    message: "Success",
+    message: "Thành công",
     data: contracts,
   });
 }
@@ -119,7 +121,7 @@ export async function POST(request: NextRequest) {
     json = await request.json();
   } catch {
     return NextResponse.json<ApiErrorResponse>(
-      { code: 400, message: "Invalid JSON body", data: null },
+      { code: 400, message: "Nội dung yêu cầu không hợp lệ", data: null },
       { status: 400 }
     );
   }
@@ -127,7 +129,7 @@ export async function POST(request: NextRequest) {
   const body = contractSchema.safeParse(json);
   if (!body.success) {
     return NextResponse.json<ApiErrorResponse>(
-      { code: 400, message: body.error.message, data: null },
+      { code: 400, message: body.error.issues.map(issue => issue.message).join(". "), data: null },
       { status: 400 }
     );
   }
@@ -170,7 +172,7 @@ export async function POST(request: NextRequest) {
   return NextResponse.json<ContractResponse>(
     {
       code: 201,
-      message: "Created",
+      message: "Đã tạo",
       data: toContract(data as ContractRowWithRelations),
     },
     { status: 201 }

@@ -24,7 +24,7 @@ export function LoadingRows({
     <VStack
       gap={0}
       role="status"
-      aria-label="Loading table rows"
+      aria-label="Đang tải dữ liệu bảng"
       xstyle={styles.skeletonBleed}>
       {Array.from({length: SKELETON_ROWS}, (_, row) => (
         <HStack

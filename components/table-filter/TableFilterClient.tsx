@@ -1,13 +1,13 @@
 'use client';
 
+import {EntityStatus} from './EntityStatus';
+
 import {useCallback, useEffect, useMemo, useRef, useState} from 'react';
 import {Avatar} from '@astryxdesign/core/Avatar';
-import {Badge} from '@astryxdesign/core/Badge';
 import {Button} from '@astryxdesign/core/Button';
-import {DropdownMenu} from '@astryxdesign/core/DropdownMenu';
+import {Heading} from '@astryxdesign/core/Heading';
 import {EmptyState} from '@astryxdesign/core/EmptyState';
 import {Icon} from '@astryxdesign/core/Icon';
-import {IconButton} from '@astryxdesign/core/IconButton';
 import {
   HStack,
   Layout,
@@ -20,7 +20,7 @@ import {ProgressBar} from '@astryxdesign/core/ProgressBar';
 import {Section} from '@astryxdesign/core/Section';
 import {Text} from '@astryxdesign/core/Text';
 import {AspectRatio} from '@astryxdesign/core/AspectRatio';
-import {PowerSearch, usePowerSearchConfig} from '@astryxdesign/core/PowerSearch';
+import {usePowerSearchConfig} from '@astryxdesign/core/PowerSearch';
 import type {PowerSearchFilter} from '@astryxdesign/core/PowerSearch';
 import {useResizable} from '@astryxdesign/core/Resizable';
 import {
@@ -35,20 +35,12 @@ import {
 } from '@astryxdesign/core/Table';
 import type {TableColumn, TablePlugin} from '@astryxdesign/core/Table';
 import {
-  BookmarkPlus,
-  Check,
-  FileText,
   Image as ImageIcon,
-  LayoutGrid,
-  Map as MapIcon,
   Search,
-  Users,
-  type LucideIcon,
 } from 'lucide-react';
 
 import {
   CONTRACT_STATUS_META,
-  DATASET_KEYS,
   DATASET_META,
   DEFAULT_DATASET_KEY,
   GROUP_ROW_KEY_PREFIX,
@@ -61,8 +53,6 @@ import {
   SORT_RANKS,
   buildContractRows,
   buildDatasetTableData,
-  createInitialSavedViewsByDataset,
-  contractsForCustomer,
   contractsForCustomerRecord,
   contractsForLandRecord,
   contractsForPlotRecord,
@@ -71,7 +61,6 @@ import {
   getDatasetInitialView,
   groupKeyOf,
   landForPlotRecord,
-  plotsForLand,
   plotsForLandRecord,
   stickyKeys,
   type ContractTableRow,
@@ -80,20 +69,19 @@ import {
   type EntityTableRow,
   type LandTableRow,
   type PlotTableRow,
-  type SavedView,
   type TableSortState,
   type TableSearchValue,
   type ViewState,
 } from '@/data';
-import {useContracts} from '@/hooks/useContract';
-import {useCustomers} from '@/hooks/useCustomers';
-import {useInfiniteBatches} from '@/hooks/useInfiniteBatches';
-import {useLands} from '@/hooks/useLands';
-import {usePlots} from '@/hooks/usePlots';
+import {useAllContracts} from '@/hooks/useAllRecords';
+import {useAllCustomers} from '@/hooks/useAllRecords';
+import {Pagination} from '@astryxdesign/core/Pagination';
+import {useRouter} from 'next/navigation';
+import {useAllLands} from '@/hooks/useAllRecords';
+import {useAllPlots} from '@/hooks/useAllRecords';
 import {formatArea, formatDate, formatMoney} from '@/utils/format';
 import {styles} from '@/app/table-filter/styles';
 import {BulkActionBar} from './BulkActionBar';
-import {ContractDetailPanel} from './ContractDetailPanel';
 import {CreateContractDialog} from './CreateContractDialog';
 import {CreateCustomerDialog} from './CreateCustomerDialog';
 import {CreateLandDialog} from './CreateLandDialog';
@@ -110,18 +98,6 @@ import {FilterBar} from './FilterBar';
 import {LandDetailPanel} from './LandDetailPanel';
 import {LoadingRows} from './LoadingRows';
 import {PlotDetailPanel} from './PlotDetailPanel';
-import {PowerSearchModeToggle} from './PowerSearchModeToggle';
-import {SavedViewDialogs} from './SavedViewDialogs';
-import {SavedViewsBar, SavedViewsToggle} from './SavedViewsBar';
-import {ViewOptionsPopover} from './ViewOptionsPopover';
-
-const DATA_PAGE = {page: 1, pageSize: 100};
-const DATASET_ICONS: Record<DatasetKey, LucideIcon> = {
-  lands: MapIcon,
-  plots: LayoutGrid,
-  contracts: FileText,
-  customers: Users,
-};
 
 function rowValue(
   row: EntityTableRow,
@@ -158,46 +134,42 @@ function isCustomerRow(row: EntityTableRow | null): row is CustomerTableRow {
   return row?.dataset === 'customers';
 }
 
-function countLabel(key: DatasetKey, count: number): string {
-  const meta = DATASET_META[key];
-  return `${count.toLocaleString('en-US')} ${
-    count === 1 ? meta.singularLabel : meta.label.toLowerCase()
-  }`;
-}
-
 export default function TableFilterClient({
   initialDataset = DEFAULT_DATASET_KEY,
+  initialSelectedId = null,
 }: {
   initialDataset?: DatasetKey;
+  initialSelectedId?: string | null;
 } = {}) {
+  const router = useRouter();
   const {
     data: contractsResponse,
     isPending: isContractsPending,
     isFetching: isContractsFetching,
     error: contractsError,
     refetch: refetchContracts,
-  } = useContracts(DATA_PAGE);
+  } = useAllContracts();
   const {
     data: landsResponse,
     isPending: isLandsPending,
     isFetching: isLandsFetching,
     error: landsError,
     refetch: refetchLands,
-  } = useLands(DATA_PAGE);
+  } = useAllLands();
   const {
     data: plotsResponse,
     isPending: isPlotsPending,
     isFetching: isPlotsFetching,
     error: plotsError,
     refetch: refetchPlots,
-  } = usePlots(DATA_PAGE);
+  } = useAllPlots();
   const {
     data: customersResponse,
     isPending: isCustomersPending,
     isFetching: isCustomersFetching,
     error: customersError,
     refetch: refetchCustomers,
-  } = useCustomers(DATA_PAGE);
+  } = useAllCustomers();
 
   const contracts = useMemo(
     () => contractsResponse?.data ?? [],
@@ -210,7 +182,7 @@ export default function TableFilterClient({
     [customersResponse?.data],
   );
 
-  const [dataset, setDataset] = useState<DatasetKey>(initialDataset);
+  const dataset = initialDataset;
   const tableData = useMemo(
     () =>
       buildDatasetTableData({
@@ -223,32 +195,11 @@ export default function TableFilterClient({
     [contracts, customers, dataset, lands, plots],
   );
   const contractRows = useMemo(() => buildContractRows(contracts), [contracts]);
-  const datasetCounts = useMemo(
-    () => ({
-      lands: lands.length,
-      plots: plots.length,
-      contracts: contracts.length,
-      customers: customers.length,
-    }),
-    [contracts.length, customers.length, lands.length, plots.length],
-  );
-
   const [filters, setFilters] = useState<PowerSearchFilter[]>(() =>
     getDatasetInitialFilters(initialDataset),
   );
-  const [isPowerSearch, setIsPowerSearch] = useState(false);
   const [query, setQuery] = useState('');
 
-  const [savedViewsByDataset, setSavedViewsByDataset] = useState(
-    createInitialSavedViewsByDataset,
-  );
-  const savedViews = savedViewsByDataset[dataset];
-  const [isSavedViewsBarOpen, setIsSavedViewsBarOpen] = useState(false);
-  const [activeSavedViewId, setActiveSavedViewId] = useState<string | null>(
-    null,
-  );
-  const [creatingName, setCreatingName] = useState<string | null>(null);
-  const [editing, setEditing] = useState<SavedView | null>(null);
   const [isCreateLandDialogOpen, setIsCreateLandDialogOpen] = useState(false);
   const [editingLand, setEditingLand] = useState<LandTableRow | null>(null);
   const [deletingLands, setDeletingLands] = useState<LandTableRow[]>([]);
@@ -268,7 +219,7 @@ export default function TableFilterClient({
     useState<ContractTableRow | null>(null);
 
   const [selectedKeys, setSelectedKeys] = useState<Set<string>>(new Set());
-  const [activeRowId, setActiveRowId] = useState<string | null>(null);
+  const [activeRowId, setActiveRowId] = useState<string | null>(initialSelectedId);
   const hasOpenedFirstRow = useRef(false);
 
   const detailWidth = useResizable({
@@ -281,7 +232,7 @@ export default function TableFilterClient({
     getDatasetInitialSort(initialDataset),
   );
 
-  const [view, setView] = useState<ViewState>(() =>
+  const [view] = useState<ViewState>(() =>
     getDatasetInitialView(initialDataset),
   );
   const [collapsedGroups, setCollapsedGroups] = useState<Set<string>>(
@@ -302,7 +253,7 @@ export default function TableFilterClient({
     setEditingContract(null);
   }, []);
 
-  const {config, applyFilters} = usePowerSearchConfig(
+  const {applyFilters} = usePowerSearchConfig(
     tableData.fieldDefs,
     tableData.label,
   );
@@ -342,51 +293,28 @@ export default function TableFilterClient({
   const isLoading =
     isInitialDataLoading || isDataRefreshing || settledRequestKey !== requestKey;
 
-  const changeDataset = useCallback(
-    (next: DatasetKey) => {
-      if (next === dataset) {
-        return;
-      }
-      hasOpenedFirstRow.current = false;
-      setDataset(next);
-      setFilters(getDatasetInitialFilters(next));
-      setSort(getDatasetInitialSort(next));
-      setView(getDatasetInitialView(next));
-      setSelectedKeys(new Set());
-      setActiveRowId(null);
-      setActiveSavedViewId(null);
-      setCollapsedGroups(new Set());
-      setIsPowerSearch(false);
-      setIsSavedViewsBarOpen(false);
-      setCreatingName(null);
-      setEditing(null);
-      closeEntityDialogs();
-      setQuery('');
-    },
-    [closeEntityDialogs, dataset],
-  );
-
   const showDatasetRow = useCallback(
     (next: DatasetKey, rowId: string) => {
+      if (next === 'lands' || next === 'contracts') {
+        router.push(`/${next}/${encodeURIComponent(rowId)}`);
+        return;
+      }
       if (next !== dataset) {
-        hasOpenedFirstRow.current = true;
-        setDataset(next);
-        setFilters(getDatasetInitialFilters(next));
-        setSort(getDatasetInitialSort(next));
-        setView(getDatasetInitialView(next));
+        router.push(`${DATASET_META[next].href}?selected=${encodeURIComponent(rowId)}`);
+        return;
       }
       setSelectedKeys(new Set());
       setActiveRowId(rowId);
-      setActiveSavedViewId(null);
+
       setCollapsedGroups(new Set());
-      setIsPowerSearch(false);
-      setIsSavedViewsBarOpen(false);
-      setCreatingName(null);
-      setEditing(null);
+
+
+
+
       closeEntityDialogs();
       setQuery('');
     },
-    [closeEntityDialogs, dataset],
+    [closeEntityDialogs, dataset, router],
   );
 
   const handleNewRow = useCallback(() => {
@@ -410,7 +338,7 @@ export default function TableFilterClient({
     hasOpenedFirstRow.current = true;
     setSelectedKeys(new Set());
     setActiveRowId(rowId);
-    setActiveSavedViewId(null);
+
     setCollapsedGroups(new Set());
   }, []);
 
@@ -421,26 +349,9 @@ export default function TableFilterClient({
     setActiveRowId(current =>
       current != null && deletedIds.has(current) ? null : current,
     );
-    setActiveSavedViewId(null);
+
     setCollapsedGroups(new Set());
   }, []);
-
-  const datasetMenuItems = useMemo(
-    () =>
-      DATASET_KEYS.map(key => ({
-        id: key,
-        label: DATASET_META[key].label,
-        description: `${DATASET_META[key].description} - ${countLabel(
-          key,
-          datasetCounts[key],
-        )}`,
-        icon: <Icon icon={DATASET_ICONS[key]} size="sm" />,
-        endContent:
-          key === dataset ? <Icon icon={Check} size="sm" /> : undefined,
-        onClick: () => changeDataset(key),
-      })),
-    [changeDataset, dataset, datasetCounts],
-  );
 
   const groupField = view.grouping;
   const isGrouped = groupField !== 'none';
@@ -513,44 +424,17 @@ export default function TableFilterClient({
     tableData.rows,
   ]);
 
-  const batchGroupKey = useMemo(
-    () =>
-      isGrouped
-        ? (row: EntityTableRow) => groupKeyOf(row, groupField)
-        : null,
-    [groupField, isGrouped],
-  );
-
-  const {
-    data: rows,
-    hasNext,
-    isLoadingNext,
-    loadNext,
-  } = useInfiniteBatches(results, PAGE_SIZE, batchGroupKey);
-
-  const sentinelRef = useRef<HTMLElement>(null);
-
-  useEffect(() => {
-    const sentinel = sentinelRef.current;
-    if (sentinel == null || !hasNext) {
-      return;
-    }
-    const observer = new IntersectionObserver(
-      entries => {
-        if (entries.some(entry => entry.isIntersecting)) {
-          loadNext(PAGE_SIZE);
-        }
-      },
-      {rootMargin: '240px'},
-    );
-    observer.observe(sentinel);
-    return () => observer.disconnect();
-  }, [hasNext, loadNext]);
+  const pageKey = `${dataset}:${query}:${JSON.stringify(filters)}:${JSON.stringify(sort)}`;
+  const [pageState, setPageState] = useState({key: '', page: 1});
+  const page = Math.min(pageState.key === pageKey ? pageState.page : 1, Math.max(1, Math.ceil(results.length / PAGE_SIZE)));
+  const rows = useMemo(() => results.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE), [results, page]);
 
   const updateFilters = useCallback(
     (updater: (current: PowerSearchFilter[]) => PowerSearchFilter[]) => {
-      setActiveSavedViewId(null);
+
       setFilters(current => updater(current));
+      setPageState({key: '', page: 1});
+      setSelectedKeys(new Set());
     },
     [],
   );
@@ -558,7 +442,9 @@ export default function TableFilterClient({
   const clearAll = useCallback(() => {
     setFilters([]);
     setQuery('');
-    setActiveSavedViewId(null);
+    setPageState({key: '', page: 1});
+    setSelectedKeys(new Set());
+
   }, []);
 
   const refetchData = useCallback(() => {
@@ -577,85 +463,7 @@ export default function TableFilterClient({
     refetchPlots,
   ]);
 
-  const applySavedView = useCallback((saved: SavedView | null) => {
-    setActiveSavedViewId(saved?.id ?? null);
-    setFilters(saved ? [...saved.filters] : []);
-    setIsPowerSearch(false);
-    if (saved == null) {
-      return;
-    }
-    setView({...saved.view, columnKeys: [...saved.view.columnKeys]});
-    setCollapsedGroups(new Set());
-  }, []);
-
-  const createSavedView = useCallback(
-    (name: string) => {
-      const trimmed = name.trim();
-      if (!trimmed) {
-        return;
-      }
-      const id = `saved-${Date.now()}`;
-      setSavedViewsByDataset(current => ({
-        ...current,
-        [dataset]: [
-          ...current[dataset],
-          {
-            id,
-            name: trimmed,
-            filters: [...filters],
-            view: {...view, columnKeys: [...view.columnKeys]},
-          },
-        ],
-      }));
-      setActiveSavedViewId(id);
-      setCreatingName(null);
-    },
-    [dataset, filters, view],
-  );
-
-  const saveEditedView = useCallback(
-    (edited: SavedView) => {
-      setSavedViewsByDataset(current => ({
-        ...current,
-        [dataset]: current[dataset].map(saved =>
-          saved.id === edited.id ? {...saved, ...edited} : saved,
-        ),
-      }));
-      setEditing(null);
-    },
-    [dataset],
-  );
-
-  const deleteSavedView = useCallback(
-    (id: string) => {
-      setSavedViewsByDataset(current => ({
-        ...current,
-        [dataset]: current[dataset].filter(saved => saved.id !== id),
-      }));
-      setActiveSavedViewId(current => (current === id ? null : current));
-      setEditing(null);
-    },
-    [dataset],
-  );
-
-  const updateView = useCallback(
-    (patch: (current: ViewState) => ViewState) => {
-      const next = patch(view);
-      if (next.grouping !== view.grouping) {
-        setCollapsedGroups(new Set());
-      }
-      setView(next);
-      setActiveSavedViewId(null);
-    },
-    [view],
-  );
-
-  const {selectionConfig} = useTableSelectionState({
-    data: rows,
-    idKey: 'id',
-    selectedKeys,
-    setSelectedKeys,
-  });
+  const {selectionConfig} = useTableSelectionState({data: rows, idKey: 'id', selectedKeys, setSelectedKeys});
   const selectionPlugin = useTableSelection<EntityTableRow>({
     ...selectionConfig,
     getRowLabel: (item: EntityTableRow) => `${item.id} ${item.summary}`,
@@ -708,24 +516,6 @@ export default function TableFilterClient({
     [groupRowKey],
   );
 
-  useEffect(() => {
-    if (hasOpenedFirstRow.current) {
-      return;
-    }
-    const first = (isGrouped ? groupedRows : rows).find(
-      row => !isGroupHeaderRow(row),
-    );
-    if (first == null) {
-      return;
-    }
-    const firstId = first.id;
-    const timer = setTimeout(() => {
-      hasOpenedFirstRow.current = true;
-      setActiveRowId(current => current ?? firstId);
-    }, 0);
-    return () => clearTimeout(timer);
-  }, [dataset, groupedRows, isGroupHeaderRow, isGrouped, rows]);
-
   const groupedPlugin = useMemo<TablePlugin<EntityTableRow>>(
     () => ({
       ...groupPlugin,
@@ -771,7 +561,8 @@ export default function TableFilterClient({
               ) {
                 return;
               }
-              setActiveRowId(item.id);
+              if (item.dataset === 'lands' || item.dataset === 'contracts') router.push(`/${item.dataset}/${item.id}`);
+              else setActiveRowId(item.id);
             },
             onKeyDown: event => {
               if (event.target !== event.currentTarget) {
@@ -779,7 +570,8 @@ export default function TableFilterClient({
               }
               if (event.key === 'Enter' || event.key === ' ') {
                 event.preventDefault();
-                setActiveRowId(item.id);
+                if (item.dataset === 'lands' || item.dataset === 'contracts') router.push(`/${item.dataset}/${item.id}`);
+              else setActiveRowId(item.id);
               }
             },
           },
@@ -789,7 +581,7 @@ export default function TableFilterClient({
         };
       },
     }),
-    [activeRowId, isGroupHeaderRow],
+    [activeRowId, isGroupHeaderRow, router],
   );
 
   const plugins = useMemo<Record<string, TablePlugin<EntityTableRow>>>(
@@ -811,7 +603,7 @@ export default function TableFilterClient({
   );
 
   const isCompact = view.density === 'compact';
-  const cellLines = isCompact ? 1 : 0;
+  const cellLines = isCompact ? 1 : 2;
   const isSpacious = view.density === 'spacious';
 
   const allColumns: Record<string, TableColumn<EntityTableRow>> = useMemo(() => {
@@ -821,7 +613,7 @@ export default function TableFilterClient({
         return textValue(item, 'contractId');
       }
       if (item.dataset === 'customers') {
-        return textValue(item, 'email') || textValue(item, 'phone');
+        return '';
       }
       return textValue(item, 'location') || textValue(item, 'landLocation');
     };
@@ -835,7 +627,7 @@ export default function TableFilterClient({
       sortable: true,
       renderCell: item => (
         <Text type="body" maxLines={cellLines}>
-          {textValue(item, key) || 'Not set'}
+          {textValue(item, key) || 'Chưa thiết lập'}
         </Text>
       ),
     });
@@ -844,7 +636,7 @@ export default function TableFilterClient({
       summary: {
         key: 'summary',
         header: label('summary'),
-        width: proportional(2, {minWidth: 260}),
+        width: proportional(1, {minWidth: 220}),
         sortable: true,
         renderCell: item => {
           const secondary = summarySecondary(item);
@@ -863,7 +655,7 @@ export default function TableFilterClient({
                 </AspectRatio>
               ) : null}
               <VStack gap={0}>
-                <Text type="body">{item.summary}</Text>
+                <Text type="body" maxLines={2}>{item.summary}</Text>
                 {secondary !== '' && (
                   <Text type="supporting" color="secondary">
                     {secondary}
@@ -914,10 +706,10 @@ export default function TableFilterClient({
               : PLOT_STATUS_META[value as keyof typeof PLOT_STATUS_META];
           return meta == null ? (
             <Text type="body" maxLines={cellLines}>
-              {value || 'Not set'}
+              {value || 'Chưa thiết lập'}
             </Text>
           ) : (
-            <Badge variant={meta.badge} label={meta.label} />
+            <EntityStatus variant={meta.badge} label={meta.label} />
           );
         },
       },
@@ -931,10 +723,10 @@ export default function TableFilterClient({
           const meta = PLOT_STATUS_META[value as keyof typeof PLOT_STATUS_META];
           return meta == null ? (
             <Text type="body" maxLines={cellLines}>
-              {value || 'Not set'}
+              {value || 'Chưa thiết lập'}
             </Text>
           ) : (
-            <Badge variant={meta.badge} label={meta.label} />
+            <EntityStatus variant={meta.badge} label={meta.label} />
           );
         },
       },
@@ -951,7 +743,7 @@ export default function TableFilterClient({
             ];
           return (
             <Text type="body" maxLines={cellLines}>
-              {meta?.label ?? 'Not set'}
+              {meta?.label ?? 'Chưa thiết lập'}
             </Text>
           );
         },
@@ -1013,7 +805,7 @@ export default function TableFilterClient({
         sortable: true,
         renderCell: item => (
           <Text type="body" maxLines={cellLines}>
-            {numberValue(item, 'imageCount').toLocaleString('en-US')}
+            {numberValue(item, 'imageCount').toLocaleString('vi-VN')}
           </Text>
         ),
       },
@@ -1095,28 +887,16 @@ export default function TableFilterClient({
   const isBulkDeleteDisabled = dataset === 'contracts' || selectedCount === 0;
   const bulkEditDisabledMessage =
     selectedCount === 0
-      ? `Select one ${tableData.singularLabel.toLowerCase()} to edit.`
-      : `Select only one ${tableData.singularLabel.toLowerCase()} to edit.`;
+      ? `Chọn một ${tableData.singularLabel.toLowerCase()} để chỉnh sửa.`
+      : `Chỉ chọn một ${tableData.singularLabel.toLowerCase()} để chỉnh sửa.`;
   const bulkDeleteDisabledMessage =
     dataset === 'contracts'
-      ? 'Contracts cannot be deleted from this table.'
-      : `Select at least one ${tableData.singularLabel.toLowerCase()} to delete.`;
+      ? 'Không thể xóa hợp đồng từ bảng này.'
+      : `Chọn ít nhất một ${tableData.singularLabel.toLowerCase()} để xóa.`;
   const activeRow = tableData.rows.find(row => row.id === activeRowId) ?? null;
-  const activeContract = isContractRow(activeRow) ? activeRow : null;
   const activeLand = isLandRow(activeRow) ? activeRow : null;
   const activePlot = isPlotRow(activeRow) ? activeRow : null;
   const activeCustomer = isCustomerRow(activeRow) ? activeRow : null;
-  const relatedContracts = useMemo(
-    () =>
-      activeContract == null
-        ? []
-        : contractsForCustomer(contractRows, activeContract),
-    [activeContract, contractRows],
-  );
-  const landPlots = useMemo(
-    () => (activeContract == null ? [] : plotsForLand(plots, activeContract)),
-    [activeContract, plots],
-  );
   const activeLandPlots = useMemo(
     () =>
       activeLand == null ? [] : plotsForLandRecord(plots, activeLand),
@@ -1148,10 +928,6 @@ export default function TableFilterClient({
     [activeCustomer, contractRows],
   );
 
-  const editContract = useCallback((contract: ContractTableRow) => {
-    setEditingContract(contract);
-  }, []);
-
   const editLand = useCallback((land: LandTableRow) => {
     setEditingLand(land);
   }, []);
@@ -1180,32 +956,13 @@ export default function TableFilterClient({
     <FilterBar
       filters={filters}
       query={query}
-      isPowerSearch={isPowerSearch}
       resultCount={results.length}
-      filterFields={tableData.filterFields}
-      multiFilterFields={tableData.multiFilterFields}
-      presetFilters={tableData.presetFilters}
-      rangeFilter={tableData.rangeFilter}
-      searchLabel={`Search ${tableData.label.toLowerCase()}`}
+      statusOptions={dataset === 'contracts' ? Object.entries(CONTRACT_STATUS_META).map(([value, meta]) => ({value, label: meta.label})) : dataset === 'plots' ? Object.entries(PLOT_STATUS_META).filter(([value]) => value !== 'UNASSIGNED').map(([value, meta]) => ({value, label: meta.label})) : []}
+      searchLabel={`Tìm ${tableData.label.toLowerCase()}`}
       searchPlaceholder={tableData.searchPlaceholder}
       onFiltersChange={updateFilters}
-      onQueryChange={setQuery}
-      onPowerSearchChange={setIsPowerSearch}
+      onQueryChange={value => {setQuery(value); setPageState({key: '', page: 1}); setSelectedKeys(new Set());}}
       onClearAll={clearAll}
-    />
-  );
-
-  const savedViewsBar = (
-    <SavedViewsBar
-      savedViews={savedViews}
-      activeSavedViewId={activeSavedViewId}
-      onApplySavedView={applySavedView}
-      onEditActiveView={() => {
-        const found = savedViews.find(saved => saved.id === activeSavedViewId);
-        if (found) {
-          setEditing({...found});
-        }
-      }}
     />
   );
 
@@ -1244,17 +1001,7 @@ export default function TableFilterClient({
     />
   );
 
-  const detailPanel = activeContract ? (
-    <ContractDetailPanel
-      contract={activeContract}
-      relatedContracts={relatedContracts}
-      landPlots={landPlots}
-      resizable={detailWidth.props}
-      onClose={() => setActiveRowId(null)}
-      onSelectContract={contractId => showDatasetRow('contracts', contractId)}
-      onEditContract={editContract}
-    />
-  ) : activeLand ? (
+  const detailPanel = activeLand ? (
     <LandDetailPanel
       land={activeLand}
       plots={activeLandPlots}
@@ -1291,7 +1038,7 @@ export default function TableFilterClient({
   ) : undefined;
 
   const dataErrorMessage =
-    dataError instanceof Error ? dataError.message : 'Could not load table data.';
+    dataError instanceof Error ? dataError.message : 'Không thể tải dữ liệu bảng.';
 
   return (
     <>
@@ -1303,7 +1050,7 @@ export default function TableFilterClient({
         header={
           <LayoutHeader
             hasDivider
-            label={`${tableData.label} filters and table actions`}>
+            label={`${tableData.label}: bộ lọc và thao tác bảng`}>
             <VStack gap={0} xstyle={styles.headerWrap}>
               {isLoading && (
                 <ProgressBar
@@ -1321,18 +1068,7 @@ export default function TableFilterClient({
                 <VStack gap={4}>
                   <HStack gap={3} vAlign="center">
                     <StackItem size="fill">
-                      <DropdownMenu
-                        button={{
-                          label: tableData.label,
-                          variant: 'ghost',
-                          size: 'lg',
-                        }}
-                        hasChevron
-                        menuWidth={260}
-                        placement="below"
-                        alignment="start"
-                        items={datasetMenuItems}
-                      />
+                      <Heading level={1}>{DATASET_META[dataset].label}</Heading>
                     </StackItem>
                     <Button
                       label={tableData.newButtonLabel}
@@ -1341,72 +1077,7 @@ export default function TableFilterClient({
                     />
                   </HStack>
 
-                  {selectedCount > 0 ? (
-                    bulkBar
-                  ) : (
-                    <HStack gap={3} vAlign="center" wrap="wrap">
-                      <StackItem size="fill" xstyle={styles.toolbarPrimary}>
-                        {isPowerSearch ? (
-                          <PowerSearch
-                            config={config}
-                            filters={filters}
-                            onChange={next => updateFilters(() => [...next])}
-                            placeholder={tableData.powerSearchPlaceholder}
-                            resultCount={results.length}
-                          />
-                        ) : isSavedViewsBarOpen ? (
-                          savedViewsBar
-                        ) : (
-                          filterBar
-                        )}
-                      </StackItem>
-
-                      <HStack gap={3} vAlign="center" xstyle={styles.toolbarEnd}>
-                        {!isSavedViewsBarOpen && (
-                          <>
-                            {isPowerSearch && (
-                              <PowerSearchModeToggle
-                                isPowerSearch={isPowerSearch}
-                                onChange={setIsPowerSearch}
-                              />
-                            )}
-
-                            <ViewOptionsPopover
-                              view={view}
-                              allColumnKeys={tableData.allColumnKeys}
-                              defaultColumnKeys={tableData.defaultColumnKeys}
-                              columnLabels={tableData.columnLabels}
-                              lockedColumnKey={tableData.lockedColumnKey}
-                              lockedColumnMessage={
-                                tableData.lockedColumnMessage
-                              }
-                              groupingOptions={tableData.groupingOptions}
-                              onViewChange={updateView}
-                            />
-
-                            <IconButton
-                              label="Create saved view"
-                              tooltip="Create saved view"
-                              variant="ghost"
-                              size="sm"
-                              icon={<Icon icon={BookmarkPlus} size="sm" />}
-                              onClick={() => setCreatingName('')}
-                            />
-                          </>
-                        )}
-
-                        <SavedViewsToggle
-                          isOpen={isSavedViewsBarOpen}
-                          onChange={next => {
-                            setIsSavedViewsBarOpen(next);
-                            if (next) {
-                              setIsPowerSearch(false);
-                            }
-                          }}
-                        />
-                      </HStack>
-                    </HStack>
-                  )}
+                  {selectedCount > 0 ? bulkBar : filterBar}
                 </VStack>
               </Section>
             </VStack>
@@ -1417,9 +1088,9 @@ export default function TableFilterClient({
             {dataError != null ? (
               <EmptyState
                 icon={<Icon icon={Search} size="lg" />}
-                title={`Could not load ${tableData.label.toLowerCase()}`}
+                title={`Không thể tải ${tableData.label.toLowerCase()}`}
                 description={dataErrorMessage}
-                actions={<Button label="Retry" onClick={refetchData} />}
+                actions={<Button label="Thử lại" onClick={refetchData} />}
               />
             ) : isInitialDataLoading ? (
               <LoadingRows columns={columns} density={view.density} />
@@ -1430,12 +1101,8 @@ export default function TableFilterClient({
                 description={tableData.emptyDescription}
                 actions={
                   <>
-                    <Button label="Clear all" onClick={clearAll} />
-                    <Button
-                      label="Power search"
-                      variant="secondary"
-                      onClick={() => setIsPowerSearch(true)}
-                    />
+                    <Button label="Xóa bộ lọc" onClick={clearAll} />
+
                   </>
                 }
               />
@@ -1451,49 +1118,20 @@ export default function TableFilterClient({
                 verticalAlign="top"
                 plugins={plugins}
                 rowCount={results.length}
+                rowIndexStart={(page - 1) * PAGE_SIZE + 1}
               />
             )}
 
-            {dataError == null &&
-              !isInitialDataLoading &&
-              results.length > 0 &&
-              (hasNext ? (
-                <VStack ref={sentinelRef} gap={0} minHeight={56}>
-                  {isLoadingNext && (
-                    <LoadingRows columns={columns} density={view.density} />
-                  )}
-                </VStack>
-              ) : (
-                results.length > PAGE_SIZE && (
-                  <VStack
-                    gap={0}
-                    minHeight={56}
-                    vAlign="center"
-                    hAlign="center">
-                    <Text type="supporting" color="secondary">
-                      All {results.length} {tableData.label.toLowerCase()}{' '}
-                      loaded
-                    </Text>
-                  </VStack>
-                )
-              ))}
+            {dataError == null && !isInitialDataLoading && results.length > PAGE_SIZE && (
+              <Section padding={4}>
+                <Pagination label="Phân trang" page={page} pageSize={PAGE_SIZE} totalItems={results.length}
+                  onChange={next => {setPageState({key: pageKey, page: next}); setSelectedKeys(new Set()); setActiveRowId(null);}} />
+              </Section>
+            )}
           </LayoutContent>
         }
       />
 
-      <SavedViewDialogs
-        creatingName={creatingName}
-        editing={editing}
-        view={view}
-        filters={filters}
-        allColumnKeys={tableData.allColumnKeys}
-        groupingOptions={tableData.groupingOptions}
-        setCreatingName={setCreatingName}
-        setEditing={setEditing}
-        onCreate={createSavedView}
-        onSaveEdited={saveEditedView}
-        onDelete={deleteSavedView}
-      />
       {isCreateLandDialogOpen && (
         <CreateLandDialog
           isOpen={isCreateLandDialogOpen}
@@ -1572,7 +1210,7 @@ export default function TableFilterClient({
           plots={plots}
           isOpen={isCreateContractDialogOpen}
           onOpenChange={setIsCreateContractDialogOpen}
-          onCreated={handleRowSaved}
+          onCreated={id => router.push('/contracts/' + id)}
         />
       )}
       {editingContract != null && (

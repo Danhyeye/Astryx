@@ -1,5 +1,7 @@
 import { z } from "zod";
 
+z.config(z.locales.vi());
+
 const imageSchema = z.object({
   url: z.string().url(),
   caption: z.string().nullable().optional(),

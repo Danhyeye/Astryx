@@ -14,14 +14,14 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Land Management System",
-  description: "A comprehensive land management solution for efficient land use and resource allocation.",
+  title: "Quản lý đất đai",
+  description: "Quản lý khu đất, lô đất, khách hàng và hợp đồng cho thuê.",
 };
 
 export default function RootLayout({ children }: { children: ReactNode }) {
   return (
     <html
-      lang="en"
+      lang="vi"
       className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
     >
       <body className="min-h-full flex flex-col">{children}</body>

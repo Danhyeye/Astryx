@@ -1,10 +1,8 @@
 import {type FormEvent, useEffect, useMemo, useRef, useState} from 'react';
 import {Banner} from '@astryxdesign/core/Banner';
-import {Button} from '@astryxdesign/core/Button';
-import {Divider} from '@astryxdesign/core/Divider';
 import {Dialog, DialogHeader} from '@astryxdesign/core/Dialog';
 import {FileInput} from '@astryxdesign/core/FileInput';
-import {FormLayout} from '@astryxdesign/core/FormLayout';
+import {GridSpan} from '@astryxdesign/core/Grid';
 import {
   HStack,
   Layout,
@@ -27,7 +25,9 @@ import {
   buildPlotPayload,
   createEmptyPlotForm,
   isPlotFormValid,
+  isPlotFormStepValid,
 } from './entityForms';
+import {EntityFormActions, EntityFormStepper} from './EntityFormStepper';
 
 const MAX_IMAGE_SIZE = 5 * 1024 * 1024;
 const MAX_IMAGE_FILES = 12;
@@ -53,7 +53,7 @@ function errorMessageOf(error: unknown): string {
     return error.message;
   }
 
-  return 'Please check the plot details and try again.';
+  return 'Vui lòng kiểm tra thông tin lô đất và thử lại.';
 }
 
 export function CreatePlotDialog({
@@ -72,6 +72,7 @@ export function CreatePlotDialog({
     ...createEmptyPlotForm(),
     landId: lands[0]?.id ?? '',
   }));
+  const [activeStep, setActiveStep] = useState(0);
   const [selectedImages, setSelectedImages] = useState<SelectedPlotImage[]>([]);
   const [submitError, setSubmitError] = useState<string | null>(null);
   const selectedImagesRef = useRef<SelectedPlotImage[]>([]);
@@ -85,7 +86,7 @@ export function CreatePlotDialog({
       lands.map(land => ({
         value: land.id,
         label: land.name,
-        description: land.location || 'No location',
+        description: land.location || 'Chưa có vị trí',
       })),
     [lands],
   );
@@ -104,6 +105,7 @@ export function CreatePlotDialog({
       landId: lands[0]?.id ?? '',
     });
     clearSelectedImages();
+    setActiveStep(0);
     setSubmitError(null);
   };
 
@@ -183,7 +185,7 @@ export function CreatePlotDialog({
   const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
 
-    if (!isFormValid || isSubmitting) {
+    if (activeStep !== 2 || !isFormValid || isSubmitting) {
       return;
     }
 
@@ -223,77 +225,33 @@ export function CreatePlotDialog({
         height="fill"
         header={
           <DialogHeader
-            title="Add new plot"
-            subtitle="Create a plot record with optional images."
+            title="Thêm lô đất"
+            subtitle="Thêm lô đất và hình ảnh nếu có."
             onOpenChange={handleOpenChange}
           />
         }
         content={
-          <LayoutContent padding={4} label="Create plot form">
+          <LayoutContent padding={4} label="Biểu mẫu tạo lô đất">
             <form id={formId} onSubmit={handleSubmit}>
               <VStack gap={4}>
                 {submitError != null && (
                   <Banner
                     status="error"
-                    title="Could not create plot"
+                    title="Không thể tạo lô đất"
                     description={submitError}
                     container="section"
                   />
                 )}
 
-                <FormLayout defaultOptionality="optional">
-                  <FileInput
-                    label="Plot images"
-                    value={imageFiles}
-                    onChange={changeSelectedImages}
-                    accept="image/png,image/jpeg,image/webp"
-                    description="PNG, JPG, or WEBP. Max 5 MB each."
-                    maxSize={MAX_IMAGE_SIZE}
-                    maxFiles={MAX_IMAGE_FILES}
-                    mode="input"
-                    isMultiple
-                    isLoading={uploadImage.isPending}
-                    isDisabled={isSubmitting}
-                  />
-
-                  {selectedImages.length > 0 && (
-                    <HStack gap={2} wrap="wrap">
-                      {selectedImages.map(image => (
-                        <Thumbnail
-                          key={image.id}
-                          src={image.previewUrl}
-                          alt={`Preview for ${image.file.name}`}
-                          label={image.file.name}
-                          isLoading={isSubmitting}
-                          onRemove={event => {
-                            event.preventDefault();
-                            removeSelectedImage(image.id);
-                          }}
-                          showRemoveOn="always"
-                        />
-                      ))}
-                    </HStack>
-                  )}
-
-                  {selectedImages.length > 0 && (
-                    <TextInput
-                      label="Image caption"
-                      value={form.imageCaption}
-                      onChange={imageCaption =>
-                        setForm(current => ({
-                          ...current,
-                          imageCaption,
-                        }))
-                      }
-                      isDisabled={isSubmitting}
-                      hasClear
-                    />
-                  )}
-
-                  <Divider />
-
-                  <Selector
-                    label="Land"
+                <EntityFormStepper
+                  activeStep={activeStep}
+                  onStepChange={setActiveStep}
+                  steps={[
+                    {
+                      label: 'Khu đất và mã lô',
+                      content: <>
+                        <Selector
+                    label="Khu đất"
                     value={form.landId}
                     options={landOptions}
                     onChange={landId =>
@@ -302,14 +260,13 @@ export function CreatePlotDialog({
                         landId,
                       }))
                     }
-                    placeholder="Choose land"
+                    placeholder="Chọn khu đất"
                     hasSearch
                     isRequired
                     isDisabled={isSubmitting}
-                  />
-
-                  <TextInput
-                    label="Plot number"
+                        />
+                        <TextInput
+                    label="Mã lô đất"
                     value={form.plotNumber}
                     onChange={plotNumber =>
                       setForm(current => ({
@@ -321,10 +278,14 @@ export function CreatePlotDialog({
                     hasAutoFocus
                     isDisabled={isSubmitting}
                     hasClear
-                  />
-
-                  <Selector
-                    label="Status"
+                        />
+                      </>,
+                    },
+                    {
+                      label: 'Trạng thái và diện tích',
+                      content: <>
+                        <Selector
+                    label="Trạng thái"
                     value={form.status}
                     options={PLOT_STATUS_OPTIONS.map(status => ({
                       value: status,
@@ -337,10 +298,9 @@ export function CreatePlotDialog({
                       }))
                     }
                     isDisabled={isSubmitting}
-                  />
-
-                  <NumberInput
-                    label="Area"
+                        />
+                        <NumberInput
+                    label="Diện tích"
                     value={form.areaSqm}
                     onChange={areaSqm =>
                       setForm(current => ({
@@ -350,14 +310,18 @@ export function CreatePlotDialog({
                     }
                     min={0}
                     step={0.01}
-                    units="sqm"
+                    units="m²"
                     hasClear
                     isWheelEnabled={false}
                     isDisabled={isSubmitting}
-                  />
-
-                  <TextArea
-                    label="Description"
+                        />
+                      </>,
+                    },
+                    {
+                      label: 'Mô tả và hình ảnh',
+                      content: <>
+                        <TextArea
+                    label="Mô tả"
                     value={form.description}
                     onChange={description =>
                       setForm(current => ({
@@ -367,30 +331,76 @@ export function CreatePlotDialog({
                     }
                     rows={3}
                     isDisabled={isSubmitting}
-                  />
-                </FormLayout>
+                        />
+                        <FileInput
+                          label="Hình ảnh lô đất"
+                          value={imageFiles}
+                          onChange={changeSelectedImages}
+                          accept="image/png,image/jpeg,image/webp"
+                          description="PNG, JPG hoặc WEBP. Tối đa 5 MB mỗi ảnh."
+                          maxSize={MAX_IMAGE_SIZE}
+                          maxFiles={MAX_IMAGE_FILES}
+                          mode="input"
+                          isMultiple
+                          isLoading={uploadImage.isPending}
+                          isDisabled={isSubmitting}
+                        />
+                        {selectedImages.length > 0 && (
+                          <GridSpan columns="full">
+                            <HStack gap={2} wrap="wrap">
+                              {selectedImages.map(image => (
+                                <Thumbnail
+                                  key={image.id}
+                                  src={image.previewUrl}
+                                  alt={`Xem trước ảnh ${image.file.name}`}
+                                  label={image.file.name}
+                                  isLoading={isSubmitting}
+                                  onRemove={event => {
+                                    event.preventDefault();
+                                    removeSelectedImage(image.id);
+                                  }}
+                                  showRemoveOn="always"
+                                />
+                              ))}
+                            </HStack>
+                          </GridSpan>
+                        )}
+                        {selectedImages.length > 0 && (
+                          <TextInput
+                            label="Chú thích ảnh"
+                            value={form.imageCaption}
+                            onChange={imageCaption =>
+                              setForm(current => ({...current, imageCaption}))
+                            }
+                            isDisabled={isSubmitting}
+                            hasClear
+                          />
+                        )}
+                      </>,
+                    },
+                  ]}
+                />
               </VStack>
             </form>
           </LayoutContent>
         }
         footer={
           <LayoutFooter hasDivider>
-            <HStack gap={2} hAlign="end" wrap="wrap">
-              <Button
-                label="Cancel"
-                variant="secondary"
-                isDisabled={isSubmitting}
-                onClick={() => handleOpenChange(false)}
-              />
-              <Button
-                label="Create plot"
-                type="submit"
-                form={formId}
-                variant="primary"
-                isDisabled={!isFormValid || isSubmitting}
-                isLoading={isSubmitting}
-              />
-            </HStack>
+            <EntityFormActions
+              activeStep={activeStep}
+              formId={formId}
+              isStepValid={isPlotFormStepValid(form, activeStep)}
+              isSubmitting={isSubmitting}
+              onBack={() => setActiveStep(step => Math.max(0, step - 1))}
+              onCancel={() => handleOpenChange(false)}
+              onNext={() =>
+                setActiveStep(step =>
+                  isPlotFormStepValid(form, step) ? step + 1 : step,
+                )
+              }
+              submitLabel="Tạo lô đất"
+              stepCount={3}
+            />
           </LayoutFooter>
         }
       />

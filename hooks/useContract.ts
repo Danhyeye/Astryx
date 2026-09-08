@@ -45,6 +45,7 @@ export function useCreateContract() {
     mutationFn: (input: CreateContractPayload) => contractsService.createContract(input),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["contracts"] });
+      queryClient.invalidateQueries({ queryKey: ["contractDetail"] });
     },
   });
 }
@@ -57,6 +58,7 @@ export function useUpdateContract() {
       contractsService.updateContract(id, data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["contracts"] });
+      queryClient.invalidateQueries({ queryKey: ["contractDetail"] });
     },
   });
 }

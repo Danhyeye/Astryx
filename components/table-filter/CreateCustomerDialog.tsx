@@ -1,10 +1,7 @@
 import {type FormEvent, useState} from 'react';
 import {Banner} from '@astryxdesign/core/Banner';
-import {Button} from '@astryxdesign/core/Button';
 import {Dialog, DialogHeader} from '@astryxdesign/core/Dialog';
-import {FormLayout} from '@astryxdesign/core/FormLayout';
 import {
-  HStack,
   Layout,
   LayoutContent,
   LayoutFooter,
@@ -18,7 +15,9 @@ import {
   buildCustomerPayload,
   createEmptyCustomerForm,
   isCustomerFormValid,
+  isCustomerFormStepValid,
 } from './entityForms';
+import {EntityFormActions, EntityFormStepper} from './EntityFormStepper';
 
 function errorMessageOf(error: unknown): string {
   if (error instanceof Error) {
@@ -34,7 +33,7 @@ function errorMessageOf(error: unknown): string {
     return error.message;
   }
 
-  return 'Please check the customer details and try again.';
+  return 'Vui lòng kiểm tra thông tin khách hàng và thử lại.';
 }
 
 export function CreateCustomerDialog({
@@ -48,6 +47,7 @@ export function CreateCustomerDialog({
 }) {
   const formId = 'create-customer-form';
   const [form, setForm] = useState(createEmptyCustomerForm);
+  const [activeStep, setActiveStep] = useState(0);
   const [submitError, setSubmitError] = useState<string | null>(null);
   const createCustomer = useCreateCustomer();
   const isSubmitting = createCustomer.isPending;
@@ -60,6 +60,7 @@ export function CreateCustomerDialog({
 
     if (!open) {
       setForm(createEmptyCustomerForm());
+      setActiveStep(0);
       setSubmitError(null);
     }
 
@@ -69,7 +70,7 @@ export function CreateCustomerDialog({
   const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
 
-    if (!isFormValid || isSubmitting) {
+    if (activeStep !== 2 || !isFormValid || isSubmitting) {
       return;
     }
 
@@ -103,27 +104,32 @@ export function CreateCustomerDialog({
         height="fill"
         header={
           <DialogHeader
-            title="Add new customer"
-            subtitle="Create a customer record."
+            title="Thêm khách hàng"
+            subtitle="Thêm thông tin khách hàng."
             onOpenChange={handleOpenChange}
           />
         }
         content={
-          <LayoutContent padding={4} label="Create customer form">
+          <LayoutContent padding={4} label="Biểu mẫu tạo khách hàng">
             <form id={formId} onSubmit={handleSubmit}>
               <VStack gap={4}>
                 {submitError != null && (
                   <Banner
                     status="error"
-                    title="Could not create customer"
+                    title="Không thể tạo khách hàng"
                     description={submitError}
                     container="section"
                   />
                 )}
 
-                <FormLayout defaultOptionality="optional">
-                  <TextInput
-                    label="Customer name"
+                <EntityFormStepper
+                  activeStep={activeStep}
+                  onStepChange={setActiveStep}
+                  steps={[
+                    {
+                      label: 'Danh tính',
+                      content: <TextInput
+                    label="Tên khách hàng"
                     value={form.name}
                     onChange={name =>
                       setForm(current => ({
@@ -135,10 +141,13 @@ export function CreateCustomerDialog({
                     hasAutoFocus
                     isDisabled={isSubmitting}
                     hasClear
-                  />
-
-                  <TextInput
-                    label="Phone"
+                      />,
+                    },
+                    {
+                      label: 'Liên hệ',
+                      content: <>
+                        <TextInput
+                    label="Số điện thoại"
                     value={form.phone}
                     onChange={phone =>
                       setForm(current => ({
@@ -148,9 +157,8 @@ export function CreateCustomerDialog({
                     }
                     isDisabled={isSubmitting}
                     hasClear
-                  />
-
-                  <TextInput
+                        />
+                        <TextInput
                     label="Email"
                     type="email"
                     value={form.email}
@@ -162,10 +170,14 @@ export function CreateCustomerDialog({
                     }
                     isDisabled={isSubmitting}
                     hasClear
-                  />
-
-                  <TextInput
-                    label="Address"
+                        />
+                      </>,
+                    },
+                    {
+                      label: 'Địa chỉ và ghi chú',
+                      content: <>
+                        <TextInput
+                    label="Địa chỉ"
                     value={form.address}
                     onChange={address =>
                       setForm(current => ({
@@ -175,10 +187,9 @@ export function CreateCustomerDialog({
                     }
                     isDisabled={isSubmitting}
                     hasClear
-                  />
-
-                  <TextArea
-                    label="Notes"
+                        />
+                        <TextArea
+                    label="Ghi chú"
                     value={form.notes}
                     onChange={notes =>
                       setForm(current => ({
@@ -188,30 +199,32 @@ export function CreateCustomerDialog({
                     }
                     rows={4}
                     isDisabled={isSubmitting}
-                  />
-                </FormLayout>
+                        />
+                      </>,
+                    },
+                  ]}
+                />
               </VStack>
             </form>
           </LayoutContent>
         }
         footer={
           <LayoutFooter hasDivider>
-            <HStack gap={2} hAlign="end" wrap="wrap">
-              <Button
-                label="Cancel"
-                variant="secondary"
-                isDisabled={isSubmitting}
-                onClick={() => handleOpenChange(false)}
-              />
-              <Button
-                label="Create customer"
-                type="submit"
-                form={formId}
-                variant="primary"
-                isDisabled={!isFormValid || isSubmitting}
-                isLoading={isSubmitting}
-              />
-            </HStack>
+            <EntityFormActions
+              activeStep={activeStep}
+              formId={formId}
+              isStepValid={isCustomerFormStepValid(form, activeStep)}
+              isSubmitting={isSubmitting}
+              onBack={() => setActiveStep(step => Math.max(0, step - 1))}
+              onCancel={() => handleOpenChange(false)}
+              onNext={() =>
+                setActiveStep(step =>
+                  isCustomerFormStepValid(form, step) ? step + 1 : step,
+                )
+              }
+              submitLabel="Tạo khách hàng"
+              stepCount={3}
+            />
           </LayoutFooter>
         }
       />

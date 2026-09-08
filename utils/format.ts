@@ -1,17 +1,4 @@
-export const MONTHS = [
-  'Jan',
-  'Feb',
-  'Mar',
-  'Apr',
-  'May',
-  'Jun',
-  'Jul',
-  'Aug',
-  'Sep',
-  'Oct',
-  'Nov',
-  'Dec',
-] as const;
+export const MONTHS = ['Th1', 'Th2', 'Th3', 'Th4', 'Th5', 'Th6', 'Th7', 'Th8', 'Th9', 'Th10', 'Th11', 'Th12'] as const;
 
 export type FormatRangeLabelOptions = {
   label: string;
@@ -28,7 +15,7 @@ export type SelectedOptionValue = {
 };
 
 export function formatNumber(value: number): string {
-  return Math.round(value || 0).toLocaleString('en-US');
+  return Math.round(value || 0).toLocaleString('vi-VN');
 }
 
 export function formatDate(
@@ -36,26 +23,25 @@ export function formatDate(
   withYear = false,
 ): string {
   if (value == null || value === '') {
-    return 'Not set';
+    return 'Chưa thiết lập';
   }
   const date = value instanceof Date ? value : new Date(value);
   if (Number.isNaN(date.getTime())) {
-    return 'Not set';
+    return 'Chưa thiết lập';
   }
-  const base = `${MONTHS[date.getUTCMonth()]} ${date.getUTCDate()}`;
-  return withYear ? `${base}, ${date.getUTCFullYear()}` : base;
+  return new Intl.DateTimeFormat('vi-VN', {day: '2-digit', month: '2-digit', ...(withYear ? {year: 'numeric' as const} : {}), timeZone: 'UTC'}).format(date);
 }
 
 export function formatMoney(amount: number): string {
-  return `$${formatNumber(amount)}`;
+  return new Intl.NumberFormat('vi-VN', {style: 'currency', currency: 'VND', maximumFractionDigits: 0}).format(amount);
 }
 
 export function formatArea(areaSqm: number): string {
-  return `${formatNumber(areaSqm)} sq m`;
+  return `${formatNumber(areaSqm)} m²`;
 }
 
 export function formatDueDay(day: number): string {
-  return day > 0 ? `Day ${day}` : 'Not set';
+  return day > 0 ? `Ngày ${day}` : 'Chưa thiết lập';
 }
 
 export function formatRangeLabel({
@@ -74,11 +60,11 @@ export function formatRangeLabel({
   }
 
   if (hasLow) {
-    return `${label} over ${formatValue(low)}`;
+    return `${label} trên ${formatValue(low)}`;
   }
 
   if (hasHigh) {
-    return `${label} under ${formatValue(high)}`;
+    return `${label} dưới ${formatValue(high)}`;
   }
 
   return undefined;

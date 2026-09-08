@@ -14,6 +14,10 @@ import type {
   CustomerTableRow,
   PlotTableRow,
 } from '../../data';
+import {
+  isValidISODate,
+  resolveContractEndDate,
+} from '../../lib/contractDates.ts';
 
 export type UploadedEntityImage = Pick<UploadedImage, 'url'>;
 export type RetainedEntityImage = Pick<Images, 'url' | 'caption'>;
@@ -50,6 +54,10 @@ export type ContractFormState = {
   endDate: string;
   status: ContractStatus;
   notes: string;
+};
+
+export type ContractFormValidationOptions = {
+  allowCustomWithoutNextDue?: boolean;
 };
 
 function optionalText(value: string): string | null {
@@ -93,7 +101,22 @@ export function createPlotFormFromPlot(plot: PlotTableRow): PlotFormState {
 }
 
 export function isPlotFormValid(form: PlotFormState): boolean {
-  return form.landId.trim() !== '' && form.plotNumber.trim() !== '';
+  return isPlotFormStepValid(form, 0) && isPlotFormStepValid(form, 1);
+}
+
+export function isPlotFormStepValid(
+  form: PlotFormState,
+  step: number,
+): boolean {
+  if (step === 0) {
+    return form.landId.trim() !== '' && form.plotNumber.trim() !== '';
+  }
+
+  if (step === 1) {
+    return form.areaSqm == null || form.areaSqm >= 0;
+  }
+
+  return true;
 }
 
 export function buildPlotPayload(
@@ -157,7 +180,25 @@ export function createCustomerFormFromCustomer(
 }
 
 export function isCustomerFormValid(form: CustomerFormState): boolean {
-  return form.name.trim() !== '';
+  return (
+    isCustomerFormStepValid(form, 0) && isCustomerFormStepValid(form, 1)
+  );
+}
+
+export function isCustomerFormStepValid(
+  form: CustomerFormState,
+  step: number,
+): boolean {
+  if (step === 0) {
+    return form.name.trim() !== '';
+  }
+
+  if (step === 1) {
+    const email = form.email.trim();
+    return email === '' || /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
+  }
+
+  return true;
 }
 
 export function buildCustomerPayload(
@@ -212,15 +253,69 @@ export function createContractFormFromContract(
   };
 }
 
-export function isContractFormValid(form: ContractFormState): boolean {
+export function isContractFormValid(
+  form: ContractFormState,
+  options: ContractFormValidationOptions = {},
+): boolean {
+  return [0, 1, 2].every(step =>
+    isContractFormStepValid(form, step, options),
+  );
+}
+
+export function isContractFormStepValid(
+  form: ContractFormState,
+  step: number,
+  {allowCustomWithoutNextDue = false}: ContractFormValidationOptions = {},
+): boolean {
+  if (step === 0) {
+    return (
+      form.customerId.trim() !== '' &&
+      (form.landId.trim() !== '' || form.plotId.trim() !== '')
+    );
+  }
+
+  if (step === 1) {
+    return (
+      isValidISODate(form.startDate) &&
+      (form.endDate === '' ||
+        (isValidISODate(form.endDate) && form.endDate >= form.startDate)) &&
+      (form.leaseDurationMonths == null ||
+        (Number.isInteger(form.leaseDurationMonths) &&
+          form.leaseDurationMonths > 0))
+    );
+  }
+
+  const nextDate = form.nextPaymentDueDate;
+  const effectiveEndDate = resolveContractEndDate({
+    startDate: form.startDate,
+    endDate: form.endDate,
+    leaseDurationMonths: form.leaseDurationMonths,
+  });
+  const isNextDateValid =
+    nextDate === '' ||
+    (isValidISODate(nextDate) &&
+      nextDate >= form.startDate &&
+      (effectiveEndDate == null || nextDate <= effectiveEndDate));
+  const hasRequiredCustomDate =
+    form.paymentFrequency !== 'CUSTOM' ||
+    nextDate !== '' ||
+    allowCustomWithoutNextDue;
+
   return (
-    form.customerId.trim() !== '' &&
-    (form.landId.trim() !== '' || form.plotId.trim() !== '') &&
-    form.startDate.trim() !== '' &&
     form.rentAmount != null &&
+    form.rentAmount >= 0 &&
     form.depositAmount != null &&
+    form.depositAmount >= 0 &&
     form.dueDay != null &&
-    form.paymentDueDay != null
+    Number.isInteger(form.dueDay) &&
+    form.dueDay >= 1 &&
+    form.dueDay <= 28 &&
+    form.paymentDueDay != null &&
+    Number.isInteger(form.paymentDueDay) &&
+    form.paymentDueDay >= 1 &&
+    form.paymentDueDay <= 28 &&
+    isNextDateValid &&
+    hasRequiredCustomDate
   );
 }
 

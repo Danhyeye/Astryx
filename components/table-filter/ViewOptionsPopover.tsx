@@ -308,10 +308,10 @@ export function ViewOptionsPopover({
                     id={`${columnPanelId}-displayed`}
                     type="label"
                     color="secondary">
-                    Displayed columns
+                    Cột đang hiển thị
                   </Text>
                   <Button
-                    label="Restore"
+                    label="Khôi phục"
                     variant="ghost"
                     size="sm"
                     xstyle={styles.transferHeaderAction}
@@ -333,14 +333,14 @@ export function ViewOptionsPopover({
                       paddingBlock={4}
                       xstyle={[styles.transferEmpty, styles.transferPadStart]}>
                       <Text type="supporting" color="secondary">
-                        No columns are displayed.
+                        Chưa hiển thị cột nào.
                       </Text>
                     </VStack>
                   ) : (
                     <List
                       density="compact"
                       header={
-                        <VisuallyHidden>Displayed columns</VisuallyHidden>
+                        <VisuallyHidden>Cột đang hiển thị</VisuallyHidden>
                       }>
                       {displayedColumns.map(key => {
                         const isLocked = key === lockedColumnKey;
@@ -453,10 +453,10 @@ export function ViewOptionsPopover({
                     id={`${columnPanelId}-available`}
                     type="label"
                     color="secondary">
-                    Available columns
+                    Cột có thể hiển thị
                   </Text>
                   <Button
-                    label="Select all"
+                    label="Chọn tất cả"
                     variant="ghost"
                     size="sm"
                     xstyle={styles.transferHeaderAction}
@@ -484,14 +484,14 @@ export function ViewOptionsPopover({
                       paddingBlock={4}
                       xstyle={[styles.transferEmpty, styles.transferPadEnd]}>
                       <Text type="supporting" color="secondary">
-                        All columns are displayed.
+                        Đã hiển thị tất cả cột.
                       </Text>
                     </VStack>
                   ) : (
                     <List
                       density="compact"
                       header={
-                        <VisuallyHidden>Available columns</VisuallyHidden>
+                        <VisuallyHidden>Cột có thể hiển thị</VisuallyHidden>
                       }>
                       {availableColumns.map(key => (
                         <Item
@@ -529,7 +529,7 @@ export function ViewOptionsPopover({
         return (
           <VStack gap={0} paddingInline={4} paddingBlockEnd={4}>
             <RadioList
-              label="Density"
+              label="Mật độ"
               isLabelHidden
               value={view.density}
               onChange={value =>
@@ -553,7 +553,7 @@ export function ViewOptionsPopover({
         return (
           <VStack gap={4} paddingInline={4} paddingBlockEnd={4}>
             <RadioList
-              label="First columns"
+              label="Các cột đầu"
               value={view.stickyStart}
               onChange={value =>
                 onViewChange(current => ({
@@ -570,7 +570,7 @@ export function ViewOptionsPopover({
               ))}
             </RadioList>
             <RadioList
-              label="Last columns"
+              label="Các cột cuối"
               value={view.stickyEnd}
               onChange={value =>
                 onViewChange(current => ({
@@ -593,7 +593,7 @@ export function ViewOptionsPopover({
         return (
           <VStack gap={0} paddingInline={4} paddingBlockEnd={4}>
             <RadioList
-              label="Grouping"
+              label="Nhóm"
               isLabelHidden
               value={view.grouping}
               onChange={value =>
@@ -659,13 +659,13 @@ export function ViewOptionsPopover({
       placement="below"
       alignment="end"
       width={660}
-      label="View options"
+      label="Tùy chọn hiển thị"
       isOpen={isOpen}
       onOpenChange={setIsOpen}
       xstyle={styles.viewPopoverSurface}
       content={content}>
       <Button
-        label="View options"
+        label="Tùy chọn hiển thị"
         variant="ghost"
         size="sm"
         endContent={<Icon icon={ChevronDown} size="sm" />}

@@ -55,7 +55,7 @@ export async function POST(request: NextRequest) {
     formData = await request.formData();
   } catch {
     return NextResponse.json<ApiResponse<null>>(
-      { code: 400, message: "Invalid form data", data: null },
+      { code: 400, message: "Dữ liệu biểu mẫu không hợp lệ", data: null },
       { status: 400 }
     );
   }
@@ -66,7 +66,7 @@ export async function POST(request: NextRequest) {
 
   if (files.length === 0) {
     return NextResponse.json<ApiResponse<null>>(
-      { code: 400, message: "No images provided", data: null },
+      { code: 400, message: "Chưa chọn hình ảnh", data: null },
       { status: 400 }
     );
   }
@@ -77,7 +77,7 @@ export async function POST(request: NextRequest) {
   for (const file of files) {
     if (file.size > MAX_FILE_SIZE) {
       return NextResponse.json<ApiResponse<null>>(
-        { code: 400, message: `File too large: ${file.name}`, data: null },
+        { code: 400, message: `Tệp vượt quá dung lượng cho phép: ${file.name}`, data: null },
         { status: 400 }
       );
     }
@@ -89,7 +89,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json<ApiResponse<null>>(
         {
           code: 400,
-          message: `Unsupported or unrecognized image file: ${file.name}`,
+          message: `Định dạng ảnh không được hỗ trợ: ${file.name}`,
           data: null,
         },
         { status: 400 }
@@ -121,7 +121,7 @@ export async function POST(request: NextRequest) {
   }
 
   return NextResponse.json<ApiResponse<UploadedImage[]>>(
-    { code: 201, message: "Uploaded", data: uploaded },
+    { code: 201, message: "Đã tải lên", data: uploaded },
     { status: 201 }
   );
 }

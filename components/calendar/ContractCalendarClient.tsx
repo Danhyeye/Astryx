@@ -1,490 +1,265 @@
 'use client';
 
-import {useMemo, useState} from 'react';
-import {Banner} from '@astryxdesign/core/Banner';
-import {Button} from '@astryxdesign/core/Button';
-import {Calendar} from '@astryxdesign/core/Calendar';
-import type {DateRange, ISODateString} from '@astryxdesign/core/Calendar';
-import {Card} from '@astryxdesign/core/Card';
-import {EmptyState} from '@astryxdesign/core/EmptyState';
-import {Grid, GridSpan} from '@astryxdesign/core/Grid';
-import {Icon} from '@astryxdesign/core/Icon';
-import {
-  HStack,
-  Layout,
-  LayoutContent,
-  LayoutHeader,
-  StackItem,
-  VStack,
-} from '@astryxdesign/core/Layout';
-import {List, ListItem} from '@astryxdesign/core/List';
-import {ProgressBar} from '@astryxdesign/core/ProgressBar';
-import {Section} from '@astryxdesign/core/Section';
-import {Selector} from '@astryxdesign/core/Selector';
-import {StatusDot} from '@astryxdesign/core/StatusDot';
-import {Heading, Text} from '@astryxdesign/core/Text';
-import {useMediaQuery} from '@astryxdesign/core/hooks';
+import { useMemo, useState } from 'react';
+import { Banner } from '@astryxdesign/core/Banner';
+import { Button } from '@astryxdesign/core/Button';
+import { Grid } from '@astryxdesign/core/Grid';
+import { Icon } from '@astryxdesign/core/Icon';
+import { IconButton } from '@astryxdesign/core/IconButton';
+import { HStack, Layout, LayoutContent, LayoutHeader, StackItem, VStack } from '@astryxdesign/core/Layout';
+import { List, ListItem } from '@astryxdesign/core/List';
+import { ProgressBar } from '@astryxdesign/core/ProgressBar';
+import { Section } from '@astryxdesign/core/Section';
+import { Selector } from '@astryxdesign/core/Selector';
+import { Heading, Text } from '@astryxdesign/core/Text';
+import { useMediaQuery } from '@astryxdesign/core/hooks';
+import { useAllContracts } from '@/hooks/useAllRecords';
+import { useGoogleCalendarStatus, useSyncGoogleCalendar } from '@/hooks/useGoogleCalendar';
+import { formatDate, formatMoney } from '@/utils/format';
+import { buildContractMonthEvents, buildContractOptions } from './contractCalendarData';
 
-import {useContracts} from '@/hooks/useContract';
-import {
-  useGoogleCalendarStatus,
-  useSyncGoogleCalendar,
-} from '@/hooks/useGoogleCalendar';
-import {formatDate, formatDueDay, formatMoney} from '@/utils/format';
-import {
-  buildContractCalendarEvents,
-  buildContractOptions,
-  eventDateKey,
-  type ContractCalendarEvent,
-} from './contractCalendarData';
-
-const ALL_CONTRACTS_VALUE = 'all';
-const DATA_PAGE = {page: 1, pageSize: 100};
-
-function errorMessageOf(error: unknown): string | null {
-  if (error == null) {
-    return null;
-  }
-
-  if (error instanceof Error) {
-    return error.message;
-  }
-
-  return 'Could not load contract calendar data.';
+function todayInVietnam() {
+  return new Intl.DateTimeFormat('en-CA', {
+    timeZone: 'Asia/Ho_Chi_Minh', year: 'numeric', month: '2-digit', day: '2-digit',
+  }).format(new Date());
 }
 
-function totalAmount(events: readonly ContractCalendarEvent[]): number {
-  return events.reduce((total, event) => total + event.amount, 0);
+function moveMonth(month: string, offset: number) {
+  const date = new Date(month + 'T00:00:00Z');
+  date.setUTCMonth(date.getUTCMonth() + offset);
+  return date.toISOString().slice(0, 10);
 }
 
-function statusVariantOf(
-  status: ContractCalendarEvent['status'],
-): 'neutral' | 'warning' | 'error' {
-  if (status === 'CANCELLED') {
-    return 'error';
-  }
-
-  if (status === 'COMPLETED') {
-    return 'warning';
-  }
-
-  return 'neutral';
-}
-
-function calendarDate(value: string): ISODateString {
-  return value as ISODateString;
-}
-
-function googleMessageOf(error: unknown): string | null {
-  if (error == null) {
-    return null;
-  }
-
-  if (error instanceof Error) {
-    return error.message;
-  }
-
-  return 'Google Calendar request failed.';
+function messageOf(error: unknown) {
+  return error instanceof Error ? error.message : null;
 }
 
 export function ContractCalendarClient() {
-  const isNarrow = useMediaQuery('(max-width: 900px)');
-  const calendarMonthCount: 1 | 2 = isNarrow ? 1 : 2;
-  const [selectedContractId, setSelectedContractId] = useState(
-    ALL_CONTRACTS_VALUE,
-  );
-  const [selectedDate, setSelectedDate] = useState(() =>
-    eventDateKey(new Date()),
-  );
-
-  const {
-    data: contractsResponse,
-    error,
-    isFetching,
-    isPending,
-  } = useContracts(DATA_PAGE);
-  const {
-    data: googleStatusResponse,
-    error: googleStatusError,
-    isFetching: isGoogleStatusFetching,
-    isPending: isGoogleStatusPending,
-  } = useGoogleCalendarStatus();
+  const isNarrow = useMediaQuery('(max-width: 640px)');
+  const [today] = useState(todayInVietnam);
+  const [month, setMonth] = useState(() => today.slice(0, 7) + '-01');
+  const [selectedDate, setSelectedDate] = useState(today);
+  const [selectedContractId, setSelectedContractId] = useState('all');
+  const { data: contractsResponse, error, isFetching, isPending } = useAllContracts();
+  const { data: googleStatusResponse, error: googleStatusError,
+    isFetching: isGoogleStatusFetching, isPending: isGoogleStatusPending } = useGoogleCalendarStatus();
   const syncGoogleCalendar = useSyncGoogleCalendar();
-
-  const contracts = useMemo(
-    () => contractsResponse?.data ?? [],
-    [contractsResponse?.data],
-  );
-  const contractEvents = useMemo(
-    () => buildContractCalendarEvents(contracts),
-    [contracts],
-  );
-  const contractOptions = useMemo(
-    () => [
-      {label: 'All contracts', value: ALL_CONTRACTS_VALUE},
-      ...buildContractOptions(contracts),
-    ],
-    [contracts],
-  );
-  const selectedContract = useMemo(
-    () =>
-      selectedContractId === ALL_CONTRACTS_VALUE
-        ? null
-        : contracts.find(contract => contract.id === selectedContractId) ??
-          null,
-    [contracts, selectedContractId],
-  );
-  const visibleEvents = useMemo(
-    () =>
-      selectedContract == null
-        ? contractEvents
-        : contractEvents.filter(
-            event => event.contractId === selectedContract.id,
-          ),
-    [contractEvents, selectedContract],
-  );
-  const firstVisibleEventDate = visibleEvents[0]?.date;
-
-  const selectedDateEvents = useMemo(
-    () => visibleEvents.filter(event => event.date === selectedDate),
-    [selectedDate, visibleEvents],
-  );
-  const selectedRange = useMemo<DateRange | null>(() => {
-    if (selectedContract == null) {
-      return null;
-    }
-
-    const start = eventDateKey(selectedContract.start_date);
-    if (start === '') {
-      return null;
-    }
-
-    const end =
-      eventDateKey(selectedContract.end_date) ||
-      visibleEvents[0]?.endDate ||
-      visibleEvents.at(-1)?.date ||
-      start;
-
-    return {
-      start: calendarDate(start),
-      end: calendarDate(end),
-    };
-  }, [selectedContract, visibleEvents]);
-  const selectedDateAmount = totalAmount(selectedDateEvents);
-  const visibleAmount = totalAmount(visibleEvents);
-  const errorMessage = errorMessageOf(error);
+  const contracts = useMemo(() => contractsResponse?.data ?? [], [contractsResponse?.data]);
+  const options = useMemo(() => [{ label: 'Tất cả hợp đồng', value: 'all' }, ...buildContractOptions(contracts)], [contracts]);
+  const events = useMemo(() => buildContractMonthEvents(
+    selectedContractId === 'all' ? contracts : contracts.filter(contract => contract.id === selectedContractId),
+    month,
+  ), [contracts, selectedContractId, month]);
+  const eventsByDate = useMemo(() => {
+    const grouped = new Map<string, typeof events>();
+    for (const event of events) grouped.set(event.date, [...(grouped.get(event.date) ?? []), event]);
+    return grouped;
+  }, [events]);
+  const days = useMemo(() => {
+    const start = new Date(month + 'T00:00:00Z');
+    const last = new Date(Date.UTC(start.getUTCFullYear(), start.getUTCMonth() + 1, 0));
+    const offset = (start.getUTCDay() + 6) % 7;
+    const length = Math.ceil((offset + last.getUTCDate()) / 7) * 7;
+    return Array.from({ length }, (_, i) => {
+      const date = new Date(start);
+      date.setUTCDate(1 - offset + i);
+      return date.toISOString().slice(0, 10);
+    });
+  }, [month]);
+  const monthLabel = new Intl.DateTimeFormat('vi-VN', { month: 'long', year: 'numeric', timeZone: 'UTC' }).format(new Date(month));
+  const selectedEvents = eventsByDate.get(selectedDate) ?? [];
   const googleStatus = googleStatusResponse?.data ?? null;
-  const googleErrorMessage =
-    googleMessageOf(googleStatusError) ??
-    googleMessageOf(syncGoogleCalendar.error);
+  const googleErrorMessage = messageOf(googleStatusError) ?? messageOf(syncGoogleCalendar.error);
   const googleSyncSummary = syncGoogleCalendar.data?.data ?? null;
-  const selectedCalendarDate = calendarDate(
-    selectedDate || firstVisibleEventDate || eventDateKey(new Date()),
-  );
+
+  function navigateMonth(offset: number) {
+    const next = moveMonth(month, offset);
+    setMonth(next);
+    setSelectedDate(next);
+  }
 
   return (
-    <Layout
-      height="fill"
-      padding={6}
-      contentWidth="fill"
-      header={
-        <LayoutHeader label="Contract calendar header">
-          <HStack gap={4} vAlign="end" wrap="wrap">
-            <StackItem size="fill">
-              <VStack gap={1}>
-                <HStack gap={2} vAlign="center" wrap="wrap">
-                  <Heading level={1}>Calendar</Heading>
-                  {isFetching && (
-                    <HStack gap={1} vAlign="center">
-                      <StatusDot
-                        variant="accent"
-                        label="Refreshing"
-                        isPulsing
-                      />
-                      <Text type="supporting" color="secondary">
-                        Refreshing
-                      </Text>
+    <Layout height="fill" padding={4} contentWidth="fill"
+      header={<LayoutHeader label="Lịch thanh toán">
+        <HStack gap={4} vAlign="center" wrap="wrap">
+          <StackItem size="fill">
+            <Heading level={1}>Lịch thanh toán</Heading>
+          </StackItem>
+          <Selector label="Hợp đồng" options={options} value={selectedContractId} hasSearch
+            onChange={value => {
+              setSelectedContractId(value);
+              const contract = contracts.find(contract => contract.id === value);
+              if (contract?.start_date) {
+                setMonth(contract.start_date.slice(0, 7) + '-01');
+                setSelectedDate(contract.start_date);
+              }
+            }} />
+        </HStack>
+      </LayoutHeader>}
+      content={<LayoutContent label="Lịch tháng">
+        <VStack gap={4}>
+          {isFetching && <ProgressBar label="Đang tải lịch thanh toán" isLabelHidden isIndeterminate />}
+          {error && <Banner status="error" title="Không thể tải lịch thanh toán" description={messageOf(error) ?? 'Vui lòng thử lại.'} />}
+          <Section padding={0} dividers={['top', 'start', 'end', 'bottom']}>
+            <Section padding={4} dividers={['bottom']}>
+              <HStack gap={3} vAlign="center" wrap="wrap">
+                <StackItem size="fill">
+                  <VStack gap={1}>
+                    <Heading level={2}>{monthLabel}</Heading>
+                    <Text color="secondary">{events.length.toLocaleString('vi-VN')} hạn thanh toán · {formatMoney(events.reduce((sum, event) => sum + event.amount, 0))}</Text>
+                  </VStack>
+                </StackItem>
+                <IconButton
+                  icon={<Icon icon="chevronLeft" />}
+                  label="Tháng trước"
+                  tooltip="Tháng trước"
+                  variant="ghost"
+                  onClick={() => navigateMonth(-1)}
+                />
+                <Button
+                  label="Hôm nay"
+                  onClick={() => {
+                    setMonth(today.slice(0, 7) + '-01');
+                    setSelectedDate(today);
+                  }}
+                />
+                <IconButton
+                  icon={<Icon icon="chevronRight" />}
+                  label="Tháng sau"
+                  tooltip="Tháng sau"
+                  variant="ghost"
+                  onClick={() => navigateMonth(1)}
+                />
+              </HStack>
+            </Section>
+            <Grid columns={7} gap={0} width="100%">
+              {['Th 2', 'Th 3', 'Th 4', 'Th 5', 'Th 6', 'Th 7', 'CN'].map(day => (
+                <Section key={day} padding={2} dividers={['bottom']}>
+                  <Text display="block" justify="center" color="secondary">{day}</Text>
+                </Section>
+              ))}
+              {days.map((date, index) => {
+                const inMonth = date.slice(0, 7) === month.slice(0, 7);
+                const dayEvents = eventsByDate.get(date) ?? [];
+                return <Section key={date} padding={1}
+                  minHeight="calc(var(--spacing-10) * 4)"
+                  variant={inMonth ? 'section' : 'muted'}
+                  dividers={index % 7 === 6 ? ['bottom'] : ['bottom', 'end']}>
+                  <VStack gap={1}>
+                    <HStack>
+                      <Button label={String(Number(date.slice(-2)))} size="sm"
+                        aria-label={formatDate(date, true)}
+                        variant={date === selectedDate ? 'primary' : 'ghost'}
+                        isDisabled={!inMonth} onClick={() => setSelectedDate(date)} />
+                      {date === today && !isNarrow && <Text type="supporting" color="accent">Hôm nay</Text>}
                     </HStack>
-                  )}
-                </HStack>
+                    {isNarrow && dayEvents.length > 0 && <Button
+                      label={String(dayEvents.length)} size="sm"
+                      tooltip={dayEvents.length + ' hạn thanh toán'}
+                      onClick={() => setSelectedDate(date)} />}
+                    {!isNarrow && dayEvents.slice(0, 3).map(event => (
+                      <Button key={event.id} label={event.customerName} size="sm"
+                        variant="secondary" onClick={() => setSelectedDate(date)}
+                        tooltip={event.contractLabel + ' · ' + formatMoney(event.amount)} />
+                    ))}
+                    {!isNarrow && dayEvents.length > 3 && <Button size="sm" variant="ghost"
+                      label={'+ ' + (dayEvents.length - 3).toLocaleString('vi-VN') + ' hạn khác'}
+                      onClick={() => setSelectedDate(date)} />}
+                  </VStack>
+                </Section>;
+              })}
+            </Grid>
+          </Section>
+          <Section padding={5}>
+            <VStack gap={2}>
+              <Heading level={2}>Hạn thanh toán ngày {formatDate(selectedDate, true)}</Heading>
+              {selectedEvents.length === 0 && !isPending
+                ? <Text color="secondary">Không có hạn thanh toán trong ngày này.</Text>
+                : <List key={selectedDate} hasDividers density="balanced" className="max-h-80 overflow-y-auto">
+                  {selectedEvents.map(event => <ListItem key={event.id}
+                    label={event.customerName} description={event.targetLabel}
+                    endContent={<Button label="Xem hợp đồng" size="sm" variant="ghost"
+                      href={'/contracts?selected=' + encodeURIComponent(event.contractId)} />}
+                    startContent={<Text weight="semibold">{formatMoney(event.amount)}</Text>} />)}
+                </List>}
+            </VStack>
+          </Section>
+          <Section padding={4} dividers={['top']}>
+            <VStack gap={3}>
+              <VStack gap={1}>
+                <Heading level={2}>Lịch Google</Heading>
+                <Text color="secondary">Đồng bộ tất cả hợp đồng đến hạn ngày {formatDate(selectedDate, true)}, kể cả khi đang lọc một hợp đồng.</Text>
                 <Text color="secondary">
-                  Contract ranges, payment due dates, and expected rent.
+                  {googleStatus?.isConnected
+                    ? `Đã kết nối với ${googleStatus.calendarId}.`
+                    : 'Kết nối Google để đồng bộ hạn thanh toán hợp đồng.'}
                 </Text>
               </VStack>
-            </StackItem>
 
-            <Selector
-              label="Contract"
-              options={contractOptions}
-              value={selectedContractId}
-              onChange={value => {
-                setSelectedContractId(value);
-                const firstContractEvent = contractEvents.find(
-                  event => event.contractId === value,
-                );
+              {isGoogleStatusPending || isGoogleStatusFetching ? (
+                <ProgressBar
+                  label="Đang tải trạng thái Lịch Google"
+                  isLabelHidden
+                  isIndeterminate
+                />
+              ) : null}
 
-                if (firstContractEvent != null) {
-                  setSelectedDate(firstContractEvent.date);
-                }
-              }}
-              hasSearch
-              width={360}
-            />
-          </HStack>
-        </LayoutHeader>
-      }
-      content={
-        <LayoutContent label="Contract calendar">
-          <VStack gap={4}>
-            {isPending && (
-              <ProgressBar
-                label="Loading contract calendar"
-                isLabelHidden
-                isIndeterminate
-              />
-            )}
+              {googleStatus != null && !googleStatus.isConfigured ? (
+                <Text type="supporting" color="secondary">
+                  Thiếu cấu hình: {googleStatus.missing.join(', ')}
+                </Text>
+              ) : null}
 
-            {errorMessage != null && (
-              <Banner
-                status="error"
-                title="Could not load calendar"
-                description={errorMessage}
-                container="section"
-              />
-            )}
+              {googleStatus?.accountEmail ? (
+                <Text type="supporting" color="secondary">
+                  {googleStatus.accountEmail}
+                </Text>
+              ) : null}
 
-            <Grid gap={4} columns={isNarrow ? 1 : 12} width="100%">
-              <GridSpan columns={isNarrow ? 'full' : 8}>
-                <Card padding={4}>
-                  <VStack gap={4}>
-                    <VStack gap={1}>
-                      <Heading level={2}>
-                        {selectedContract == null
-                          ? 'All contract due dates'
-                          : selectedContract.customers[0]?.name ??
-                            'Selected contract'}
-                      </Heading>
-                      <Text color="secondary">
-                        {selectedRange == null
-                          ? `${contractEvents.length.toLocaleString('en-US')} due dates generated from contract terms.`
-                          : `${formatDate(selectedRange.start, true)} - ${formatDate(
-                              selectedRange.end,
-                              true,
-                            )}`}
-                      </Text>
-                    </VStack>
+              {googleStatus?.lastSyncedAt ? (
+                <Text type="supporting" color="secondary">
+                  Đồng bộ lần cuối{' '}
+                  {formatDate(googleStatus.lastSyncedAt, true)}
+                </Text>
+              ) : null}
 
-                    {selectedRange == null ? (
-                      <Calendar
-                        value={selectedCalendarDate}
-                        onChange={value => setSelectedDate(value)}
-                        numberOfMonths={calendarMonthCount}
-                        weekStartsOn="sun"
-                      />
-                    ) : (
-                      <Calendar
-                        mode="range"
-                        value={selectedRange}
-                        focusDate={selectedRange.start}
-                        min={selectedRange.start}
-                        max={selectedRange.end}
-                        numberOfMonths={calendarMonthCount}
-                        weekStartsOn="sun"
-                      />
-                    )}
-                  </VStack>
-                </Card>
-              </GridSpan>
+              {googleSyncSummary != null ? (
+                <Text type="supporting" color="secondary">
+                  Đã đồng bộ {googleSyncSummary.total.toLocaleString('vi-VN')}{' '}
+                  hạn thanh toán ngày {formatDate(googleSyncSummary.date, true)}. Đã tạo {googleSyncSummary.created},
+                  cập nhật {googleSyncSummary.updated}, đã xóa{' '}
+                  {googleSyncSummary.deleted}, thất bại{' '}
+                  {googleSyncSummary.failed}.
+                </Text>
+              ) : null}
 
-              <GridSpan columns={isNarrow ? 'full' : 4}>
-                <VStack gap={4}>
-                  <Card padding={4}>
-                    <VStack gap={3}>
-                      <HStack gap={2} vAlign="center">
-                        <Icon icon="calendar" color="accent" />
-                        <Heading level={2}>Due summary</Heading>
-                      </HStack>
-                      <VStack gap={1}>
-                        <Text color="secondary">Visible due dates</Text>
-                        <Heading level={2}>
-                          {visibleEvents.length.toLocaleString('en-US')}
-                        </Heading>
-                      </VStack>
-                      <VStack gap={1}>
-                        <Text color="secondary">Expected rent</Text>
-                        <Heading level={2}>{formatMoney(visibleAmount)}</Heading>
-                      </VStack>
-                    </VStack>
-                  </Card>
+              {googleErrorMessage != null ? (
+                <Text type="supporting" color="secondary">
+                  {googleErrorMessage}
+                </Text>
+              ) : null}
 
-                  <Card padding={4}>
-                    <VStack gap={3}>
-                      <VStack gap={1}>
-                        <Heading level={2}>
-                          {formatDate(selectedCalendarDate, true)}
-                        </Heading>
-                        <Text color="secondary">
-                          {selectedDateEvents.length.toLocaleString('en-US')}{' '}
-                          due dates on selected day
-                        </Text>
-                      </VStack>
-                      <Heading level={2}>
-                        {formatMoney(selectedDateAmount)}
-                      </Heading>
-                    </VStack>
-                  </Card>
-
-                  <Card padding={4}>
-                    <VStack gap={3}>
-                      <VStack gap={1}>
-                        <Heading level={2}>Google Calendar</Heading>
-                        <Text color="secondary">
-                          {googleStatus?.isConnected
-                            ? `Connected to ${googleStatus.calendarId}.`
-                            : 'Connect Google to sync contract due dates.'}
-                        </Text>
-                      </VStack>
-
-                      {isGoogleStatusPending || isGoogleStatusFetching ? (
-                        <ProgressBar
-                          label="Loading Google Calendar status"
-                          isLabelHidden
-                          isIndeterminate
-                        />
-                      ) : null}
-
-                      {googleStatus != null && !googleStatus.isConfigured ? (
-                        <Text type="supporting" color="secondary">
-                          Missing env: {googleStatus.missing.join(', ')}
-                        </Text>
-                      ) : null}
-
-                      {googleStatus?.accountEmail ? (
-                        <Text type="supporting" color="secondary">
-                          {googleStatus.accountEmail}
-                        </Text>
-                      ) : null}
-
-                      {googleStatus?.lastSyncedAt ? (
-                        <Text type="supporting" color="secondary">
-                          Last synced{' '}
-                          {formatDate(googleStatus.lastSyncedAt, true)}
-                        </Text>
-                      ) : null}
-
-                      {googleSyncSummary != null ? (
-                        <Text type="supporting" color="secondary">
-                          Synced {googleSyncSummary.total.toLocaleString('en-US')}{' '}
-                          due dates. Created {googleSyncSummary.created},
-                          updated {googleSyncSummary.updated}, deleted{' '}
-                          {googleSyncSummary.deleted}, failed{' '}
-                          {googleSyncSummary.failed}.
-                        </Text>
-                      ) : null}
-
-                      {googleErrorMessage != null ? (
-                        <Text type="supporting" color="secondary">
-                          {googleErrorMessage}
-                        </Text>
-                      ) : null}
-
-                      {googleStatus?.isConnected ? (
-                        <Button
-                          label="Sync to Google"
-                          variant="secondary"
-                          icon={<Icon icon="calendar" />}
-                          isLoading={syncGoogleCalendar.isPending}
-                          onClick={() => syncGoogleCalendar.mutate()}
-                        />
-                      ) : (
-                        <Button
-                          label="Connect Google"
-                          variant="secondary"
-                          icon={<Icon icon="externalLink" />}
-                          href="/api/calendar/google/connect"
-                          isDisabled={googleStatus?.isConfigured === false}
-                        />
-                      )}
-                    </VStack>
-                  </Card>
-                </VStack>
-              </GridSpan>
-            </Grid>
-
-            <Section variant="transparent" padding={0}>
-              <Card padding={4}>
-                {visibleEvents.length === 0 ? (
-                  <EmptyState
-                    title="No due dates found"
-                    description="Add contract start, end, frequency, and due-day values to generate payment due dates."
-                    icon={<Icon icon="calendar" />}
-                    isCompact
-                  />
-                ) : (
-                  <List
-                    density="balanced"
-                    hasDividers
-                    header={
-                      <VStack gap={1}>
-                        <Heading level={2}>Due dates</Heading>
-                        <Text color="secondary">
-                          {selectedContract == null
-                            ? 'All generated contract payment dates.'
-                            : 'Generated payment dates for the selected contract.'}
-                        </Text>
-                      </VStack>
-                    }
-                  >
-                    {visibleEvents.map(event => (
-                      <ListItem
-                        key={event.id}
-                        label={`${formatDate(event.date, true)} - ${event.customerName}`}
-                        description={
-                          <VStack gap={0.5}>
-                            <Text type="supporting" color="secondary">
-                              {event.targetLabel}
-                            </Text>
-                            <HStack gap={2} wrap="wrap">
-                              <Text type="supporting" color="secondary">
-                                {event.frequency}
-                              </Text>
-                              <Text type="supporting" color="secondary">
-                                {formatDueDay(Number(event.date.slice(-2)))}
-                              </Text>
-                              <HStack gap={1} vAlign="center">
-                                <StatusDot
-                                  variant={statusVariantOf(event.status)}
-                                  label={event.status}
-                                />
-                                <Text type="supporting" color="secondary">
-                                  {event.status}
-                                </Text>
-                              </HStack>
-                            </HStack>
-                          </VStack>
-                        }
-                        startContent={
-                          <Icon icon="calendar" color="accent" size="sm" />
-                        }
-                        endContent={
-                          <Text weight="semibold">
-                            {formatMoney(event.amount)}
-                          </Text>
-                        }
-                        isSelected={event.date === selectedDate}
-                        onClick={() => {
-                          setSelectedContractId(event.contractId);
-                          setSelectedDate(event.date);
-                        }}
-                      />
-                    ))}
-                  </List>
-                )}
-              </Card>
-            </Section>
+              {googleStatus?.isConnected ? (
+                <Button
+                  label={`Đồng bộ ngày ${formatDate(selectedDate, true)}`}
+                  variant="secondary"
+                  icon={<Icon icon="calendar" />}
+                  isLoading={syncGoogleCalendar.isPending}
+                  onClick={() => syncGoogleCalendar.mutate(selectedDate)}
+                />
+              ) : (
+                <Button
+                  label="Kết nối Google"
+                  variant="secondary"
+                  icon={<Icon icon="externalLink" />}
+                  href="/api/calendar/google/connect"
+                  isDisabled={googleStatus?.isConfigured === false}
+                />
+              )}
+            </VStack>
+          </Section>        
           </VStack>
-        </LayoutContent>
-      }
+      </LayoutContent>}
     />
   );
 }

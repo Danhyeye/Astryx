@@ -21,6 +21,7 @@ export type Contract = {
   notes: string;
   created_at: string;
   updated_at: string;
+  payments?: {due_date: string; amount: number; paid_at: string | null; status: string}[];
   customers: Customer[];
   lands: Land[];
   plots: Plot[];
