@@ -90,13 +90,13 @@ export function CustomerDetailPanel({
                   width="100%"
                   onClick={() => onEditCustomer(customer)}
                 />
-                <Button
+                {/* <Button
                   label="Xóa"
                   variant="destructive"
                   size="sm"
                   width="100%"
                   onClick={() => onDeleteCustomer(customer)}
-                />
+                /> */}
               </HStack>
             </VStack>
           </Section>

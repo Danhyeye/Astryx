@@ -1,5 +1,7 @@
 'use client';
 
+import {EntityStatus} from '@/components/table-filter/EntityStatus';
+
 import {ContractPayments} from './ContractPayments';
 import {AlertDialog} from '@astryxdesign/core/AlertDialog';
 import {UploadContractFilesDialog} from './UploadContractFilesDialog';
@@ -62,6 +64,7 @@ export function ContractDetailClient({ id }: { id: string }) {
               label="Trạng thái hợp đồng"
               isLabelHidden
               value={contract.status}
+              renderValue={() => <EntityStatus label={CONTRACT_STATUS_META[contract.status].label} variant={CONTRACT_STATUS_META[contract.status].badge} />}
               options={(Object.keys(CONTRACT_STATUS_META) as ContractStatus[]).map(status => ({
                 value: status,
                 label: CONTRACT_STATUS_META[status].label,

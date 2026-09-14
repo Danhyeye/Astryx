@@ -1,6 +1,8 @@
 'use client';
 
 import { useMemo, useState } from 'react';
+import {EntityStatus} from '@/components/table-filter/EntityStatus';
+import {PAYMENT_FREQUENCY_META} from '@/data';
 import { Banner } from '@astryxdesign/core/Banner';
 import { Button } from '@astryxdesign/core/Button';
 import { Grid } from '@astryxdesign/core/Grid';
@@ -68,6 +70,9 @@ export function ContractCalendarClient() {
   }, [month]);
   const monthLabel = new Intl.DateTimeFormat('vi-VN', { month: 'long', year: 'numeric', timeZone: 'UTC' }).format(new Date(month));
   const selectedEvents = eventsByDate.get(selectedDate) ?? [];
+  const paymentsByEvent = useMemo(() => new Map(contracts.flatMap(contract =>
+    (contract.payments ?? []).map(payment => [`${contract.id}:${payment.due_date}`, payment] as const),
+  )), [contracts]);
   const googleStatus = googleStatusResponse?.data ?? null;
   const googleErrorMessage = messageOf(googleStatusError) ?? messageOf(syncGoogleCalendar.error);
   const googleSyncSummary = syncGoogleCalendar.data?.data ?? null;
@@ -171,16 +176,42 @@ export function ContractCalendarClient() {
             </Grid>
           </Section>
           <Section padding={5}>
-            <VStack gap={2}>
-              <Heading level={2}>Hạn thanh toán ngày {formatDate(selectedDate, true)}</Heading>
+            <VStack gap={4}>
+              <HStack gap={3} hAlign="between" vAlign="center" wrap="wrap">
+                <VStack gap={1}>
+                  <Heading level={2}>Hạn thanh toán ngày {formatDate(selectedDate, true)}</Heading>
+                  <Text type="supporting" color="secondary">{formatNumber(selectedEvents.length)} kỳ thanh toán</Text>
+                </VStack>
+                {selectedEvents.length > 0 && <VStack gap={1} hAlign="end">
+                  <Text type="supporting" color="secondary">Tổng tiền đến hạn</Text>
+                  <Text weight="semibold">{formatMoney(selectedEvents.reduce((sum, event) => sum + event.amount, 0))}</Text>
+                </VStack>}
+              </HStack>
               {selectedEvents.length === 0 && !isPending
                 ? <Text color="secondary">Không có hạn thanh toán trong ngày này.</Text>
-                : <List key={selectedDate} hasDividers density="balanced" className="max-h-80 overflow-y-auto">
-                  {selectedEvents.map(event => <ListItem key={event.id}
-                    label={event.customerName} description={event.targetLabel}
-                    endContent={<Button label="Xem hợp đồng" size="sm" variant="ghost"
-                      href={'/contracts?selected=' + encodeURIComponent(event.contractId)} />}
-                    startContent={<Text weight="semibold">{formatMoney(event.amount)}</Text>} />)}
+                : <List key={selectedDate} hasDividers density="balanced" className="max-h-96 overflow-y-auto">
+                  {selectedEvents.map(event => {
+                    const payment = paymentsByEvent.get(`${event.contractId}:${event.date}`);
+                    const paid = !!payment?.paid_at || payment?.status.toUpperCase() === 'PAID';
+                    const status = <EntityStatus variant={paid ? 'green' : event.date < today ? 'red' : 'neutral'}
+                      label={paid ? 'Đã thanh toán' : event.date < today ? 'Quá hạn' : 'Chưa thanh toán'} />;
+                    return <ListItem key={event.id}
+                      label={event.customerName}
+                      href={`/contracts/${encodeURIComponent(event.contractId)}`}
+                      description={<VStack gap={2} hAlign="start">
+                        <Text type="supporting" color="secondary" maxLines={2}>{event.targetLabel}</Text>
+                        <Text type="supporting" color="secondary">{PAYMENT_FREQUENCY_META[event.frequency].label}</Text>
+                        {isNarrow && <HStack gap={2} wrap="wrap" vAlign="center">
+                          <Text weight="semibold">{formatMoney(event.amount)}</Text>{status}
+                        </HStack>}
+                      </VStack>}
+                      endContent={<HStack gap={3} vAlign="center">
+                        {!isNarrow && <VStack gap={2} hAlign="end">
+                          <Text weight="semibold">{formatMoney(event.amount)}</Text>{status}
+                        </VStack>}
+                        <Icon icon="chevronRight" />
+                      </HStack>} />;
+                  })}
                 </List>}
             </VStack>
           </Section>

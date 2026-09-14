@@ -141,64 +141,6 @@ export default function TableFilterClient({
   initialSelectedId?: string | null;
 } = {}) {
   const router = useRouter();
-  const {
-    data: contractsResponse,
-    isPending: isContractsPending,
-    isFetching: isContractsFetching,
-    error: contractsError,
-    refetch: refetchContracts,
-  } = useAllContracts();
-  const {
-    data: landsResponse,
-    isPending: isLandsPending,
-    isFetching: isLandsFetching,
-    error: landsError,
-    refetch: refetchLands,
-  } = useAllLands();
-  const {
-    data: plotsResponse,
-    isPending: isPlotsPending,
-    isFetching: isPlotsFetching,
-    error: plotsError,
-    refetch: refetchPlots,
-  } = useAllPlots();
-  const {
-    data: customersResponse,
-    isPending: isCustomersPending,
-    isFetching: isCustomersFetching,
-    error: customersError,
-    refetch: refetchCustomers,
-  } = useAllCustomers();
-
-  const contracts = useMemo(
-    () => contractsResponse?.data ?? [],
-    [contractsResponse?.data],
-  );
-  const lands = useMemo(() => landsResponse?.data ?? [], [landsResponse?.data]);
-  const plots = useMemo(() => plotsResponse?.data ?? [], [plotsResponse?.data]);
-  const customers = useMemo(
-    () => customersResponse?.data ?? [],
-    [customersResponse?.data],
-  );
-
-  const dataset = initialDataset;
-  const tableData = useMemo(
-    () =>
-      buildDatasetTableData({
-        dataset,
-        contracts,
-        customers,
-        lands,
-        plots,
-      }),
-    [contracts, customers, dataset, lands, plots],
-  );
-  const contractRows = useMemo(() => buildContractRows(contracts), [contracts]);
-  const [filters, setFilters] = useState<PowerSearchFilter[]>(() =>
-    getDatasetInitialFilters(initialDataset),
-  );
-  const [query, setQuery] = useState('');
-
   const [isCreateLandDialogOpen, setIsCreateLandDialogOpen] = useState(false);
   const [editingLand, setEditingLand] = useState<LandTableRow | null>(null);
   const [deletingLands, setDeletingLands] = useState<LandTableRow[]>([]);
@@ -219,6 +161,68 @@ export default function TableFilterClient({
 
   const [selectedKeys, setSelectedKeys] = useState<Set<string>>(new Set());
   const [activeRowId, setActiveRowId] = useState<string | null>(initialSelectedId);
+  const dataset = initialDataset;
+  const needsContractOptions = isCreateContractDialogOpen || editingContract != null;
+  const needsPlotOptions = isCreatePlotDialogOpen || editingPlot != null;
+  const needsRelatedContracts = activeRowId != null && dataset !== 'contracts';
+
+  const {
+    data: contractsResponse,
+    isPending: isContractsPending,
+    isFetching: isContractsFetching,
+    error: contractsError,
+    refetch: refetchContracts,
+  } = useAllContracts(dataset === 'contracts' || needsRelatedContracts);
+  const {
+    data: landsResponse,
+    isPending: isLandsPending,
+    isFetching: isLandsFetching,
+    error: landsError,
+    refetch: refetchLands,
+  } = useAllLands(dataset === 'lands' || needsContractOptions || needsPlotOptions || (dataset === 'plots' && activeRowId != null));
+  const {
+    data: plotsResponse,
+    isPending: isPlotsPending,
+    isFetching: isPlotsFetching,
+    error: plotsError,
+    refetch: refetchPlots,
+  } = useAllPlots(dataset === 'plots' || needsContractOptions || (dataset === 'lands' && activeRowId != null));
+  const {
+    data: customersResponse,
+    isPending: isCustomersPending,
+    isFetching: isCustomersFetching,
+    error: customersError,
+    refetch: refetchCustomers,
+  } = useAllCustomers(dataset === 'customers' || needsContractOptions);
+
+  const contracts = useMemo(
+    () => contractsResponse?.data ?? [],
+    [contractsResponse?.data],
+  );
+  const lands = useMemo(() => landsResponse?.data ?? [], [landsResponse?.data]);
+  const plots = useMemo(() => plotsResponse?.data ?? [], [plotsResponse?.data]);
+  const customers = useMemo(
+    () => customersResponse?.data ?? [],
+    [customersResponse?.data],
+  );
+
+  const tableData = useMemo(
+    () =>
+      buildDatasetTableData({
+        dataset,
+        contracts,
+        customers,
+        lands,
+        plots,
+      }),
+    [contracts, customers, dataset, lands, plots],
+  );
+  const contractRows = useMemo(() => buildContractRows(contracts), [contracts]);
+  const [filters, setFilters] = useState<PowerSearchFilter[]>(() =>
+    getDatasetInitialFilters(initialDataset),
+  );
+  const [query, setQuery] = useState('');
+
   const hasOpenedFirstRow = useRef(false);
 
   const detailWidth = useResizable({

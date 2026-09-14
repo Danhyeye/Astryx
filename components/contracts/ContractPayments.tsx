@@ -47,10 +47,10 @@ export function ContractPayments({contract}: {contract: Contract}) {
       data={rows.slice((currentPage - 1) * 12, currentPage * 12)} idKey="due_date" density="balanced" dividers="rows" hasHover
       columns={[
         {key: 'due_date', header: 'Ngày đến hạn', width: proportional(1), renderCell: row => <Text>{formatDate(row.due_date, true)}</Text>},
-        {key: 'amount', header: 'Số tiền', width: proportional(1), align: 'end', renderCell: row => <Text weight="semibold">{formatMoney(row.amount)}</Text>},
+        {key: 'amount', header: 'Số tiền', width: proportional(1), align: 'center', renderCell: row => <Text>{formatMoney(row.amount)}</Text>},
         {key: 'status', header: 'Trạng thái', width: proportional(1), renderCell: row => {
           const paid = !!row.paid_at || row.status.toUpperCase() === 'PAID';
-          return <VStack gap={1}><EntityStatus label={paid ? 'Đã thanh toán' : row.due_date < contractToday() ? 'Quá hạn' : 'Chưa thanh toán'} />
+          return <VStack gap={1} hAlign="start"><EntityStatus variant={paid ? 'green' : row.due_date < contractToday() ? 'red' : 'neutral'} label={paid ? 'Đã thanh toán' : row.due_date < contractToday() ? 'Quá hạn' : 'Chưa thanh toán'} />
             {row.paid_at && <Text type="supporting" color="secondary">{formatDate(row.paid_at, true)}</Text>}
           </VStack>;
         }},

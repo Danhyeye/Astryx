@@ -1,3 +1,4 @@
+import {EntityStatus} from './EntityStatus';
 import {useState} from 'react';
 import {Heading} from '@astryxdesign/core/Heading';
 import {VStack} from '@astryxdesign/core/Layout';
@@ -35,7 +36,7 @@ export function ContractRentalSchedule({contracts, landId, excludeId, plots, per
     {key: 'status', header: 'Tình trạng', width: proportional(2), renderCell: row => {
       const conflicts = (row.status === 'active' || row.status === 'pending') && rentalOverlaps(row, period)
         && (selectedPlotIds.length === 0 || row.plot_ids.length === 0 || row.plot_ids.some(id => selectedPlotIds.includes(id)));
-      return conflicts ? 'Trùng thời gian đã chọn' : row.status === 'completed' ? 'Đã hoàn tất' : 'Không trùng thời gian';
+      return <EntityStatus variant={conflicts ? 'red' : 'neutral'} label={conflicts ? 'Trùng thời gian đã chọn' : row.status === 'completed' ? 'Đã hoàn tất' : 'Không trùng thời gian'} />;
     }},
   ];
   return <VStack gap={3}>

@@ -1,3 +1,4 @@
+import {EntityStatus} from './EntityStatus';
 import {MetadataList, MetadataListItem} from '@astryxdesign/core/MetadataList';
 import {CONTRACT_STATUS_META, PAYMENT_FREQUENCY_META} from '@/data';
 import {formatDate, formatMoney, formatNumber} from '@/utils/format';
@@ -37,7 +38,7 @@ export function ContractFormPreview({form, customerOptions, landOptions, plotOpt
     <Grid columns={{minWidth: 240, max: 2, repeat: 'fit'}} gap={4}>
       {rows.map(([label, value]) => (
         <MetadataList key={label} columns="single" label={{position: 'top'}}>
-          <MetadataListItem label={label}>{value}</MetadataListItem>
+          <MetadataListItem label={label}>{label === 'Trạng thái' ? <EntityStatus label={value} variant={CONTRACT_STATUS_META[form.status].badge} /> : value}</MetadataListItem>
         </MetadataList>
       ))}
     </Grid>

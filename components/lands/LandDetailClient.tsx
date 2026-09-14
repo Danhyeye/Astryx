@@ -1,6 +1,19 @@
 'use client';
 
 import { useMemo, useState } from 'react';
+import {Grid} from '@astryxdesign/core/Grid';
+import {Overlay} from '@astryxdesign/core/Overlay';
+import {Lightbox} from '@astryxdesign/core/Lightbox';
+import {AspectRatio} from '@astryxdesign/core/AspectRatio';
+import {useResizable} from '@astryxdesign/core/Resizable';
+import {useQuery} from '@tanstack/react-query';
+import {useRouter} from 'next/navigation';
+import {PlotDetailPanel} from '@/components/table-filter/PlotDetailPanel';
+import {EditPlotDialog} from '@/components/table-filter/EditPlotDialog';
+import {DeletePlotsDialog} from '@/components/table-filter/DeletePlotsDialog';
+import {CONTRACT_SELECT, toContract, type ContractRowWithRelations} from '@/lib/api/contractRows';
+import {createClient} from '@/lib/supabase/client';
+import {fetchAllPages} from '@/lib/api/fetchAllPages';
 import {LandContracts} from './LandContracts';
 import { Banner } from '@astryxdesign/core/Banner';
 import { Button } from '@astryxdesign/core/Button';
@@ -14,7 +27,7 @@ import { MetadataList, MetadataListItem } from '@astryxdesign/core/MetadataList'
 import { Pagination } from '@astryxdesign/core/Pagination';
 import { Section } from '@astryxdesign/core/Section';
 import { Skeleton } from '@astryxdesign/core/Skeleton';
-import { StatusDot } from '@astryxdesign/core/StatusDot';
+import {EntityStatus} from '@/components/table-filter/EntityStatus';
 import { Table, proportional, type TableColumn } from '@astryxdesign/core/Table';
 import { Text } from '@astryxdesign/core/Text';
 import {useContractAvailability} from '@/hooks/useContractAvailability';
@@ -22,7 +35,7 @@ import {contractToday} from '@/lib/contractDates';
 import {getPlotRentalStatus, rentalEndDate} from '@/lib/contractAvailability';
 import { useLandDetail } from '@/hooks/useLands';
 import { useAllPlots } from '@/hooks/useAllRecords';
-import { buildDatasetTableData, PLOT_STATUS_META, type LandTableRow } from '@/data';
+import { buildContractRows, buildPlotRows, buildDatasetTableData, PLOT_STATUS_META, type LandTableRow, type PlotTableRow } from '@/data';
 import { EditLandDialog } from '@/components/table-filter/EditLandDialog';
 import { CreatePlotDialog } from '@/components/table-filter/CreatePlotDialog';
 import { FilterBar } from '@/components/table-filter/FilterBar';
@@ -49,13 +62,7 @@ const columns: TableColumn<LandDetailPlot>[] = [
     header: 'Trạng thái',
     width: proportional(1),
     renderCell: (plot) => (
-      <HStack gap={2} vAlign="center">
-        <StatusDot
-          variant={plot.rentalStatus === 'AVAILABLE' ? 'success' : 'neutral'}
-          label={RENTAL_STATUS_META[plot.rentalStatus].label}
-        />
-        <Text>{RENTAL_STATUS_META[plot.rentalStatus].label}</Text>
-      </HStack>
+      <EntityStatus variant={RENTAL_STATUS_META[plot.rentalStatus].badge} label={RENTAL_STATUS_META[plot.rentalStatus].label} />
     ),
   },
   { key: 'description', header: 'Mô tả', width: proportional(2) },
@@ -71,14 +78,36 @@ function StatItem({ count, label }: { count: number; label: string }) {
 }
 
 export function LandDetailClient({ id }: { id: string }) {
+  const router = useRouter();
+  const panelWidth = useResizable({defaultSize: 380, minSizePx: 320, maxSizePx: 560});
+  const [editingPlot, setEditingPlot] = useState<PlotTableRow | null>(null);
+  const [deletingPlot, setDeletingPlot] = useState<PlotTableRow | null>(null);
   const landQuery = useLandDetail(id);
   const plotsQuery = useAllPlots();
   const rentalQuery = useContractAvailability(true);
   const land = landQuery.data?.data;
+  const images = useMemo(() => [...(land?.images ?? [])].sort((a, b) => a.sort_order - b.sort_order), [land?.images]);
+  const [viewingImageId, setViewingImageId] = useState<string | null>(null);
+  const imageIndex = images.findIndex(image => image.id === viewingImageId);
 
   const [query, setQuery] = useState('');
   const [filters, setFilters] = useState<PowerSearchFilter[]>([]);
   const [pagination, setPagination] = useState({ key: '', page: 1 });
+  const [selectedPlotId, setSelectedPlotId] = useState<string | null>(null);
+  const plotContracts = useQuery({
+    queryKey: ['contracts', 'land-plot-detail', id, selectedPlotId],
+    enabled: selectedPlotId != null,
+    queryFn: async ({signal}) => {
+      const response = await fetchAllPages<ContractRowWithRelations>(async (page, size) => {
+        const {data, error} = await createClient().from('contracts').select(CONTRACT_SELECT)
+          .eq('land_id', id).or(`plot_ids.cs.{${selectedPlotId}},plot_ids.eq.{}`)
+          .order('start_date').order('id').range((page - 1) * size, page * size - 1).abortSignal(signal);
+        if (error) throw new Error(error.message);
+        return {data: data as ContractRowWithRelations[] | null};
+      }, signal);
+      return buildContractRows(response.data.map(toContract));
+    },
+  });
   const [editing, setEditing] = useState(false);
   const [creatingPlot, setCreatingPlot] = useState(false);
 
@@ -90,6 +119,10 @@ export function LandDetailClient({ id }: { id: string }) {
         .sort((a, b) => a.plot_number.localeCompare(b.plot_number, 'vi', { numeric: true })),
     [id, plotsQuery.data?.data, rentalQuery.data]
   );
+
+  const selectedPlot = plots.find(plot => plot.id === selectedPlotId);
+
+  const selectedPlotRow = selectedPlot ? buildPlotRows([{...selectedPlot, lands: land ? [land] : selectedPlot.lands}])[0] : null;
 
   const status = (filters[0]?.value as { value?: string } | undefined)?.value;
   const results = plots.filter(
@@ -129,6 +162,13 @@ export function LandDetailClient({ id }: { id: string }) {
   return (
     <Layout
       padding={4}
+      end={selectedPlotRow && land ? <PlotDetailPanel
+        plot={selectedPlotRow} land={land} contracts={plotContracts.data ?? []}
+        isContractsLoading={plotContracts.isPending} contractsError={plotContracts.error?.message}
+        resizable={panelWidth.props} onClose={() => setSelectedPlotId(null)}
+        onSelectLand={() => setSelectedPlotId(null)}
+        onSelectContract={contractId => router.push(`/contracts/${contractId}`)}
+        onEditPlot={setEditingPlot} onDeletePlot={setDeletingPlot} /> : undefined}
       header={
         <LayoutHeader hasDivider>
           <VStack gap={3}>
@@ -178,9 +218,30 @@ export function LandDetailClient({ id }: { id: string }) {
               <>
                 <Card>
                   <VStack gap={4}>
+                    <HStack gap={3} hAlign="between" vAlign="center" wrap="wrap">
+                      <Heading level={2}>Hình ảnh khu đất</Heading>
+                    </HStack>
+                    {land.images.length > 0 ? <Grid columns={{minWidth: 160, max: 4, repeat: 'fill'}} gap={3}>
+                      {images.slice(0, 4).map((image, index) => <Overlay key={image.id}
+                        showOn={index === 3 && images.length > 4 ? 'always' : 'hover-or-focus'} align="center"
+                        content={<Button
+                          label={index === 3 && images.length > 4 ? `+${(images.length - 4).toLocaleString('en-US')}` : `Xem ảnh ${index + 1}`}
+                          variant="secondary"
+                          onClick={() => setViewingImageId(index === 3 && images.length > 4 ? images[4].id : image.id)} />}>
+                        <AspectRatio ratio={4 / 3} fit="contain" shape="rectangle">
+                          {/* Uploaded storage URLs are displayed directly. */}
+                          {/* eslint-disable-next-line @next/next/no-img-element */}
+                          <img src={image.url} alt={image.caption || land.name} loading="lazy" />
+                        </AspectRatio>
+                      </Overlay>)}
+                    </Grid> : <Text color="secondary">Chưa có hình ảnh khu đất.</Text>}
+                  </VStack>
+                </Card>
+                <Card>
+                  <VStack gap={4}>
                     <MetadataList columns={2}>
                       {wholeLandRental && <MetadataListItem label="Tình trạng cho thuê">
-                        {(wholeLandRental.status === 'pending' || (wholeLandRental.start_date ?? '') > contractToday()) ? 'Đã đặt trước toàn bộ khu đất' : 'Đang cho thuê toàn bộ khu đất'}
+                        <EntityStatus label={(wholeLandRental.status === 'pending' || (wholeLandRental.start_date ?? '') > contractToday()) ? 'Đã đặt trước toàn bộ khu đất' : 'Đang cho thuê toàn bộ khu đất'} />
                       </MetadataListItem>}
                       <MetadataListItem label="Địa chỉ">
                         {land.location || 'Chưa có địa chỉ'}
@@ -248,7 +309,10 @@ export function LandDetailClient({ id }: { id: string }) {
                     ) : (
                       <Table
                         data={results.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE)}
-                        columns={columns}
+                        columns={[...columns, {
+                          key: 'details', header: 'Chi tiết', width: proportional(1),
+                          renderCell: plot => <Button label="Xem chi tiết" size="sm" variant="ghost" onClick={() => setSelectedPlotId(plot.id)} />,
+                        }]}
                         idKey="id"
                         rowCount={results.length}
                         rowIndexStart={(page - 1) * PAGE_SIZE + 1}
@@ -270,6 +334,15 @@ export function LandDetailClient({ id }: { id: string }) {
               </>
             )}
 
+            {imageIndex >= 0 && <Lightbox isOpen hasZoom
+              media={images.map(image => ({src: image.url, alt: image.caption || land?.name || 'Hình ảnh khu đất', caption: image.caption || undefined}))}
+              index={imageIndex} onIndexChange={index => setViewingImageId(images[index]?.id ?? null)}
+              onOpenChange={open => {if (!open) setViewingImageId(null);}} />}
+            {editingPlot && land && <EditPlotDialog plot={editingPlot} lands={[land]} isOpen
+              onOpenChange={open => {if (!open) setEditingPlot(null);}} onSaved={() => {void plotsQuery.refetch();}} />}
+            {deletingPlot && <DeletePlotsDialog plots={[deletingPlot]} isOpen
+              onOpenChange={open => {if (!open) setDeletingPlot(null);}}
+              onDeleted={() => {setSelectedPlotId(null); void plotsQuery.refetch();}} />}
             {editing && landRow && (
               <EditLandDialog
                 land={landRow}

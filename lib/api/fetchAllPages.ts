@@ -1,11 +1,14 @@
 /** Read every API page so client-side counts and filters never silently truncate. */
 export async function fetchAllPages<T>(
   fetchPage: (page: number, pageSize: number) => Promise<{data: T[] | null}>,
+  signal?: AbortSignal,
 ): Promise<{data: T[]; code: number; message: string}> {
   const data: T[] = [];
   const pageSize = 100;
   for (let page = 1; ; page++) {
+    signal?.throwIfAborted();
     const response = await fetchPage(page, pageSize);
+    signal?.throwIfAborted();
     const rows = response.data ?? [];
     data.push(...rows);
     if (rows.length < pageSize) break;

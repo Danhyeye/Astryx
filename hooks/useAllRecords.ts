@@ -5,19 +5,19 @@ import {plotsService} from '@/lib/api/fetchPlot';
 import {customersService} from '@/lib/api/fetchCustomer';
 import {contractsService} from '@/lib/api/fetchContract';
 
-export function useAllLands() {
-  return useQuery({queryKey: ['lands', 'all'], queryFn: () =>
-    fetchAllPages((page, pageSize) => landsService.getLands({page, pageSize}))});
+export function useAllLands(enabled = true) {
+  return useQuery({enabled, queryKey: ['lands', 'all'], queryFn: ({signal}) =>
+    fetchAllPages((page, pageSize) => landsService.getLands({page, pageSize}), signal)});
 }
-export function useAllPlots() {
-  return useQuery({queryKey: ['plots', 'all'], queryFn: () =>
-    fetchAllPages((page, pageSize) => plotsService.getPlots({page, pageSize}))});
+export function useAllPlots(enabled = true) {
+  return useQuery({enabled, queryKey: ['plots', 'all'], queryFn: ({signal}) =>
+    fetchAllPages((page, pageSize) => plotsService.getPlots({page, pageSize}), signal)});
 }
-export function useAllCustomers() {
-  return useQuery({queryKey: ['customers', 'all'], queryFn: () =>
-    fetchAllPages((page, pageSize) => customersService.getCustomers({page, pageSize}))});
+export function useAllCustomers(enabled = true) {
+  return useQuery({enabled, queryKey: ['customers', 'all'], queryFn: ({signal}) =>
+    fetchAllPages((page, pageSize) => customersService.getCustomers({page, pageSize}), signal)});
 }
-export function useAllContracts() {
-  return useQuery({queryKey: ['contracts', 'all'], queryFn: () =>
-    fetchAllPages((page, pageSize) => contractsService.getContracts({page, pageSize}))});
+export function useAllContracts(enabled = true) {
+  return useQuery({enabled, queryKey: ['contracts', 'all'], queryFn: ({signal}) =>
+    fetchAllPages((page, pageSize) => contractsService.getContracts({page, pageSize}), signal)});
 }

@@ -1,7 +1,13 @@
-import {HStack} from '@astryxdesign/core/Layout';
-import {StatusDot} from '@astryxdesign/core/StatusDot';
-import {Text} from '@astryxdesign/core/Text';
+import type {ComponentProps} from 'react';
+import {Badge} from '@astryxdesign/core/Badge';
 
-export function EntityStatus({label, variant}: {label: string; variant?: string}) {
-  return <HStack gap={2} vAlign="center"><StatusDot label={label} variant={variant === 'green' ? 'success' : variant === 'red' ? 'error' : variant === 'blue' ? 'accent' : 'neutral'} /><Text>{label}</Text></HStack>;
+const variants: Record<string, ComponentProps<typeof Badge>['variant']> = {
+  neutral: 'neutral', green: 'green', red: 'red', blue: 'blue',
+  yellow: 'yellow', orange: 'orange', purple: 'purple', teal: 'teal',
+  cyan: 'cyan', pink: 'pink', success: 'success', warning: 'warning',
+  error: 'error', info: 'info', accent: 'blue',
+};
+
+export function EntityStatus({label, variant = 'neutral'}: {label: string; variant?: string}) {
+  return <Badge label={label} variant={variants[variant] ?? 'neutral'} />;
 }

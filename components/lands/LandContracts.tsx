@@ -6,13 +6,12 @@ import {Banner} from '@astryxdesign/core/Banner';
 import {Button} from '@astryxdesign/core/Button';
 import {EmptyState} from '@astryxdesign/core/EmptyState';
 import {Heading} from '@astryxdesign/core/Heading';
-import {HStack, VStack} from '@astryxdesign/core/Layout';
-import {Text} from '@astryxdesign/core/Text';
+import {VStack} from '@astryxdesign/core/Layout';
 import {Link} from '@astryxdesign/core/Link';
 import {Pagination} from '@astryxdesign/core/Pagination';
 import {Section} from '@astryxdesign/core/Section';
 import {Skeleton} from '@astryxdesign/core/Skeleton';
-import {StatusDot} from '@astryxdesign/core/StatusDot';
+import {EntityStatus} from '@/components/table-filter/EntityStatus';
 import {Table, proportional, type TableColumn} from '@astryxdesign/core/Table';
 import {buildContractRows, CONTRACT_STATUS_META, type ContractTableRow} from '@/data';
 import {CONTRACT_SELECT, toContract, type ContractRowWithRelations} from '@/lib/api/contractRows';
@@ -27,11 +26,7 @@ const columns: TableColumn<ContractTableRow>[] = [
   )},
   {key: 'plot', header: 'Phạm vi thuê', width: proportional(2), renderCell: row => row.plotIds.length ? row.plot : 'Toàn bộ khu đất'},
   {key: 'status', header: 'Trạng thái', width: proportional(1), renderCell: row => (
-    <HStack gap={2} vAlign="center">
-    <StatusDot label={CONTRACT_STATUS_META[row.status].label}
-      variant={row.status === 'ACTIVE' ? 'success' : row.status === 'CANCELLED' ? 'error' : 'neutral'} />
-    <Text>{CONTRACT_STATUS_META[row.status].label}</Text>
-    </HStack>
+    <EntityStatus label={CONTRACT_STATUS_META[row.status].label} variant={CONTRACT_STATUS_META[row.status].badge} />
   )},
   {key: 'rentAmount', header: 'Tiền thuê', width: proportional(1), renderCell: row => formatMoney(row.rentAmount)},
   {key: 'startDate', header: 'Ngày bắt đầu', width: proportional(1), renderCell: row => formatDate(row.startDate, true)},

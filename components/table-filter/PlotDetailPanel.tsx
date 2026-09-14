@@ -1,17 +1,22 @@
-import {EntityStatus} from './EntityStatus';
-import {Badge} from '@astryxdesign/core/Badge';
-import {Button} from '@astryxdesign/core/Button';
-import {Divider} from '@astryxdesign/core/Divider';
-import {Icon} from '@astryxdesign/core/Icon';
-import {IconButton} from '@astryxdesign/core/IconButton';
-import {Item} from '@astryxdesign/core/Item';
-import {HStack, LayoutPanel, StackItem, VStack} from '@astryxdesign/core/Layout';
-import {MetadataList, MetadataListItem} from '@astryxdesign/core/MetadataList';
-import {ResizeHandle} from '@astryxdesign/core/Resizable';
-import type {ResizableProps} from '@astryxdesign/core/Resizable';
-import {Section} from '@astryxdesign/core/Section';
-import {Heading, Text} from '@astryxdesign/core/Text';
-import {X} from 'lucide-react';
+import { useState } from 'react';
+import { Grid } from '@astryxdesign/core/Grid';
+import { AspectRatio } from '@astryxdesign/core/AspectRatio';
+import { Overlay } from '@astryxdesign/core/Overlay';
+import { Lightbox } from '@astryxdesign/core/Lightbox';
+import { EntityStatus } from './EntityStatus';
+import { Badge } from '@astryxdesign/core/Badge';
+import { Button } from '@astryxdesign/core/Button';
+import { Divider } from '@astryxdesign/core/Divider';
+import { Icon } from '@astryxdesign/core/Icon';
+import { IconButton } from '@astryxdesign/core/IconButton';
+import { Item } from '@astryxdesign/core/Item';
+import { HStack, LayoutPanel, StackItem, VStack } from '@astryxdesign/core/Layout';
+import { MetadataList, MetadataListItem } from '@astryxdesign/core/MetadataList';
+import { ResizeHandle } from '@astryxdesign/core/Resizable';
+import type { ResizableProps } from '@astryxdesign/core/Resizable';
+import { Section } from '@astryxdesign/core/Section';
+import { Heading, Text } from '@astryxdesign/core/Text';
+import { X } from 'lucide-react';
 
 import {
   CONTRACT_STATUS_META,
@@ -19,14 +24,16 @@ import {
   type ContractTableRow,
   type PlotTableRow,
 } from '@/data';
-import {styles} from '@/app/table-filter/styles';
-import type {Land} from '@/types/land';
-import {formatArea, formatDate, formatMoney} from '@/utils/format';
+import { styles } from '@/app/table-filter/styles';
+import type { Land } from '@/types/land';
+import { formatArea, formatDate, formatMoney } from '@/utils/format';
 
 export function PlotDetailPanel({
   plot,
   land,
   contracts,
+  isContractsLoading = false,
+  contractsError,
   resizable,
   onClose,
   onSelectLand,
@@ -37,6 +44,8 @@ export function PlotDetailPanel({
   plot: PlotTableRow;
   land: Land | null;
   contracts: ContractTableRow[];
+  isContractsLoading?: boolean;
+  contractsError?: string;
   resizable: ResizableProps;
   onClose: () => void;
   onSelectLand: (landId: string) => void;
@@ -44,6 +53,9 @@ export function PlotDetailPanel({
   onEditPlot: (plot: PlotTableRow) => void;
   onDeletePlot: (plot: PlotTableRow) => void;
 }) {
+  const [viewing, setViewing] = useState<{ plotId: string; imageId: string } | null>(null);
+  const images = [...plot.images].sort((a, b) => a.sort_order - b.sort_order);
+  const imageIndex = viewing?.plotId === plot.id ? images.findIndex(image => image.id === viewing.imageId) : -1;
   const plotStatus = PLOT_STATUS_META[plot.status];
 
   return (
@@ -69,9 +81,8 @@ export function PlotDetailPanel({
                       <EntityStatus variant={plotStatus.badge} label={plotStatus.label} />
                       <Badge
                         variant="neutral"
-                        label={`${contracts.length} ${
-                          'hợp đồng'
-                        }`}
+                        label={`${contracts.length} ${'hợp đồng'
+                          }`}
                       />
                       <Text type="supporting" color="secondary">
                         {plot.id}
@@ -99,21 +110,43 @@ export function PlotDetailPanel({
                   width="100%"
                   onClick={() => onEditPlot(plot)}
                 />
-                <Button
+                {/* <Button
                   label="Xóa"
                   variant="destructive"
                   size="sm"
                   width="100%"
                   onClick={() => onDeletePlot(plot)}
-                />
+                /> */}
               </HStack>
+
             </VStack>
           </Section>
 
           <Divider />
 
           <Section variant="transparent" padding={4}>
-            <MetadataList columns="single" label={{position: 'start', width: 116}}>
+            <VStack gap={3}>
+              <Heading level={3}>Hình ảnh lô đất</Heading>
+              {images.length === 0 ? <Text color="secondary">Chưa có hình ảnh lô đất.</Text> : <Grid columns={2} gap={2}>
+                {images.slice(0, 4).map((image, index) => <Overlay key={image.id}
+                  showOn={index === 3 && images.length > 4 ? 'always' : 'hover-or-focus'} align="center"
+                  content={<Button size="sm" variant="secondary"
+                    label={index === 3 && images.length > 4 ? `+${images.length - 4}` : `Xem ảnh ${index + 1}`}
+                    onClick={() => setViewing({ plotId: plot.id, imageId: index === 3 && images.length > 4 ? images[4].id : image.id })} />}>
+                  <AspectRatio ratio={4 / 3} fit="contain" shape="rectangle">
+                    {/* Uploaded storage URLs are displayed directly. */}
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img src={image.url} alt={image.caption || `Lô ${plot.plotNumber}`} loading="lazy" />
+                  </AspectRatio>
+                </Overlay>)}
+              </Grid>}
+            </VStack>
+          </Section>
+
+          <Divider />
+
+          <Section variant="transparent" padding={4}>
+            <MetadataList columns="single" label={{ position: 'start', width: 116 }}>
               <MetadataListItem label="Mã lô đất">
                 <Text type="body">{plot.plotNumber}</Text>
               </MetadataListItem>
@@ -155,9 +188,8 @@ export function PlotDetailPanel({
                   align="center"
                   label={land.name}
                   labelLines={2}
-                  description={`${formatArea(land.area_sqm)} - ${
-                    land.location || 'Chưa có vị trí'
-                  }`}
+                  description={`${formatArea(land.area_sqm)} - ${land.location || 'Chưa có vị trí'
+                    }`}
                   onClick={() => onSelectLand(land.id)}
                 />
               )}
@@ -169,7 +201,7 @@ export function PlotDetailPanel({
           <Section variant="transparent" padding={4}>
             <VStack gap={2}>
               <Heading level={3}>Hợp đồng</Heading>
-              {contracts.length === 0 ? (
+              {isContractsLoading ? <Text color="secondary">Đang tải hợp đồng…</Text> : contractsError ? <Text color="secondary">{contractsError}</Text> : contracts.length === 0 ? (
                 <Text type="supporting" color="secondary">
                   Lô đất chưa có hợp đồng.
                 </Text>
@@ -199,6 +231,11 @@ export function PlotDetailPanel({
           </Section>
         </VStack>
       </LayoutPanel>
+      {imageIndex >= 0 && <Lightbox isOpen hasZoom
+        media={images.map(image => ({ src: image.url, alt: image.caption || `Lô ${plot.plotNumber}`, caption: image.caption || undefined }))}
+        index={imageIndex}
+        onIndexChange={index => setViewing(images[index] ? { plotId: plot.id, imageId: images[index].id } : null)}
+        onOpenChange={open => { if (!open) setViewing(null); }} />}
     </>
   );
 }

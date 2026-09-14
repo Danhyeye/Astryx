@@ -12,7 +12,7 @@ import {
   tokenExpiresAt,
   updateGoogleEvent,
 } from '@/lib/google-calendar/googleCalendar';
-import {contractStatusFromDatabase, paymentFrequencyFromDatabase} from '@/lib/contractDbValues';
+import {contractStatusToDatabase, contractStatusFromDatabase, paymentFrequencyFromDatabase} from '@/lib/contractDbValues';
 import {mapCustomer, mapLand, mapPlot} from '@/lib/mappers';
 import {createAdminClient} from '@/lib/supabase/admin';
 import type {ApiErrorResponse} from '@/types/api-response';
@@ -80,9 +80,11 @@ function toContract(row: ContractRowWithRelations): Contract {
   };
 }
 
-async function loadContracts(supabase: AdminClient): Promise<Contract[]> {
+async function loadContracts(supabase: AdminClient, date: string): Promise<Contract[]> {
   const {data} = await fetchAllPages<ContractRowWithRelations>(async (page, size) => {
     const {data, error} = await supabase.from('contracts').select(CONTRACT_SELECT)
+      .neq('status', contractStatusToDatabase('CANCELLED') as ContractRow['status']).lte('start_date', date)
+      .or(`end_date.is.null,end_date.gte.${date}`)
       .order('id', {ascending: true}).range((page - 1) * size, page * size - 1);
     if (error) throw new Error(error.message);
     return {data: data as ContractRowWithRelations[] | null};
@@ -292,7 +294,7 @@ export async function POST(request: Request) {
     }
 
     const accessToken = await getAccessToken(supabase, config, token);
-    const contracts = await loadContracts(supabase);
+    const contracts = await loadContracts(supabase, date);
     const mappings = await loadEventMappings(supabase, integration.id);
     const {events: dueEvents, staleMappings} = buildSelectedDaySync(contracts, [...mappings.values()], date);
     const errors: string[] = [];
