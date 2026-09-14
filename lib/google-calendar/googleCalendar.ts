@@ -130,7 +130,7 @@ function calendarDeleteEventUrl(calendarId: string, eventId: string): string {
 }
 
 function formatMoney(amount: number): string {
-  return new Intl.NumberFormat('vi-VN', {style: 'currency', currency: 'VND', maximumFractionDigits: 0}).format(amount || 0);
+  return new Intl.NumberFormat('vi-VN', {style: 'currency', currency: 'VND', maximumFractionDigits: 0}).format(amount || 0).replaceAll('.', ',');
 }
 
 export function getGoogleCalendarEnv(
@@ -190,7 +190,7 @@ export function buildGoogleDueEvent(
       `Khu đất / lô đất: ${event.targetLabel}`,
       `Số tiền: ${formatMoney(event.amount)}`,
       `Chu kỳ: ${{MONTHLY: 'Hằng tháng', QUARTERLY: 'Hằng quý', YEARLY: 'Hằng năm', CUSTOM: 'Tùy chỉnh'}[event.frequency] ?? event.frequency}`,
-      `Trạng thái: ${{ACTIVE: 'Đang hiệu lực', COMPLETED: 'Đã hoàn tất', CANCELLED: 'Đã hủy'}[event.status] ?? event.status}`,
+      `Trạng thái: ${{PENDING: 'Chờ hiệu lực', ACTIVE: 'Đang hiệu lực', COMPLETED: 'Đã hoàn tất', CANCELLED: 'Đã hủy'}[event.status] ?? event.status}`,
       `Thời hạn: ${event.startDate} đến ${event.endDate || 'Chưa thiết lập'}`,
     ].join('\n'),
     start: {

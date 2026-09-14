@@ -1,5 +1,5 @@
 import type {ReactNode} from 'react';
-import {Banner} from '@astryxdesign/core/Banner';
+import {EntityFormBanner as Banner} from './EntityFormBanner';
 import {Button} from '@astryxdesign/core/Button';
 import {Grid} from '@astryxdesign/core/Grid';
 import {HStack, VStack} from '@astryxdesign/core/Layout';

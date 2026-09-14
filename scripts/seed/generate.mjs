@@ -245,8 +245,9 @@ export function generateSeedData({ asOf = new Date().toISOString().slice(0, 10) 
     const contract = {
       id: deterministicUuid("contract", index),
       customer_id: customers[index % customers.length].id,
-      land_id: null,
-      plot_id: plots[index].id,
+      land_id: plots[index].land_id,
+      plot_id: null,
+      plot_ids: [plots[index].id],
       deposit_amount: roundMoney(monthlyRate * (1 + index % 3)),
       rent_amount: roundMoney(monthlyRate * frequencyMultiplier),
       due_day: dueDay,

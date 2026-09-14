@@ -76,3 +76,14 @@ export function resolveContractEndDate({
     addUTCDays(addUTCMonths(start, leaseDurationMonths), -1),
   );
 }
+
+/** Calendar date in the timezone used by rental contracts and their cron job. */
+export function contractToday(now = new Date()): string {
+  return new Intl.DateTimeFormat('en-CA', {
+    timeZone: 'Asia/Ho_Chi_Minh', year: 'numeric', month: '2-digit', day: '2-digit',
+  }).format(now);
+}
+
+export function isPendingStartDateValid(status: string, startDate: string, now = new Date()): boolean {
+  return status !== 'PENDING' || (isValidISODate(startDate) && startDate > contractToday(now));
+}

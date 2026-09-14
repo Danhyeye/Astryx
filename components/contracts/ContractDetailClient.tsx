@@ -1,5 +1,6 @@
 'use client';
 
+import {ContractPayments} from './ContractPayments';
 import {AlertDialog} from '@astryxdesign/core/AlertDialog';
 import {UploadContractFilesDialog} from './UploadContractFilesDialog';
 import { useState } from 'react';
@@ -16,17 +17,19 @@ import { MetadataList, MetadataListItem } from '@astryxdesign/core/MetadataList'
 import { ProgressBar } from '@astryxdesign/core/ProgressBar';
 import { Section } from '@astryxdesign/core/Section';
 import { Text } from '@astryxdesign/core/Text';
-import { useContractDetail } from '@/hooks/useContract';
+import { useContractDetail, useUpdateContract } from '@/hooks/useContract';
 import { useAllCustomers, useAllLands, useAllPlots } from '@/hooks/useAllRecords';
 import { buildContractRows, CONTRACT_STATUS_META, PAYMENT_FREQUENCY_META } from '@/data';
 import { EditContractDialog } from '@/components/table-filter/EditContractDialog';
-import { EntityStatus } from '@/components/table-filter/EntityStatus';
+import {Selector} from '@astryxdesign/core/Selector';
+import type {ContractStatus} from '@/types/contract';
 import { fetchContractFiles, deleteContractFile, type ContractFile } from '@/lib/api/fetchContractFiles';
-import { resolveContractEndDate } from '@/lib/contractDates';
+import { resolveContractEndDate, isPendingStartDateValid } from '@/lib/contractDates';
 import { formatDate, formatMoney, formatArea } from '@/utils/format';
 
 export function ContractDetailClient({ id }: { id: string }) {
   const query = useContractDetail(id);
+  const updateStatus = useUpdateContract();
   const contract = query.data?.data;
   const filesQuery = useQuery({ queryKey: ['contractFiles', id], queryFn: () => fetchContractFiles(id), enabled: !!contract });
   const customers = useAllCustomers();
@@ -46,7 +49,6 @@ export function ContractDetailClient({ id }: { id: string }) {
   if (query.isPending) return <Section><ProgressBar label="Đang tải hợp đồng" isIndeterminate /></Section>;
   if (!contract || !row) return <Section><Banner status="error" title="Không thể tải hợp đồng" description={query.error?.message ?? 'Không tìm thấy hợp đồng.'} /><Link href="/contracts">Danh sách hợp đồng</Link></Section>;
   const land = contract.lands[0] ?? contract.plots[0]?.lands[0];
-  const plot = contract.plots[0];
   const customer = contract.customers[0];
   const end = resolveContractEndDate({ startDate: contract.start_date, endDate: contract.end_date, leaseDurationMonths: contract.lease_duration_months });
   return <>
@@ -56,9 +58,31 @@ export function ContractDetailClient({ id }: { id: string }) {
           <Link href="/contracts">Danh sách hợp đồng</Link>
           <HStack gap={3} vAlign="center" wrap="wrap">
             <StackItem size="fill"><Heading level={1}>{row.summary}</Heading></StackItem>
-            <EntityStatus label={CONTRACT_STATUS_META[contract.status].label} />
-            <Button label="Chỉnh sửa hợp đồng" onClick={() => setEditing(true)} />
+            <Selector
+              label="Trạng thái hợp đồng"
+              isLabelHidden
+              value={contract.status}
+              options={(Object.keys(CONTRACT_STATUS_META) as ContractStatus[]).map(status => ({
+                value: status,
+                label: CONTRACT_STATUS_META[status].label,
+                disabled: !isPendingStartDateValid(status, contract.start_date),
+                description: !isPendingStartDateValid(status, contract.start_date)
+                  ? 'Ngày bắt đầu phải ở tương lai. Hãy chỉnh sửa thời hạn hợp đồng trước.'
+                  : undefined,
+              }))}
+              isDisabled={updateStatus.isPending || editing}
+              isLoading={updateStatus.isPending}
+              onChange={status => {
+                if (status !== contract.status && !updateStatus.isPending) {
+                  updateStatus.mutate({id, data: {status: status as ContractStatus}}, {
+                    onSuccess: async () => { await query.refetch(); },
+                  });
+                }
+              }}
+            />
+            <Button label="Chỉnh sửa hợp đồng" isDisabled={updateStatus.isPending} onClick={() => setEditing(true)} />
           </HStack>
+          {updateStatus.error && <Banner status="error" title="Không thể đổi trạng thái hợp đồng" description={updateStatus.error.message} />}
         </VStack>
       </LayoutHeader>}
       content={<LayoutContent padding={5} label="Thông tin hợp đồng">
@@ -83,8 +107,8 @@ export function ContractDetailClient({ id }: { id: string }) {
                 <Text type="large" weight="semibold">{land?.name ?? 'Chưa có khu đất'}</Text>
               </VStack>
               <MetadataList>
-                <MetadataListItem label="Lô đất">{plot?.plot_number ?? 'Toàn khu đất'}</MetadataListItem>
-                <MetadataListItem label="Diện tích">{formatArea(plot?.area_sqm ?? land?.area_sqm ?? 0)}</MetadataListItem>
+                <MetadataListItem label="Lô đất">{contract.plots.length ? contract.plots.map(plot => plot.plot_number).join(', ') : 'Toàn khu đất'}</MetadataListItem>
+                <MetadataListItem label="Diện tích">{formatArea(row.areaSqm)}</MetadataListItem>
                 <MetadataListItem label="Vị trí"><Text wordBreak="break-word">{land?.location || '—'}</Text></MetadataListItem>
               </MetadataList>
               {land && <Link href={'/lands/' + land.id}>Xem khu đất</Link>}
@@ -124,16 +148,7 @@ export function ContractDetailClient({ id }: { id: string }) {
           </VStack>
           </Grid>
           </Section>
-          <Section padding={5} dividers={['top']}><VStack gap={3}>
-            <Heading level={2}>Lịch sử và lịch thanh toán</Heading>
-            {!contract.payments?.length && <Text color="secondary">Chưa có kỳ thanh toán được ghi nhận.</Text>}
-            <List hasDividers className="max-h-80 overflow-y-auto">
-              {[...(contract.payments ?? [])].sort((a, b) => a.due_date.localeCompare(b.due_date)).map((payment, index) => <ListItem
-                key={payment.due_date + ':' + index} label={formatDate(payment.due_date, true)}
-                description={payment.paid_at ? 'Đã thanh toán ngày ' + formatDate(payment.paid_at, true) : payment.status.toUpperCase() === 'PAID' ? 'Đã thanh toán' : payment.status.toUpperCase() === 'OVERDUE' ? 'Quá hạn' : 'Chưa thanh toán'}
-                endContent={<Text weight="semibold">{formatMoney(payment.amount)}</Text>} />)}
-            </List>
-          </VStack></Section>
+          <Section padding={5} dividers={['top']}><ContractPayments key={contract.id} contract={contract} /></Section>
         </VStack>
       </LayoutContent>} />
     {uploading && <UploadContractFilesDialog id={id} onClose={()=>setUploading(false)} onUploaded={()=>{void filesQuery.refetch();}} />}

@@ -1,5 +1,5 @@
 import {type FormEvent, useEffect, useRef, useState} from 'react';
-import {Banner} from '@astryxdesign/core/Banner';
+import {EntityFormBanner as Banner} from './EntityFormBanner';
 import {Dialog, DialogHeader} from '@astryxdesign/core/Dialog';
 import {FileInput} from '@astryxdesign/core/FileInput';
 import {GridSpan} from '@astryxdesign/core/Grid';
@@ -10,7 +10,7 @@ import {
   LayoutFooter,
   VStack,
 } from '@astryxdesign/core/Layout';
-import {NumberInput} from '@astryxdesign/core/NumberInput';
+import {NumberInput} from '@/components/NumberInput';
 import {TextArea} from '@astryxdesign/core/TextArea';
 import {TextInput} from '@astryxdesign/core/TextInput';
 import {Thumbnail} from '@astryxdesign/core/Thumbnail';
@@ -21,9 +21,8 @@ import {
   buildCreateLandPayload,
   createEmptyLandForm,
   isCreateLandFormValid,
-  isLandFormStepValid,
 } from './createLandForm';
-import {EntityFormActions, EntityFormStepper} from './EntityFormStepper';
+import {EntitySinglePageActions, EntitySinglePageForm} from './EntitySinglePageForm';
 
 const MAX_IMAGE_SIZE = 5 * 1024 * 1024;
 const MAX_IMAGE_FILES = 12;
@@ -62,7 +61,6 @@ export function CreateLandDialog({
 }) {
   const formId = 'create-land-form';
   const [form, setForm] = useState(createEmptyLandForm);
-  const [activeStep, setActiveStep] = useState(0);
   const [selectedImages, setSelectedImages] = useState<SelectedLandImage[]>([]);
   const [submitError, setSubmitError] = useState<string | null>(null);
   const selectedImagesRef = useRef<SelectedLandImage[]>([]);
@@ -83,7 +81,7 @@ export function CreateLandDialog({
 
   const resetDialogState = () => {
     setForm(createEmptyLandForm());
-    setActiveStep(0);
+
     clearSelectedImages();
     setSubmitError(null);
   };
@@ -164,7 +162,7 @@ export function CreateLandDialog({
   const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
 
-    if (activeStep !== 2 || !isFormValid || isSubmitting) {
+    if (!isFormValid || isSubmitting) {
       return;
     }
 
@@ -222,10 +220,8 @@ export function CreateLandDialog({
                   />
                 )}
 
-                <EntityFormStepper
-                  activeStep={activeStep}
-                  onStepChange={setActiveStep}
-                  steps={[
+                <EntitySinglePageForm
+                  sections={[
                     {
                       label: 'Thông tin cơ bản',
                       content: (
@@ -335,20 +331,12 @@ export function CreateLandDialog({
         }
         footer={
           <LayoutFooter hasDivider>
-            <EntityFormActions
-              activeStep={activeStep}
+            <EntitySinglePageActions
               formId={formId}
-              isStepValid={isLandFormStepValid(form, activeStep)}
+              isFormValid={isFormValid}
               isSubmitting={isSubmitting}
-              onBack={() => setActiveStep(step => Math.max(0, step - 1))}
               onCancel={() => handleOpenChange(false)}
-              onNext={() =>
-                setActiveStep(step =>
-                  isLandFormStepValid(form, step) ? step + 1 : step,
-                )
-              }
               submitLabel="Tạo khu đất"
-              stepCount={3}
             />
           </LayoutFooter>
         }

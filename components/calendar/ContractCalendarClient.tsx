@@ -15,7 +15,7 @@ import { Heading, Text } from '@astryxdesign/core/Text';
 import { useMediaQuery } from '@astryxdesign/core/hooks';
 import { useAllContracts } from '@/hooks/useAllRecords';
 import { useGoogleCalendarStatus, useSyncGoogleCalendar } from '@/hooks/useGoogleCalendar';
-import { formatDate, formatMoney } from '@/utils/format';
+import { formatDate, formatMoney, formatNumber } from '@/utils/format';
 import { buildContractMonthEvents, buildContractOptions } from './contractCalendarData';
 
 function todayInVietnam() {
@@ -106,7 +106,7 @@ export function ContractCalendarClient() {
                 <StackItem size="fill">
                   <VStack gap={1}>
                     <Heading level={2}>{monthLabel}</Heading>
-                    <Text color="secondary">{events.length.toLocaleString('vi-VN')} hạn thanh toán · {formatMoney(events.reduce((sum, event) => sum + event.amount, 0))}</Text>
+                    <Text color="secondary">{formatNumber(events.length)} hạn thanh toán · {formatMoney(events.reduce((sum, event) => sum + event.amount, 0))}</Text>
                   </VStack>
                 </StackItem>
                 <IconButton
@@ -163,7 +163,7 @@ export function ContractCalendarClient() {
                         tooltip={event.contractLabel + ' · ' + formatMoney(event.amount)} />
                     ))}
                     {!isNarrow && dayEvents.length > 3 && <Button size="sm" variant="ghost"
-                      label={'+ ' + (dayEvents.length - 3).toLocaleString('vi-VN') + ' hạn khác'}
+                      label={'+ ' + formatNumber(dayEvents.length - 3) + ' hạn khác'}
                       onClick={() => setSelectedDate(date)} />}
                   </VStack>
                 </Section>;
@@ -184,7 +184,7 @@ export function ContractCalendarClient() {
                 </List>}
             </VStack>
           </Section>
-          <Section padding={4} dividers={['top']}>
+          {/* <Section padding={4} dividers={['top']}>
             <VStack gap={3}>
               <VStack gap={1}>
                 <Heading level={2}>Lịch Google</Heading>
@@ -225,11 +225,11 @@ export function ContractCalendarClient() {
 
               {googleSyncSummary != null ? (
                 <Text type="supporting" color="secondary">
-                  Đã đồng bộ {googleSyncSummary.total.toLocaleString('vi-VN')}{' '}
-                  hạn thanh toán ngày {formatDate(googleSyncSummary.date, true)}. Đã tạo {googleSyncSummary.created},
-                  cập nhật {googleSyncSummary.updated}, đã xóa{' '}
-                  {googleSyncSummary.deleted}, thất bại{' '}
-                  {googleSyncSummary.failed}.
+                  Đã đồng bộ {formatNumber(googleSyncSummary.total)}{' '}
+                  hạn thanh toán ngày {formatDate(googleSyncSummary.date, true)}. Đã tạo {formatNumber(googleSyncSummary.created)},
+                  cập nhật {formatNumber(googleSyncSummary.updated)}, đã xóa{' '}
+                  {formatNumber(googleSyncSummary.deleted)}, thất bại{' '}
+                  {formatNumber(googleSyncSummary.failed)}.
                 </Text>
               ) : null}
 
@@ -257,7 +257,7 @@ export function ContractCalendarClient() {
                 />
               )}
             </VStack>
-          </Section>        
+          </Section>         */}
           </VStack>
       </LayoutContent>}
     />

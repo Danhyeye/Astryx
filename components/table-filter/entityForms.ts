@@ -1,3 +1,4 @@
+import {isVietnamPhone, isValidEmail, normalizeVietnamPhone} from '../../utils/contact.ts';
 import type {
   ContractStatus,
   CreateContractPayload,
@@ -16,6 +17,7 @@ import type {
 } from '../../data';
 import {
   isValidISODate,
+  isPendingStartDateValid,
   resolveContractEndDate,
 } from '../../lib/contractDates.ts';
 
@@ -42,7 +44,7 @@ export type CustomerFormState = {
 export type ContractFormState = {
   customerId: string;
   landId: string;
-  plotId: string;
+  plotIds: string[];
   depositAmount: number | null;
   rentAmount: number | null;
   dueDay: number | null;
@@ -195,7 +197,8 @@ export function isCustomerFormStepValid(
 
   if (step === 1) {
     const email = form.email.trim();
-    return email === '' || /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
+    return (form.phone.trim() === '' || isVietnamPhone(form.phone)) &&
+      (email === '' || isValidEmail(email));
   }
 
   return true;
@@ -206,27 +209,31 @@ export function buildCustomerPayload(
 ): CreateCustomerPayload & UpdateCustomerPayload {
   return {
     name: form.name.trim(),
-    phone: optionalText(form.phone),
+    phone: optionalText(normalizeVietnamPhone(form.phone)),
     email: optionalText(form.email),
     address: optionalText(form.address),
     notes: optionalText(form.notes),
   };
 }
 
+function dueDayFromStartDate(startDate: string): number | null {
+  return isValidISODate(startDate) ? Math.min(Number(startDate.slice(8, 10)), 28) : null;
+}
+
 export function createEmptyContractForm(today: string): ContractFormState {
   return {
     customerId: '',
     landId: '',
-    plotId: '',
+    plotIds: [],
     depositAmount: 0,
     rentAmount: null,
-    dueDay: 1,
+    dueDay: dueDayFromStartDate(today),
     leaseDurationMonths: 12,
     paymentFrequency: 'MONTHLY',
-    paymentDueDay: 1,
+    paymentDueDay: dueDayFromStartDate(today),
     nextPaymentDueDate: '',
     startDate: today,
-    endDate: '',
+    endDate: resolveContractEndDate({startDate: today, endDate: null, leaseDurationMonths: 12}) ?? '',
     status: 'ACTIVE',
     notes: '',
   };
@@ -238,11 +245,11 @@ export function createContractFormFromContract(
   return {
     customerId: contract.customerId,
     landId: contract.landId,
-    plotId: contract.plotId,
+    plotIds: contract.plotIds,
     depositAmount: contract.depositAmount,
     rentAmount: contract.rentAmount,
-    dueDay: contract.dueDay,
-    leaseDurationMonths: contract.leaseDurationMonths,
+    dueDay: dueDayFromStartDate(contract.startDate),
+    leaseDurationMonths: contract.leaseDurationMonths > 0 ? contract.leaseDurationMonths : null,
     paymentFrequency: contract.paymentFrequency,
     paymentDueDay: contract.paymentDueDay,
     nextPaymentDueDate: contract.nextPaymentDueDate,
@@ -250,6 +257,22 @@ export function createContractFormFromContract(
     endDate: contract.endDate,
     status: contract.status,
     notes: contract.notes,
+  };
+}
+
+export function updateContractFormDates(
+  form: ContractFormState,
+  change: Partial<Pick<ContractFormState, 'startDate' | 'leaseDurationMonths'>>,
+): ContractFormState {
+  const next = {...form, ...change};
+  return {
+    ...next,
+    ...('startDate' in change
+      ? {dueDay: dueDayFromStartDate(next.startDate), paymentDueDay: dueDayFromStartDate(next.startDate)}
+      : {}),
+    endDate: next.leaseDurationMonths != null || 'leaseDurationMonths' in change
+      ? resolveContractEndDate({...next, endDate: null}) ?? ''
+      : next.endDate,
   };
 }
 
@@ -270,13 +293,14 @@ export function isContractFormStepValid(
   if (step === 0) {
     return (
       form.customerId.trim() !== '' &&
-      (form.landId.trim() !== '' || form.plotId.trim() !== '')
+      form.landId.trim() !== ''
     );
   }
 
   if (step === 1) {
     return (
       isValidISODate(form.startDate) &&
+      isPendingStartDateValid(form.status, form.startDate) &&
       (form.endDate === '' ||
         (isValidISODate(form.endDate) && form.endDate >= form.startDate)) &&
       (form.leaseDurationMonths == null ||
@@ -309,11 +333,11 @@ export function isContractFormStepValid(
     form.dueDay != null &&
     Number.isInteger(form.dueDay) &&
     form.dueDay >= 1 &&
-    form.dueDay <= 28 &&
+    form.dueDay <= 31 &&
     form.paymentDueDay != null &&
     Number.isInteger(form.paymentDueDay) &&
     form.paymentDueDay >= 1 &&
-    form.paymentDueDay <= 28 &&
+    form.paymentDueDay <= 31 &&
     isNextDateValid &&
     hasRequiredCustomDate
   );
@@ -321,11 +345,10 @@ export function isContractFormStepValid(
 
 export function buildContractPayload(
   form: ContractFormState,
-  {includeEmptyRelations = false}: {includeEmptyRelations?: boolean} = {},
 ): CreateContractPayload {
-  const landId = form.landId.trim();
-  const plotId = form.plotId.trim();
   const payload: CreateContractPayload = {
+    land: {id: form.landId.trim()},
+    plots: form.plotIds.map(id => ({id})),
     customer: {
       id: form.customerId,
     },
@@ -341,21 +364,6 @@ export function buildContractPayload(
     status: form.status,
     notes: optionalText(form.notes),
   };
-
-  if (plotId !== '') {
-    if (includeEmptyRelations) {
-      payload.land = null;
-    }
-    payload.plot = {id: plotId};
-  } else if (landId !== '') {
-    payload.land = {id: landId};
-    if (includeEmptyRelations) {
-      payload.plot = null;
-    }
-  } else if (includeEmptyRelations) {
-    payload.land = null;
-    payload.plot = null;
-  }
 
   return payload;
 }

@@ -33,7 +33,7 @@ export type DashboardChartColors = {
 };
 
 export function formatCompactNumber(value: number): string {
-  return Math.round(value).toLocaleString('vi-VN');
+  return Math.round(value).toLocaleString('en-US');
 }
 
 export function getSecondaryChartLayout(

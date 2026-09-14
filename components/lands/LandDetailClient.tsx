@@ -1,6 +1,7 @@
 'use client';
 
 import { useMemo, useState } from 'react';
+import {LandContracts} from './LandContracts';
 import { Banner } from '@astryxdesign/core/Banner';
 import { Button } from '@astryxdesign/core/Button';
 import { Card } from '@astryxdesign/core/Card';
@@ -16,6 +17,9 @@ import { Skeleton } from '@astryxdesign/core/Skeleton';
 import { StatusDot } from '@astryxdesign/core/StatusDot';
 import { Table, proportional, type TableColumn } from '@astryxdesign/core/Table';
 import { Text } from '@astryxdesign/core/Text';
+import {useContractAvailability} from '@/hooks/useContractAvailability';
+import {contractToday} from '@/lib/contractDates';
+import {getPlotRentalStatus, rentalEndDate} from '@/lib/contractAvailability';
 import { useLandDetail } from '@/hooks/useLands';
 import { useAllPlots } from '@/hooks/useAllRecords';
 import { buildDatasetTableData, PLOT_STATUS_META, type LandTableRow } from '@/data';
@@ -29,7 +33,10 @@ import {Icon} from '@astryxdesign/core/Icon'
 
 const PAGE_SIZE = 15;
 
-const columns: TableColumn<Plot>[] = [
+const RENTAL_STATUS_META = {...PLOT_STATUS_META, PENDING: {label: 'Đã đặt trước', badge: 'neutral'}};
+type LandDetailPlot = Plot & {rentalStatus: ReturnType<typeof getPlotRentalStatus>};
+
+const columns: TableColumn<LandDetailPlot>[] = [
   { key: 'plot_number', header: 'Mã lô đất', width: proportional(1) },
   {
     key: 'area_sqm',
@@ -44,10 +51,10 @@ const columns: TableColumn<Plot>[] = [
     renderCell: (plot) => (
       <HStack gap={2} vAlign="center">
         <StatusDot
-          variant={plot.status === 'AVAILABLE' ? 'success' : 'neutral'}
-          label={PLOT_STATUS_META[plot.status].label}
+          variant={plot.rentalStatus === 'AVAILABLE' ? 'success' : 'neutral'}
+          label={RENTAL_STATUS_META[plot.rentalStatus].label}
         />
-        <Text>{PLOT_STATUS_META[plot.status].label}</Text>
+        <Text>{RENTAL_STATUS_META[plot.rentalStatus].label}</Text>
       </HStack>
     ),
   },
@@ -66,6 +73,7 @@ function StatItem({ count, label }: { count: number; label: string }) {
 export function LandDetailClient({ id }: { id: string }) {
   const landQuery = useLandDetail(id);
   const plotsQuery = useAllPlots();
+  const rentalQuery = useContractAvailability(true);
   const land = landQuery.data?.data;
 
   const [query, setQuery] = useState('');
@@ -78,14 +86,15 @@ export function LandDetailClient({ id }: { id: string }) {
     () =>
       (plotsQuery.data?.data ?? [])
         .filter((plot) => plot.land_id === id)
+        .map(plot => ({...plot, rentalStatus: getPlotRentalStatus(plot, rentalQuery.data ?? [])}))
         .sort((a, b) => a.plot_number.localeCompare(b.plot_number, 'vi', { numeric: true })),
-    [id, plotsQuery.data?.data]
+    [id, plotsQuery.data?.data, rentalQuery.data]
   );
 
   const status = (filters[0]?.value as { value?: string } | undefined)?.value;
   const results = plots.filter(
     (plot) =>
-      (!status || plot.status === status) &&
+      (!status || plot.rentalStatus === status) &&
       `${plot.plot_number} ${plot.description}`
         .toLocaleLowerCase('vi')
         .includes(query.trim().toLocaleLowerCase('vi'))
@@ -106,9 +115,14 @@ export function LandDetailClient({ id }: { id: string }) {
     [land, plots]
   );
 
-  const availableCount = plots.filter((plot) => plot.status === 'AVAILABLE').length;
-  const rentedCount = plots.filter((plot) => plot.status === 'RENTED').length;
-  const soldCount = plots.filter((plot) => plot.status === 'SOLD').length;
+  const availableCount = plots.filter((plot) => plot.rentalStatus === 'AVAILABLE').length;
+  const rentedCount = plots.filter((plot) => plot.rentalStatus === 'RENTED').length;
+  const pendingCount = plots.filter(plot => plot.rentalStatus === 'PENDING').length;
+  const wholeLandRental = rentalQuery.data?.filter(contract => contract.land_id === id && contract.plot_ids.length === 0
+    && (contract.status === 'active' || contract.status === 'pending')
+    && (!rentalEndDate(contract) || rentalEndDate(contract)! >= contractToday()))
+    .sort((a, b) => (a.start_date ?? '').localeCompare(b.start_date ?? ''))[0];
+  const soldCount = plots.filter((plot) => plot.rentalStatus === 'SOLD').length;
 
   const resetPagination = () => setPagination({ key: '', page: 1 });
 
@@ -136,13 +150,13 @@ export function LandDetailClient({ id }: { id: string }) {
       content={
         <LayoutContent padding={4} label="Thông tin khu đất và lô đất">
           <VStack gap={6}>
-            {landQuery.isPending || plotsQuery.isPending ? (
+            {landQuery.isPending || plotsQuery.isPending || rentalQuery.isPending ? (
               <VStack gap={4}>
                 <Skeleton width="100%" height={140} />
                 <Skeleton width="60%" height={20} />
                 <Skeleton width="100%" height={200} />
               </VStack>
-            ) : landQuery.error || plotsQuery.error ? (
+            ) : landQuery.error || plotsQuery.error || rentalQuery.error ? (
               <Banner
                 status="error"
                 title="Không thể tải thông tin khu đất"
@@ -153,6 +167,7 @@ export function LandDetailClient({ id }: { id: string }) {
                     onClick={() => {
                       void landQuery.refetch();
                       void plotsQuery.refetch();
+                      void rentalQuery.refetch();
                     }}
                   />
                 }
@@ -164,6 +179,9 @@ export function LandDetailClient({ id }: { id: string }) {
                 <Card>
                   <VStack gap={4}>
                     <MetadataList columns={2}>
+                      {wholeLandRental && <MetadataListItem label="Tình trạng cho thuê">
+                        {(wholeLandRental.status === 'pending' || (wholeLandRental.start_date ?? '') > contractToday()) ? 'Đã đặt trước toàn bộ khu đất' : 'Đang cho thuê toàn bộ khu đất'}
+                      </MetadataListItem>}
                       <MetadataListItem label="Địa chỉ">
                         {land.location || 'Chưa có địa chỉ'}
                       </MetadataListItem>
@@ -182,10 +200,14 @@ export function LandDetailClient({ id }: { id: string }) {
                       <Divider orientation="vertical" />
                       <StatItem count={rentedCount} label="Đang cho thuê" />
                       <Divider orientation="vertical" />
+                      <StatItem count={pendingCount} label="Đã đặt trước" />
+                      <Divider orientation="vertical" />
                       <StatItem count={soldCount} label="Đã bán" />
                     </HStack>
                   </VStack>
                 </Card>
+
+                <LandContracts key={id} landId={id} />
 
                 <Section padding={5}>
                   <VStack gap={4}>
@@ -198,7 +220,7 @@ export function LandDetailClient({ id }: { id: string }) {
                       query={query}
                       filters={filters}
                       resultCount={results.length}
-                      statusOptions={Object.entries(PLOT_STATUS_META)
+                      statusOptions={Object.entries(RENTAL_STATUS_META)
                         .filter(([value]) => value !== 'UNASSIGNED')
                         .map(([value, meta]) => ({ value, label: meta.label }))}
                       searchLabel="Tìm lô đất"

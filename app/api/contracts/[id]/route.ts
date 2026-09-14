@@ -1,7 +1,6 @@
 import {createAdminClient} from '@/lib/supabase/admin';
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
-import { mapCustomer, mapImage, mapLand, mapPlot } from "@/lib/mappers";
 import {
   contractTargetPatchToDatabase,
   contractStatusFromDatabase,
@@ -14,59 +13,12 @@ import {
   validateContractUpdate,
   type ContractInput,
 } from "@/lib/validations/contract";
-import type { Contract, ContractResponse } from "@/types/contract";
+import type { ContractResponse } from "@/types/contract";
 import type { ApiErrorResponse } from "@/types/api-response";
 import type { Database } from "@/types/database.types";
 
 type ContractRow = Database["public"]["Tables"]["contracts"]["Row"];
-type CustomerRow = Database["public"]["Tables"]["customers"]["Row"];
-type LandRow = Database["public"]["Tables"]["lands"]["Row"];
-type PlotRow = Database["public"]["Tables"]["plots"]["Row"];
-type LandImageRow = Database["public"]["Tables"]["land_images"]["Row"];
-type ContractRowWithRelations = ContractRow & {
-  contract_payments: Database['public']['Tables']['contract_payments']['Row'][] | null;
-  customers: CustomerRow | null;
-  lands: (LandRow & { land_images: LandImageRow[] | null }) | null;
-  plots:
-    | (PlotRow & {
-        land_images: LandImageRow[] | null;
-        lands: LandRow | null;
-      })
-    | null;
-};
-
-function toContract(row: ContractRowWithRelations): Contract {
-  const { customers, lands, plots, ...c } = row;
-  const landImages = (lands?.land_images ?? []).map((img) => mapImage(img, img.storage_path));
-  const plotImages = (plots?.land_images ?? []).map((img) => mapImage(img, img.storage_path));
-  const plotLand = plots?.lands ? mapLand(plots.lands) : null;
-
-  return {
-    id: c.id,
-    deposit_amount: c.deposit_amount,
-    rent_amount: c.rent_amount,
-    due_day: c.due_day,
-    lease_duration_months: c.lease_duration_months ?? 0,
-    payment_frequency: paymentFrequencyFromDatabase(c.payment_frequency),
-    payment_due_day: c.payment_due_day ?? 0,
-    next_payment_due_date: c.next_payment_due_date ?? "",
-    start_date: c.start_date,
-    end_date: c.end_date ?? "",
-    status: contractStatusFromDatabase(c.status),
-    notes: c.notes ?? "",
-    created_at: c.created_at,
-    updated_at: c.updated_at,
-    payments: row.contract_payments ?? [],
-    customers: customers ? [mapCustomer(customers)] : [],
-    lands: lands ? [mapLand(lands, landImages)] : [],
-    plots: plots ? [mapPlot(plots, plotLand ? [plotLand] : [], plotImages)] : [],
-  };
-}
-
-const CONTRACT_SELECT = `*,
-  contract_payments (*), customers (*),
-  lands (*, land_images(*)),
-  plots (*, land_images(*), lands(*))`;
+import {CONTRACT_SELECT, toContract, type ContractRowWithRelations} from '@/lib/api/contractRows';
 
 export async function GET(
   request: NextRequest,
@@ -136,8 +88,8 @@ export async function PATCH(
   const persisted = persistedData as ContractRowWithRelations;
   const persistedInput: ContractInput = {
     customer: {id: persisted.customer_id},
-    land: persisted.land_id == null ? null : {id: persisted.land_id},
-    plot: persisted.plot_id == null ? null : {id: persisted.plot_id},
+    land: {id: persisted.land_id!},
+    plots: persisted.plot_ids.map(id => ({id})),
     deposit_amount: persisted.deposit_amount,
     rent_amount: persisted.rent_amount,
     due_day: persisted.due_day,
@@ -168,13 +120,14 @@ export async function PATCH(
   const updatePayload: Partial<ContractRow> = {};
   const targetPatch = contractTargetPatchToDatabase({
     land: body.data.land,
-    plot: body.data.plot,
+    plots: body.data.plots,
   });
 
   if (body.data.customer !== undefined) updatePayload.customer_id = body.data.customer.id;
   if (targetPatch.land_id !== undefined) {
     updatePayload.land_id = targetPatch.land_id;
   }
+  if (targetPatch.plot_ids !== undefined) updatePayload.plot_ids = targetPatch.plot_ids;
   if (targetPatch.plot_id !== undefined) {
     updatePayload.plot_id = targetPatch.plot_id;
   }
@@ -205,8 +158,8 @@ export async function PATCH(
 
   if (updateError) {
     return NextResponse.json<ApiErrorResponse>(
-      { code: updateError.code === "PGRST116" ? 404 : 500, message: updateError.message, data: null },
-      { status: updateError.code === "PGRST116" ? 404 : 500 }
+      { code: updateError.code === "23505" ? 409 : updateError.code === "23514" ? 400 : updateError.code === "PGRST116" ? 404 : 500, message: updateError.message, data: null },
+      { status: updateError.code === "23505" ? 409 : updateError.code === "23514" ? 400 : updateError.code === "PGRST116" ? 404 : 500 }
     );
   }
 

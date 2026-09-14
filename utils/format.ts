@@ -15,7 +15,11 @@ export type SelectedOptionValue = {
 };
 
 export function formatNumber(value: number): string {
-  return Math.round(value || 0).toLocaleString('vi-VN');
+  return Math.round(value || 0).toLocaleString('en-US');
+}
+
+export function formatInputNumber(value: number): string {
+  return value.toLocaleString('en-US', {maximumFractionDigits: 20});
 }
 
 export function formatDate(
@@ -33,7 +37,7 @@ export function formatDate(
 }
 
 export function formatMoney(amount: number): string {
-  return new Intl.NumberFormat('vi-VN', {style: 'currency', currency: 'VND', maximumFractionDigits: 0}).format(amount);
+  return new Intl.NumberFormat('vi-VN', {style: 'currency', currency: 'VND', maximumFractionDigits: 0}).format(amount).replaceAll('.', ',');
 }
 
 export function formatArea(areaSqm: number): string {

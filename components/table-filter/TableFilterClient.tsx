@@ -3,7 +3,6 @@
 import {EntityStatus} from './EntityStatus';
 
 import {useCallback, useEffect, useMemo, useRef, useState} from 'react';
-import {Avatar} from '@astryxdesign/core/Avatar';
 import {Button} from '@astryxdesign/core/Button';
 import {Heading} from '@astryxdesign/core/Heading';
 import {EmptyState} from '@astryxdesign/core/EmptyState';
@@ -610,7 +609,7 @@ export default function TableFilterClient({
     const label = (key: string) => tableData.columnLabels[key] ?? key;
     const summarySecondary = (item: EntityTableRow) => {
       if (item.dataset === 'contracts') {
-        return textValue(item, 'contractId');
+        return '';
       }
       if (item.dataset === 'customers') {
         return '';
@@ -636,17 +635,36 @@ export default function TableFilterClient({
       summary: {
         key: 'summary',
         header: label('summary'),
-        width: proportional(1, {minWidth: 220}),
+        width: dataset === 'contracts' || dataset === 'customers'
+          ? proportional(2, {minWidth: 240})
+          : proportional(1, {minWidth: 220}),
         sortable: true,
         renderCell: item => {
           const secondary = summarySecondary(item);
+          if (item.dataset === 'contracts' || item.dataset === 'customers') {
+            const name = item.dataset === 'contracts' ? textValue(item, 'customer') : item.summary;
+            return (
+              <HStack gap={3} vAlign="center">
+                <StackItem size="fill">
+                  <VStack gap={1}>
+                    <Text type="body" weight="semibold" maxLines={1}>{name}</Text>
+                    {item.dataset === 'contracts' && (
+                      <Text type="supporting" color="secondary" maxLines={isCompact ? 1 : 2}>
+                        {[textValue(item, 'land'), textValue(item, 'plot')].filter(Boolean).join(' / ')}
+                      </Text>
+                    )}
+                  </VStack>
+                </StackItem>
+              </HStack>
+            );
+          }
           return isCompact ? (
             <Text type="body" maxLines={1}>
               {item.summary}
             </Text>
           ) : (
             <HStack gap={3} vAlign="center">
-              {isSpacious && item.dataset !== 'customers' ? (
+              {isSpacious ? (
                 <AspectRatio
                   ratio={4 / 3}
                   fit="center"
@@ -675,7 +693,6 @@ export default function TableFilterClient({
           const customer = textValue(item, 'customer') || item.summary;
           return (
             <HStack gap={2} vAlign="center">
-              <Avatar name={customer} size="sm" />
               <Text type="body" maxLines={cellLines}>
                 {customer}
               </Text>
@@ -684,8 +701,8 @@ export default function TableFilterClient({
         },
       },
       phone: textColumn('phone', pixel(150)),
-      email: textColumn('email', proportional(1, {minWidth: 220})),
-      address: textColumn('address', proportional(1, {minWidth: 240})),
+      email: textColumn('email', proportional(1, {minWidth: 180})),
+      address: textColumn('address', proportional(1, {minWidth: 180})),
       location: textColumn('location', proportional(1, {minWidth: 180})),
       land: textColumn('land', proportional(1, {minWidth: 180})),
       landLocation: textColumn('landLocation', proportional(1, {minWidth: 180})),
@@ -854,16 +871,17 @@ export default function TableFilterClient({
         ),
       },
     };
-  }, [cellLines, isCompact, isSpacious, tableData.columnLabels]);
+  }, [cellLines, dataset, isCompact, isSpacious, tableData.columnLabels]);
 
   const columns = useMemo(
     () =>
       view.columnKeys
+        .filter(key => dataset !== 'customers' || key !== 'updatedAt')
         .map(key => allColumns[key])
         .filter(
           (column): column is TableColumn<EntityTableRow> => column != null,
         ),
-    [view.columnKeys, allColumns],
+    [view.columnKeys, allColumns, dataset],
   );
 
   const selectedRecords = useMemo(
@@ -1115,7 +1133,7 @@ export default function TableFilterClient({
                 dividers="rows"
                 hasHover
                 textOverflow="wrap"
-                verticalAlign="top"
+                verticalAlign={dataset === 'contracts' || dataset === 'customers' ? 'middle' : 'top'}
                 plugins={plugins}
                 rowCount={results.length}
                 rowIndexStart={(page - 1) * PAGE_SIZE + 1}
@@ -1124,8 +1142,10 @@ export default function TableFilterClient({
 
             {dataError == null && !isInitialDataLoading && results.length > PAGE_SIZE && (
               <Section padding={4}>
+                <HStack hAlign="center">
                 <Pagination label="Phân trang" page={page} pageSize={PAGE_SIZE} totalItems={results.length}
                   onChange={next => {setPageState({key: pageKey, page: next}); setSelectedKeys(new Set()); setActiveRowId(null);}} />
+                </HStack>
               </Section>
             )}
           </LayoutContent>

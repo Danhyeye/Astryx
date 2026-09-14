@@ -170,6 +170,7 @@ export type Database = {
           customer_id: string;
           land_id: string | null;
           plot_id: string | null;
+          plot_ids: string[];
           deposit_amount: number;
           rent_amount: number;
           due_day: number;
@@ -179,7 +180,7 @@ export type Database = {
           next_payment_due_date: string | null;
           start_date: string;
           end_date: string | null;
-          status: "ACTIVE" | "COMPLETED" | "CANCELLED";
+          status: "PENDING" | "ACTIVE" | "COMPLETED" | "CANCELLED";
           notes: string | null;
           created_at: string;
           updated_at: string;
@@ -189,6 +190,7 @@ export type Database = {
           customer_id: string;
           land_id?: string | null;
           plot_id?: string | null;
+          plot_ids?: string[];
           deposit_amount?: number;
           rent_amount: number;
           due_day: number;
@@ -198,7 +200,7 @@ export type Database = {
           next_payment_due_date?: string | null;
           start_date: string;
           end_date?: string | null;
-          status?: "ACTIVE" | "COMPLETED" | "CANCELLED";
+          status?: "PENDING" | "ACTIVE" | "COMPLETED" | "CANCELLED";
           notes?: string | null;
           created_at?: string;
           updated_at?: string;
@@ -208,6 +210,7 @@ export type Database = {
           customer_id?: string;
           land_id?: string | null;
           plot_id?: string | null;
+          plot_ids?: string[];
           deposit_amount?: number;
           rent_amount?: number;
           due_day?: number;
@@ -217,7 +220,7 @@ export type Database = {
           next_payment_due_date?: string | null;
           start_date?: string;
           end_date?: string | null;
-          status?: "ACTIVE" | "COMPLETED" | "CANCELLED";
+          status?: "PENDING" | "ACTIVE" | "COMPLETED" | "CANCELLED";
           notes?: string | null;
           created_at?: string;
           updated_at?: string;
@@ -244,6 +247,15 @@ export type Database = {
             referencedRelation: "plots";
             referencedColumns: ["id"];
           },
+        ];
+      };
+      contract_plots: {
+        Row: {contract_id: string; plot_id: string};
+        Insert: {contract_id: string; plot_id: string};
+        Update: {contract_id?: string; plot_id?: string};
+        Relationships: [
+          {foreignKeyName: "contract_plots_contract_id_fkey"; columns: ["contract_id"]; isOneToOne: false; referencedRelation: "contracts"; referencedColumns: ["id"]},
+          {foreignKeyName: "contract_plots_plot_id_fkey"; columns: ["plot_id"]; isOneToOne: false; referencedRelation: "plots"; referencedColumns: ["id"]},
         ];
       };
       contract_payments: {
@@ -442,7 +454,12 @@ export type Database = {
       };
     };
     Views: Record<string, never>;
-    Functions: Record<string, never>;
+    Functions: {
+      record_contract_payment: {
+        Args: {p_contract_id: string; p_due_date: string; p_paid: boolean};
+        Returns: undefined;
+      };
+    };
     Enums: Record<string, never>;
     CompositeTypes: Record<string, never>;
   };

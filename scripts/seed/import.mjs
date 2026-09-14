@@ -71,7 +71,16 @@ export async function main(args = process.argv.slice(2), env = process.env) {
     env.SUPABASE_SERVICE_ROLE_KEY,
     { auth: { persistSession: false, autoRefreshToken: false } },
   );
-  for (const [table, key] of TABLES) await upsertBatches(client, table, data[key]);
+  // Create the new active contracts before applying their display status to plots.
+  // The database rejects assigning a plot already marked as manually rented.
+  const activePlotIds = new Set(data.contracts.filter(contract => contract.status === 'active').flatMap(contract => contract.plot_ids));
+  for (const [table, key] of TABLES) {
+    const rows = table === 'plots'
+      ? data.plots.map(plot => activePlotIds.has(plot.id) ? {...plot, status: 'available'} : plot)
+      : data[key];
+    await upsertBatches(client, table, rows);
+  }
+  await upsertBatches(client, 'plots', data.plots.filter(plot => activePlotIds.has(plot.id)));
 }
 
 if (import.meta.url === pathToFileURL(process.argv[1] ?? "").href) {

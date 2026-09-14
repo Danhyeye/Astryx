@@ -105,6 +105,7 @@ export type ContractTableRow = EntityTableRow & {
   landLocation: string;
   plot: string;
   plotId: string;
+  plotIds: string[];
   status: ContractStatus;
   plotStatus: PlotStatusValue;
   paymentFrequency: PaymentFrequency;
@@ -167,6 +168,7 @@ export const CONTRACT_STATUS_META: Record<
     badge: 'neutral' | 'green' | 'red';
   }
 > = {
+  PENDING: {label: 'Chờ hiệu lực', badge: 'neutral'},
   ACTIVE: {label: 'Đang hiệu lực', badge: 'green'},
   COMPLETED: {label: 'Đã hoàn tất', badge: 'neutral'},
   CANCELLED: {label: 'Đã hủy', badge: 'red'},
@@ -221,6 +223,7 @@ export const VALUE_LABELS: Record<string, string> = {
 };
 
 const CONTRACT_STATUS_ORDER: ContractStatus[] = [
+  'PENDING',
   'ACTIVE',
   'COMPLETED',
   'CANCELLED',
@@ -284,7 +287,7 @@ export function buildContractRows(
     const land = first(contract.lands) ?? first(plot?.lands);
     const customerName = customer?.name || NO_CUSTOMER;
     const landName = land?.name || NO_LAND;
-    const plotName = plot?.plot_number ? `Lô đất ${plot.plot_number}` : NO_PLOT;
+    const plotName = contract.plots.length ? contract.plots.map(plot => `Lô đất ${plot.plot_number}`).join(', ') : NO_PLOT;
     const plotStatus = plot?.status ?? 'UNASSIGNED';
     const nextPaymentDueSort = parseDateSort(contract.next_payment_due_date);
 
@@ -314,6 +317,7 @@ export function buildContractRows(
       landLocation: land?.location ?? '',
       plot: plotName,
       plotId: plot?.id ?? '',
+      plotIds: contract.plots.map(plot => plot.id),
       status: contract.status,
       plotStatus,
       paymentFrequency: contract.payment_frequency,
@@ -330,7 +334,7 @@ export function buildContractRows(
       endDate: contract.end_date,
       endOn: parseDate(contract.end_date),
       leaseDurationMonths: contract.lease_duration_months,
-      areaSqm: plot?.area_sqm ?? land?.area_sqm ?? 0,
+      areaSqm: contract.plots.length ? contract.plots.reduce((sum, plot) => sum + plot.area_sqm, 0) : land?.area_sqm ?? 0,
       notes: contract.notes,
       createdAt: contract.created_at,
       updatedAt: contract.updated_at,
@@ -905,6 +909,7 @@ export const INITIAL_FILTERS: PowerSearchFilter[] = [PRESET_FILTERS[0].filter];
 
 export const SORT_RANKS: Record<string, Record<string, number>> = {
   status: {
+    PENDING: -1,
     ACTIVE: 0,
     AVAILABLE: 0,
     COMPLETED: 1,
@@ -1049,7 +1054,7 @@ const DATASET_DEFAULT_COLUMN_KEYS: Record<DatasetKey, readonly string[]> = {
   lands: ['summary', 'location', 'areaSqm', 'description', 'updatedAt'],
   plots: ['summary', 'land', 'status', 'areaSqm', 'description', 'updatedAt'],
   contracts: DEFAULT_COLUMN_KEYS,
-  customers: ['summary', 'phone', 'email', 'address', 'updatedAt'],
+  customers: ['summary', 'phone', 'email', 'address'],
 };
 
 const DATASET_INITIAL_VIEWS: Record<DatasetKey, ViewState> = {
@@ -1519,7 +1524,7 @@ export function contractsForPlotRecord(
   active: Pick<PlotTableRow, 'id'>,
 ): ContractTableRow[] {
   return rows
-    .filter(row => row.plotId !== '' && row.plotId === active.id)
+    .filter(row => row.plotIds.includes(active.id))
     .sort((a, b) => b.createdAt.localeCompare(a.createdAt));
 }
 

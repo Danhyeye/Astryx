@@ -1,5 +1,5 @@
 import {type FormEvent, useEffect, useState} from 'react';
-import {Banner} from '@astryxdesign/core/Banner';
+import {EntityFormBanner as Banner} from './EntityFormBanner';
 import {Dialog, DialogHeader} from '@astryxdesign/core/Dialog';
 import {FileInput} from '@astryxdesign/core/FileInput';
 import {GridSpan} from '@astryxdesign/core/Grid';
@@ -9,7 +9,7 @@ import {
   LayoutFooter,
   VStack,
 } from '@astryxdesign/core/Layout';
-import {NumberInput} from '@astryxdesign/core/NumberInput';
+import {NumberInput} from '@/components/NumberInput';
 import {TextArea} from '@astryxdesign/core/TextArea';
 import {TextInput} from '@astryxdesign/core/TextInput';
 import {Thumbnail} from '@astryxdesign/core/Thumbnail';
@@ -23,11 +23,10 @@ import {
   createLandFormFromLand,
   getReplacementImageLifecycle,
   isCreateLandFormValid,
-  isLandFormStepValid,
   type ReplacementImageLifecycle,
 } from './createLandForm';
 import {LandImageGallery} from './LandImageGallery';
-import {EntityFormActions, EntityFormStepper} from './EntityFormStepper';
+import {EntitySinglePageActions, EntitySinglePageForm} from './EntitySinglePageForm';
 
 const MAX_IMAGE_SIZE = 5 * 1024 * 1024;
 const REPLACEMENT_IMAGE_LABELS: Record<ReplacementImageLifecycle, string> = {
@@ -67,7 +66,6 @@ export function EditLandDialog({
 }) {
   const formId = `edit-land-${land.id}`;
   const [form, setForm] = useState(() => createLandFormFromLand(land));
-  const [activeStep, setActiveStep] = useState(0);
   const [retainedImages, setRetainedImages] = useState(() => land.images);
   const [imageFile, setImageFile] = useState<File | null>(null);
   const [imagePreviewUrl, setImagePreviewUrl] = useState<string | null>(null);
@@ -127,7 +125,7 @@ export function EditLandDialog({
       setRetainedImages(land.images);
       setImageFile(null);
       setImagePreviewUrl(null);
-      setActiveStep(0);
+
       setSubmitError(null);
     }
 
@@ -137,7 +135,7 @@ export function EditLandDialog({
   const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
 
-    if (activeStep !== 2 || !isFormValid || isSubmitting) {
+    if (!isFormValid || isSubmitting) {
       return;
     }
 
@@ -194,10 +192,8 @@ export function EditLandDialog({
                   />
                 )}
 
-                <EntityFormStepper
-                  activeStep={activeStep}
-                  onStepChange={setActiveStep}
-                  steps={[
+                <EntitySinglePageForm
+                  sections={[
                     {
                       label: 'Thông tin cơ bản',
                       content: (
@@ -301,20 +297,12 @@ export function EditLandDialog({
         }
         footer={
           <LayoutFooter hasDivider padding={4} label="Thao tác chỉnh sửa khu đất">
-            <EntityFormActions
-              activeStep={activeStep}
+            <EntitySinglePageActions
               formId={formId}
-              isStepValid={isLandFormStepValid(form, activeStep)}
+              isFormValid={isFormValid}
               isSubmitting={isSubmitting}
-              onBack={() => setActiveStep(step => Math.max(0, step - 1))}
               onCancel={() => handleOpenChange(false)}
-              onNext={() =>
-                setActiveStep(step =>
-                  isLandFormStepValid(form, step) ? step + 1 : step,
-                )
-              }
               submitLabel="Lưu thay đổi"
-              stepCount={3}
             />
           </LayoutFooter>
         }

@@ -3,7 +3,7 @@ import type { Customer } from "./customer";
 import type { Land } from "./land";
 import type { Plot } from "./plot";
 
-export type ContractStatus = "ACTIVE" | "COMPLETED" | "CANCELLED";
+export type ContractStatus = "PENDING" | "ACTIVE" | "COMPLETED" | "CANCELLED";
 export type PaymentFrequency = "MONTHLY" | "QUARTERLY" | "YEARLY" | "CUSTOM";
 
 export type Contract = {
@@ -37,12 +37,8 @@ export type CreateContractPayload = {
   customer: {
     id: string;
   };
-  land?: {
-    id: string;
-  } | null;
-  plot?: {
-    id: string;
-  } | null;
+  land: {id: string};
+  plots: {id: string}[];
   deposit_amount: number;
   rent_amount: number;
   due_day: number;

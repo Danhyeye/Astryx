@@ -1,5 +1,6 @@
+import {isVietnamPhone, isValidEmail, PHONE_ERROR, EMAIL_ERROR} from '@/utils/contact';
 import {type FormEvent, useState} from 'react';
-import {Banner} from '@astryxdesign/core/Banner';
+import {EntityFormBanner as Banner} from './EntityFormBanner';
 import {Dialog, DialogHeader} from '@astryxdesign/core/Dialog';
 import {
   Layout,
@@ -16,9 +17,8 @@ import {
   buildCustomerPayload,
   createCustomerFormFromCustomer,
   isCustomerFormValid,
-  isCustomerFormStepValid,
 } from './entityForms';
-import {EntityFormActions, EntityFormStepper} from './EntityFormStepper';
+import {EntitySinglePageActions, EntitySinglePageForm} from './EntitySinglePageForm';
 
 function errorMessageOf(error: unknown): string {
   if (error instanceof Error) {
@@ -52,7 +52,6 @@ export function EditCustomerDialog({
   const [form, setForm] = useState(() =>
     createCustomerFormFromCustomer(customer),
   );
-  const [activeStep, setActiveStep] = useState(0);
   const [submitError, setSubmitError] = useState<string | null>(null);
   const updateCustomer = useUpdateCustomer();
   const isSubmitting = updateCustomer.isPending;
@@ -65,7 +64,7 @@ export function EditCustomerDialog({
 
     if (!open) {
       setForm(createCustomerFormFromCustomer(customer));
-      setActiveStep(0);
+
       setSubmitError(null);
     }
 
@@ -75,7 +74,7 @@ export function EditCustomerDialog({
   const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
 
-    if (activeStep !== 2 || !isFormValid || isSubmitting) {
+    if (!isFormValid || isSubmitting) {
       return;
     }
 
@@ -125,10 +124,8 @@ export function EditCustomerDialog({
                   />
                 )}
 
-                <EntityFormStepper
-                  activeStep={activeStep}
-                  onStepChange={setActiveStep}
-                  steps={[
+                <EntitySinglePageForm
+                  sections={[
                     {
                       label: 'Danh tính',
                       content: <TextInput
@@ -151,6 +148,8 @@ export function EditCustomerDialog({
                       content: <>
                         <TextInput
                     label="Số điện thoại"
+                    placeholder="0912345678 hoặc +84912345678"
+                    status={form.phone.trim() && !isVietnamPhone(form.phone) ? {type: 'error', message: PHONE_ERROR} : undefined}
                     value={form.phone}
                     onChange={phone =>
                       setForm(current => ({
@@ -164,6 +163,8 @@ export function EditCustomerDialog({
                         <TextInput
                     label="Email"
                     type="email"
+                    placeholder="ten@example.com"
+                    status={form.email.trim() && !isValidEmail(form.email) ? {type: 'error', message: EMAIL_ERROR} : undefined}
                     value={form.email}
                     onChange={email =>
                       setForm(current => ({
@@ -213,20 +214,12 @@ export function EditCustomerDialog({
         }
         footer={
           <LayoutFooter hasDivider>
-            <EntityFormActions
-              activeStep={activeStep}
+            <EntitySinglePageActions
               formId={formId}
-              isStepValid={isCustomerFormStepValid(form, activeStep)}
+              isFormValid={isFormValid}
               isSubmitting={isSubmitting}
-              onBack={() => setActiveStep(step => Math.max(0, step - 1))}
               onCancel={() => handleOpenChange(false)}
-              onNext={() =>
-                setActiveStep(step =>
-                  isCustomerFormStepValid(form, step) ? step + 1 : step,
-                )
-              }
               submitLabel="Lưu thay đổi"
-              stepCount={3}
             />
           </LayoutFooter>
         }
