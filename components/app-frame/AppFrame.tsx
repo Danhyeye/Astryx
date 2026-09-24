@@ -13,10 +13,12 @@ import {
   SideNavItem,
   SideNavSection,
 } from '@astryxdesign/core/SideNav';
+import NextLink from 'next/link';
+import {LinkProvider} from '@astryxdesign/core/Link';
 import { usePathname } from 'next/navigation';
 
 import { Theme } from '@astryxdesign/core/theme';
-import { workspaceTheme } from '@/theme/workspace';
+import { matchaTheme } from '@/src/themes/matcha/matcha';
 import { getAppNavItems, isAppRouteSelected } from './navigation';
 
 export function AppFrame({
@@ -29,8 +31,9 @@ export function AppFrame({
   const pathname = usePathname();
 
   return (
-    <Theme theme={workspaceTheme} mode="system">
+    <Theme theme={matchaTheme} mode="system">
       <InternationalizationProvider locale="vi-VN" messages={{ 'vi-VN': vi }}>
+        <LinkProvider component={NextLink}>
         <AppShell
           className="max-md:[&_.astryx-app-shell-sidenav]:hidden!"
           height="fill"
@@ -69,6 +72,7 @@ export function AppFrame({
           }>
           {children}
         </AppShell>
+        </LinkProvider>
       </InternationalizationProvider>
     </Theme>
   );

@@ -1,5 +1,11 @@
 'use client';
 
+import {useEntityPage} from '@/hooks/useEntityPage';
+import type {Contract} from '@/types/contract';
+import type {Land} from '@/types/land';
+import type {Plot} from '@/types/plot';
+import type {Customer} from '@/types/customer';
+
 import {EntityStatus} from './EntityStatus';
 
 import {useCallback, useEffect, useMemo, useRef, useState} from 'react';
@@ -26,7 +32,6 @@ import {ProgressBar} from '@astryxdesign/core/ProgressBar';
 import {Section} from '@astryxdesign/core/Section';
 import {Text} from '@astryxdesign/core/Text';
 import {AspectRatio} from '@astryxdesign/core/AspectRatio';
-import {usePowerSearchConfig} from '@astryxdesign/core/PowerSearch';
 import type {PowerSearchFilter} from '@astryxdesign/core/PowerSearch';
 import {useResizable} from '@astryxdesign/core/Resizable';
 import {
@@ -56,7 +61,6 @@ import {
   PLOT_STATUS_META,
   SELECTION_COLUMN_KEY,
   SELECTION_COLUMN_WIDTH,
-  SORT_RANKS,
   buildContractRows,
   buildDatasetTableData,
   contractsForCustomerRecord,
@@ -170,38 +174,72 @@ export default function TableFilterClient({
   const [selectedKeys, setSelectedKeys] = useState<Set<string>>(new Set());
   const [activeRowId, setActiveRowId] = useState<string | null>(initialSelectedId);
   const dataset = initialDataset;
+  const [filters, setFilters] = useState<PowerSearchFilter[]>(() =>
+    getDatasetInitialFilters(initialDataset),
+  );
+  const [query, setQuery] = useState('');
+
+  const [sort, setSort] = useState<TableSortState>(() =>
+    getDatasetInitialSort(initialDataset),
+  );
+
+  const [view] = useState<ViewState>(() =>
+    getDatasetInitialView(initialDataset),
+  );
+  const [collapsedGroups, setCollapsedGroups] = useState<Set<string>>(
+    () => new Set(),
+  );
+
+  const pageKey = `${dataset}:${query}:${JSON.stringify(filters)}:${JSON.stringify(sort)}`;
+  const [pageState, setPageState] = useState({key: '', page: 1});
+  const page = pageState.key === pageKey ? pageState.page : 1;
+  const [debouncedQuery, setDebouncedQuery] = useState(query);
+  useEffect(() => {const timer = setTimeout(() => setDebouncedQuery(query), 350); return () => clearTimeout(timer);}, [query]);
+  const statusFilter = filters.find(filter => filter.field === 'status');
+  const listParams = {page, pageSize: PAGE_SIZE, q: debouncedQuery,
+    status: statusFilter ? String((statusFilter.value as {value: string}).value) : undefined,
+    sort: sort[0]?.sortKey, direction: sort[0]?.direction, sort2: sort[1]?.sortKey, direction2: sort[1]?.direction};
+  const contractPage = useEntityPage<Contract>('contracts', listParams, dataset === 'contracts');
+  const landPage = useEntityPage<Land>('lands', listParams, dataset === 'lands');
+  const plotPage = useEntityPage<Plot>('plots', listParams, dataset === 'plots');
+  const customerPage = useEntityPage<Customer>('customers', listParams, dataset === 'customers');
   const needsContractOptions = isCreateContractDialogOpen || editingContract != null;
   const needsPlotOptions = isCreatePlotDialogOpen || editingPlot != null;
   const needsRelatedContracts = activeRowId != null && dataset !== 'contracts';
 
+  const allContractOptions = useAllContracts(needsRelatedContracts);
+  const allLandOptions = useAllLands(needsContractOptions || needsPlotOptions || (dataset === 'plots' && activeRowId != null));
+  const allPlotOptions = useAllPlots(needsContractOptions || (dataset === 'lands' && activeRowId != null));
+  const allCustomerOptions = useAllCustomers(needsContractOptions);
+  const totalResults = ({lands: landPage, plots: plotPage, contracts: contractPage, customers: customerPage}[dataset]).data?.total ?? 0;
   const {
     data: contractsResponse,
     isPending: isContractsPending,
     isFetching: isContractsFetching,
     error: contractsError,
     refetch: refetchContracts,
-  } = useAllContracts(dataset === 'contracts' || needsRelatedContracts);
+  } = dataset === 'contracts' ? contractPage : allContractOptions;
   const {
     data: landsResponse,
     isPending: isLandsPending,
     isFetching: isLandsFetching,
     error: landsError,
     refetch: refetchLands,
-  } = useAllLands(dataset === 'lands' || needsContractOptions || needsPlotOptions || (dataset === 'plots' && activeRowId != null));
+  } = dataset === 'lands' ? landPage : allLandOptions;
   const {
     data: plotsResponse,
     isPending: isPlotsPending,
     isFetching: isPlotsFetching,
     error: plotsError,
     refetch: refetchPlots,
-  } = useAllPlots(dataset === 'plots' || needsContractOptions || (dataset === 'lands' && activeRowId != null));
+  } = dataset === 'plots' ? plotPage : allPlotOptions;
   const {
     data: customersResponse,
     isPending: isCustomersPending,
     isFetching: isCustomersFetching,
     error: customersError,
     refetch: refetchCustomers,
-  } = useAllCustomers(dataset === 'customers' || needsContractOptions);
+  } = dataset === 'customers' ? customerPage : allCustomerOptions;
 
   const contracts = useMemo(
     () => contractsResponse?.data ?? [],
@@ -226,11 +264,6 @@ export default function TableFilterClient({
     [contracts, customers, dataset, lands, plots],
   );
   const contractRows = useMemo(() => buildContractRows(contracts), [contracts]);
-  const [filters, setFilters] = useState<PowerSearchFilter[]>(() =>
-    getDatasetInitialFilters(initialDataset),
-  );
-  const [query, setQuery] = useState('');
-
   const hasOpenedFirstRow = useRef(false);
 
   const detailWidth = useResizable({
@@ -238,17 +271,6 @@ export default function TableFilterClient({
     minSizePx: 320,
     maxSizePx: 560,
   });
-
-  const [sort, setSort] = useState<TableSortState>(() =>
-    getDatasetInitialSort(initialDataset),
-  );
-
-  const [view] = useState<ViewState>(() =>
-    getDatasetInitialView(initialDataset),
-  );
-  const [collapsedGroups, setCollapsedGroups] = useState<Set<string>>(
-    () => new Set(),
-  );
 
   const closeEntityDialogs = useCallback(() => {
     setIsCreateLandDialogOpen(false);
@@ -263,11 +285,6 @@ export default function TableFilterClient({
     setIsCreateContractDialogOpen(false);
     setEditingContract(null);
   }, []);
-
-  const {applyFilters} = usePowerSearchConfig(
-    tableData.fieldDefs,
-    tableData.label,
-  );
 
   const requestKey = useMemo(
     () => `${JSON.stringify(filters)}:${query}`,
@@ -367,78 +384,8 @@ export default function TableFilterClient({
   const groupField = view.grouping;
   const isGrouped = groupField !== 'none';
 
-  const results = useMemo(() => {
-    const byFilters = applyFilters(
-      filters,
-      tableData.rows as unknown as Parameters<typeof applyFilters>[1],
-    ) as EntityTableRow[];
-    const q = query.trim().toLowerCase();
-    const byQuery = q
-      ? byFilters.filter(row => row.searchText.toLowerCase().includes(q))
-      : byFilters;
-
-    if (sort.length === 0 && !isGrouped) {
-      return byQuery;
-    }
-
-    const groupRank = isGrouped
-      ? new Map(
-          tableData.groupOrders[groupField].map((key, index) => [key, index]),
-        )
-      : null;
-
-    return [...byQuery].sort((a, b) => {
-      if (groupRank != null) {
-        const cmp =
-          (groupRank.get(groupKeyOf(a, groupField)) ??
-            Number.MAX_SAFE_INTEGER) -
-          (groupRank.get(groupKeyOf(b, groupField)) ??
-            Number.MAX_SAFE_INTEGER);
-        if (cmp !== 0) {
-          return cmp;
-        }
-      }
-
-      for (const {sortKey, direction} of sort) {
-        const av = rowValue(a, sortKey);
-        const bv = rowValue(b, sortKey);
-        const rank = SORT_RANKS[sortKey];
-        let cmp: number;
-
-        if (rank != null) {
-          cmp =
-            (rank[String(av)] ?? Number.MAX_SAFE_INTEGER) -
-            (rank[String(bv)] ?? Number.MAX_SAFE_INTEGER);
-        } else if (typeof av === 'number' && typeof bv === 'number') {
-          cmp = av - bv;
-        } else if (av instanceof Date && bv instanceof Date) {
-          cmp = av.getTime() - bv.getTime();
-        } else {
-          cmp = String(av ?? '').localeCompare(String(bv ?? ''));
-        }
-
-        if (cmp !== 0) {
-          return direction === 'ascending' ? cmp : -cmp;
-        }
-      }
-
-      return 0;
-    });
-  }, [
-    applyFilters,
-    filters,
-    groupField,
-    isGrouped,
-    query,
-    sort,
-    tableData.groupOrders,
-    tableData.rows,
-  ]);
-
-  const pageKey = `${dataset}:${query}:${JSON.stringify(filters)}:${JSON.stringify(sort)}`;
-  const [pageState, setPageState] = useState({key: '', page: 1});
-  const page = Math.min(pageState.key === pageKey ? pageState.page : 1, Math.max(1, Math.ceil(results.length / PAGE_SIZE)));
-  const rows = useMemo(() => results.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE), [results, page]);
+  const results = tableData.rows;
+  const rows = results;
 
   const updateFilters = useCallback(
     (updater: (current: PowerSearchFilter[]) => PowerSearchFilter[]) => {
@@ -780,11 +727,11 @@ export default function TableFilterClient({
       rentAmount: {
         key: 'rentAmount',
         header: label('rentAmount'),
-        width: pixel(120),
-        align: 'end',
+        width: pixel(180),
+        align: 'center',
         sortable: true,
         renderCell: item => (
-          <Text type="body" maxLines={cellLines}>
+          <Text type="body" className="whitespace-nowrap tabular-nums">
             {formatMoney(numberValue(item, 'rentAmount'))}
           </Text>
         ),
@@ -792,11 +739,11 @@ export default function TableFilterClient({
       depositAmount: {
         key: 'depositAmount',
         header: label('depositAmount'),
-        width: pixel(120),
-        align: 'end',
+        width: pixel(180),
+        align: 'center',
         sortable: true,
         renderCell: item => (
-          <Text type="body" maxLines={cellLines}>
+          <Text type="body" className="whitespace-nowrap tabular-nums">
             {formatMoney(numberValue(item, 'depositAmount'))}
           </Text>
         ),
@@ -804,8 +751,9 @@ export default function TableFilterClient({
       nextPaymentDueDate: {
         key: 'nextPaymentDueDate',
         header: label('nextPaymentDueDate'),
-        width: pixel(150),
+        width: pixel(280),
         sortable: {sortKey: 'nextPaymentDueSort'},
+        align: 'center',
         renderCell: item => (
           <Text type="body" maxLines={cellLines}>
             {formatDate(textValue(item, 'nextPaymentDueDate'), true)}
@@ -986,7 +934,7 @@ export default function TableFilterClient({
     <FilterBar
       filters={filters}
       query={query}
-      resultCount={results.length}
+      resultCount={totalResults}
       isLoading={isInitialDataLoading}
       statusOptions={dataset === 'contracts' ? Object.entries(CONTRACT_STATUS_META).map(([value, meta]) => ({value, label: meta.label})) : dataset === 'plots' ? Object.entries(PLOT_STATUS_META).filter(([value]) => value !== 'UNASSIGNED').map(([value, meta]) => ({value, label: meta.label})) : []}
       searchLabel={`Tìm ${tableData.label.toLowerCase()}`}
@@ -1191,15 +1139,15 @@ export default function TableFilterClient({
                 textOverflow="wrap"
                 verticalAlign={dataset === 'contracts' || dataset === 'customers' ? 'middle' : 'top'}
                 plugins={plugins}
-                rowCount={results.length}
+                rowCount={totalResults}
                 rowIndexStart={(page - 1) * PAGE_SIZE + 1}
               />
             )}
 
-            {dataError == null && !isInitialDataLoading && results.length > PAGE_SIZE && (
+            {dataError == null && !isInitialDataLoading && totalResults > PAGE_SIZE && (
               <Section padding={4}>
                 <HStack hAlign="center">
-                <Pagination label="Phân trang" page={page} pageSize={PAGE_SIZE} totalItems={results.length}
+                <Pagination label="Phân trang" page={page} pageSize={PAGE_SIZE} totalItems={totalResults}
                   onChange={next => {setPageState({key: pageKey, page: next}); setSelectedKeys(new Set()); setActiveRowId(null);}} />
                 </HStack>
               </Section>

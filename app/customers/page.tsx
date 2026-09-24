@@ -1,5 +1,4 @@
 import {AppFrame} from '@/components/app-frame/AppFrame';
-import {QueryProvider} from '@/components/providers/query-provider';
 import TableFilterClient from '@/components/table-filter/TableFilterClient';
 
 export default async function CustomersPage({
@@ -12,9 +11,9 @@ export default async function CustomersPage({
 
   return (
     <AppFrame contentPadding={0}>
-      <QueryProvider>
+
         <TableFilterClient key={selectedId ?? 'customers'} initialDataset="customers" initialSelectedId={selectedId} />
-      </QueryProvider>
+
     </AppFrame>
   );
 }

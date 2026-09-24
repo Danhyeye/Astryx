@@ -1,3 +1,4 @@
+import {listParams} from '@/lib/api/listParams';
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { mapCustomer } from "@/lib/mappers";
@@ -7,17 +8,21 @@ import { customerSchema } from "@/lib/validations/customer";
 
 export async function GET(request: NextRequest) {
   const { searchParams } = request.nextUrl;
-  const page = Number(searchParams.get("page") ?? 1);
-  const pageSize = Number(searchParams.get("pageSize") ?? 10);
-  const from = (page - 1) * pageSize;
-  const to = from + pageSize - 1;
+  const {page, pageSize, from, to, sort, ascending, sort2, ascending2, search} = listParams(searchParams, "customers");
+
 
   const supabase = await createClient();
-  const { data, error } = await supabase
+  let query = supabase
     .from("customers")
-    .select("*")
-    .order("created_at", { ascending: false }).order("id", { ascending: true })
+    .select("*", {count: "exact"})
+    .order(sort, {ascending}).order(sort2, {ascending: ascending2}).order("id", { ascending: true })
     .range(from, to);
+  if (search) {
+    const terms = ["name", "phone", "email", "address"].map(column => `${column}.ilike.%${search}%`);
+    query = query.or(terms.join(","));
+  }
+
+  const {data, error, count} = await query;
 
   if (error) {
     return NextResponse.json<ApiErrorResponse>(
@@ -27,6 +32,7 @@ export async function GET(request: NextRequest) {
   }
 
   return NextResponse.json<CustomersResponse>({
+    total: count ?? 0, page, pageSize,
     code: 200,
     message: "Thành công",
     data: data.map(mapCustomer),

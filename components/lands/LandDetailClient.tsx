@@ -87,7 +87,7 @@ export function LandDetailClient({ id }: { id: string }) {
   const [editingPlot, setEditingPlot] = useState<PlotTableRow | null>(null);
   const [deletingPlot, setDeletingPlot] = useState<PlotTableRow | null>(null);
   const landQuery = useLandDetail(id);
-  const plotsQuery = useAllPlots();
+  const plotsQuery = useAllPlots(true, id);
   const rentalQuery = useContractAvailability(true);
   const land = landQuery.data?.data;
   const images = useMemo(() => [...(land?.images ?? [])].sort((a, b) => a.sort_order - b.sort_order), [land?.images]);

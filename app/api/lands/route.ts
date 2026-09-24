@@ -1,3 +1,4 @@
+import {listParams} from '@/lib/api/listParams';
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { mapImage, mapLand } from "@/lib/mappers";
@@ -12,17 +13,21 @@ type LandRowWithImages = LandRow & { land_images: LandImageRow[] };
 
 export async function GET(request: NextRequest) {
   const { searchParams } = request.nextUrl;
-  const page = Number(searchParams.get("page") ?? 1);
-  const pageSize = Number(searchParams.get("pageSize") ?? 10);
-  const from = (page - 1) * pageSize;
-  const to = from + pageSize - 1;
+  const {page, pageSize, from, to, sort, ascending, sort2, ascending2, search} = listParams(searchParams, "lands");
+
 
   const supabase = await createClient();
-  const { data, error } = await supabase
+  let query = supabase
     .from("lands")
-    .select("*, land_images(*)")
-    .order("created_at", { ascending: false }).order("id", { ascending: true })
+    .select("*, land_images(*)", {count: "exact"})
+    .order(sort, {ascending}).order(sort2, {ascending: ascending2}).order("id", { ascending: true })
     .range(from, to);
+  if (search) {
+    const terms = ["name", "location", "description"].map(column => `${column}.ilike.%${search}%`);
+    query = query.or(terms.join(","));
+  }
+
+  const {data, error, count} = await query;
 
   if (error) {
     return NextResponse.json<ApiErrorResponse>(
@@ -40,6 +45,7 @@ export async function GET(request: NextRequest) {
   });
 
   return NextResponse.json<LandsResponse>({
+    total: count ?? 0, page, pageSize,
     code: 200,
     message: "Thành công",
     data: lands,

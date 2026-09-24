@@ -145,11 +145,11 @@ export function ContractCalendarClient() {
               {days.map((date, index) => {
                 const inMonth = date.slice(0, 7) === month.slice(0, 7);
                 const dayEvents = eventsByDate.get(date) ?? [];
-                return <Section key={date} padding={1}
+                return <Section key={date} padding={1} className="min-w-0 overflow-hidden"
                   minHeight={isNarrow ? undefined : "calc(var(--spacing-10) * 4)"}
                   variant={inMonth ? 'section' : 'muted'}
                   dividers={index % 7 === 6 ? ['bottom'] : ['bottom', 'end']}>
-                  <VStack gap={1}>
+                  <VStack gap={1} className="min-w-0">
                     <HStack>
                       <Button label={String(Number(date.slice(-2)))} size={isNarrow ? "md" : "sm"} width={isNarrow ? "100%" : undefined}
                         aria-label={`${formatDate(date, true)}, ${dayEvents.length} hạn thanh toán`}
@@ -159,9 +159,9 @@ export function ContractCalendarClient() {
                     </HStack>
                     {isNarrow && dayEvents.length > 0 && <Text type="supporting" justify="center">{dayEvents.length} kỳ</Text>}
                     {!isNarrow && dayEvents.slice(0, 3).map(event => (
-                      <Button key={event.id} label={event.customerName} size="sm"
+                      <Button key={event.id} label={event.customerName} size="sm" width="100%" className="min-w-0 max-w-full"
                         variant="secondary" onClick={() => {setSelectedDate(date); if (isNarrow) requestAnimationFrame(() => agendaRef.current?.scrollIntoView({block: 'start'}));}}
-                        tooltip={event.contractLabel + ' · ' + formatMoney(event.amount)} />
+                        tooltip={event.customerName + ' · ' + event.contractLabel + ' · ' + formatMoney(event.amount)} />
                     ))}
                     {!isNarrow && dayEvents.length > 3 && <Button size="sm" variant="ghost"
                       label={'+ ' + formatNumber(dayEvents.length - 3) + ' hạn khác'}

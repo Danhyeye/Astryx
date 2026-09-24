@@ -41,4 +41,4 @@ Existing application routes and components, README.md business rules, Supabase s
 
 ## Confirmed palette
 
-Use olive green `#A3B565` for primary areas and actions, with cream `#FDF8E2` for the main canvas and pale olive `#D0D6A3` for supporting cards, muted panels and table headers. Use dark olive text for contrast. This replaces the earlier blue direction.
+Use the Astryx Matcha theme installed through `astryx theme add matcha`. This supersedes the earlier custom olive and cream palette. Preserve responsive layouts and application functionality.

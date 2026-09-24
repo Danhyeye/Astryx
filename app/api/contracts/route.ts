@@ -1,3 +1,4 @@
+import {listParams} from '@/lib/api/listParams';
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import {
@@ -20,27 +21,38 @@ import {CONTRACT_SELECT, toContract, type ContractRowWithRelations} from '@/lib/
 
 export async function GET(request: NextRequest) {
   const { searchParams } = request.nextUrl;
-  const page = Number(searchParams.get("page") ?? 1);
-  const pageSize = Number(searchParams.get("pageSize") ?? 10);
-  const status = searchParams.get("status") as ContractStatus | null;
-  const from = (page - 1) * pageSize;
-  const to = from + pageSize - 1;
+  const {page, pageSize, from, to, sort, ascending, sort2, ascending2, search} = listParams(searchParams, "contracts");
+  const status = searchParams.get("status");
+
 
   const supabase = await createClient();
   let query = supabase
     .from("contracts")
-    .select(CONTRACT_SELECT)
-    .order("created_at", { ascending: false }).order("id", { ascending: true })
+    .select(CONTRACT_SELECT, {count: "exact"})
+    .order(sort, {ascending}).order(sort2, {ascending: ascending2}).order("id", { ascending: true })
     .range(from, to);
 
   if (status) {
     query = query.eq(
       "status",
-      contractStatusToDatabase(status) as ContractRow["status"],
+      contractStatusToDatabase(status as ContractStatus) as ContractRow["status"],
     );
   }
 
-  const { data, error } = await query;
+
+  if (search) {
+    const terms = ["notes"].map(column => `${column}.ilike.%${search}%`);
+    const {data: matchingLands, error: landError} = await supabase.from("lands").select("id").or(`name.ilike.%${search}%,location.ilike.%${search}%`);
+    if (landError) return NextResponse.json({message: landError.message}, {status: 500});
+    if (matchingLands?.length) terms.push(`land_id.in.(${matchingLands.map(row => row.id).join(",")})`);
+    const [{data: matchingCustomers, error: customerError}, {data: matchingPlots, error: plotError}] = await Promise.all([supabase.from("customers").select("id").ilike("name", `%${search}%`), supabase.from("plots").select("id").ilike("plot_number", `%${search}%`)]);
+    if (customerError || plotError) return NextResponse.json({message: "Không thể tìm kiếm hợp đồng"}, {status: 500});
+    if (matchingCustomers?.length) terms.push(`customer_id.in.(${matchingCustomers.map(row => row.id).join(",")})`);
+    if (matchingPlots?.length) terms.push(`plot_ids.ov.{${matchingPlots.map(row => row.id).join(",")}}`);
+    query = query.or(terms.join(","));
+  }
+
+  const { data, error, count } = await query;
 
   if (error) {
     return NextResponse.json<ApiErrorResponse>(
@@ -54,6 +66,7 @@ export async function GET(request: NextRequest) {
   );
 
   return NextResponse.json<ContractsResponse>({
+    total: count ?? 0, page, pageSize,
     code: 200,
     message: "Thành công",
     data: contracts,

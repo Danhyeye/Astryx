@@ -36,9 +36,10 @@ export function ContractDetailClient({ id }: { id: string }) {
   const updateStatus = useUpdateContract();
   const contract = query.data?.data;
   const filesQuery = useQuery({ queryKey: ['contractFiles', id], queryFn: () => fetchContractFiles(id), enabled: !!contract });
-  const customers = useAllCustomers();
-  const lands = useAllLands();
-  const plots = useAllPlots();
+  const [editing, setEditing] = useState(false);
+  const customers = useAllCustomers(editing);
+  const lands = useAllLands(editing);
+  const plots = useAllPlots(editing);
   const [removingFile, setRemovingFile] = useState<ContractFile | null>(null);
   const removeFile = useMutation({
     mutationFn:(file:ContractFile)=>deleteContractFile(id,file.path),
@@ -48,7 +49,6 @@ export function ContractDetailClient({ id }: { id: string }) {
     },
   });
   const [uploading, setUploading] = useState(false);
-  const [editing, setEditing] = useState(false);
   const row = contract ? buildContractRows([contract])[0] : null;
   if (query.isPending) return <ContractDetailSkeleton isWide={isWide} />;
   if (!contract || !row) return <Section><Banner status="error" title="Không thể tải hợp đồng" description={query.error?.message ?? 'Không tìm thấy hợp đồng.'} /><Link href="/contracts">Danh sách hợp đồng</Link></Section>;

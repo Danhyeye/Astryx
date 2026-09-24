@@ -18,6 +18,7 @@ export type Plot = {
 };
 
 export type PlotFilters = {
+  landId?: string;
   page?: number;
   pageSize?: number;
   status?: Status;

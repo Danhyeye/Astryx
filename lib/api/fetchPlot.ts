@@ -10,7 +10,8 @@ import {
 const convertPlotFilters = (filters?: PlotFilters): RequestParams => {
   if (!filters) return {};
 
-  const params: RequestParams = {}; 
+  const params: RequestParams = {};
+    if (filters?.landId) params.landId = filters.landId;
     if (filters?.page) params.page = filters.page;
     if (filters?.pageSize) params.pageSize = filters.pageSize;
     if (filters?.status) params.status = filters.status;

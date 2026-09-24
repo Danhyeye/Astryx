@@ -1,98 +1,15 @@
 {
   "schemaVersion": 2,
-  "generatedAt": "2026-09-24T11:08:09.930859+00:00",
-  "title": "Design System: Quản lý đất đai",
-  "extensions": {
-    "motion": [
-      {
-        "name": "fast",
-        "value": "140ms",
-        "purpose": "Generated workspace theme duration."
-      },
-      {
-        "name": "medium",
-        "value": "240ms",
-        "purpose": "Generated workspace theme duration."
-      },
-      {
-        "name": "slow",
-        "value": "400ms",
-        "purpose": "Generated workspace theme duration."
-      }
-    ],
-    "shadows": [],
-    "breakpoints": []
-  },
-  "components": [
-    {
-      "name": "Primary Button",
-      "kind": "button",
-      "refersTo": "button-primary",
-      "description": "Compact preview of the Astryx primary action.",
-      "html": "<button class=\"ds-primary\">Thêm khu đất</button>",
-      "css": ".ds-primary{font-family:var(--font-family-body,system-ui,sans-serif);color:var(--color-text-primary,#29321E);background:var(--color-accent,#A3B565);color:var(--color-on-accent,#29321E);min-height:var(--size-element-md,44px);padding:var(--spacing-2,8px) var(--spacing-3,12px);border:0;border-radius:var(--radius-element,10px);font-size:1rem;font-weight:500;cursor:pointer}.ds-primary:hover{background-image:linear-gradient(#0000000d,#0000000d)}.ds-primary:active{background-image:linear-gradient(#0000001a,#0000001a)}.ds-primary:focus-visible{outline:2px solid var(--focus-outline-color,#52682D);outline-offset:2px;}"
-    },
-    {
-      "name": "Ghost Button",
-      "kind": "button",
-      "description": "Lightweight secondary action preview.",
-      "html": "<button class=\"ds-ghost\">Xem chi tiết</button>",
-      "css": ".ds-ghost{font-family:var(--font-family-body,system-ui,sans-serif);color:var(--color-text-primary,#29321E);background:transparent;border:0;padding:var(--spacing-2,8px) var(--spacing-3,12px);min-height:var(--size-element-md,44px);border-radius:var(--radius-element,10px);cursor:pointer}.ds-ghost:hover{background:var(--color-overlay-hover,#1B1B220D)}.ds-ghost:active{background:var(--color-overlay-pressed,#1B1B221A)}.ds-ghost:focus-visible{outline:2px solid var(--focus-outline-color,#52682D);outline-offset:2px;}"
-    },
-    {
-      "name": "Field",
-      "kind": "input",
-      "description": "Labeled field preview; production uses Astryx validation.",
-      "html": "<label class=\"ds-field\">Tên khu đất<input placeholder=\"Nhập tên khu đất\" /></label>",
-      "css": ".ds-field{font-family:var(--font-family-body,system-ui,sans-serif);color:var(--color-text-primary,#29321E);display:grid;gap:var(--spacing-2,8px)}.ds-field input{font:inherit;color:inherit;background:var(--color-background-surface,#FDF8E2);border:1px solid var(--color-border,#D1D6B8);border-radius:var(--radius-element,10px);min-height:var(--size-element-md,44px);padding-inline:var(--spacing-3,12px)}.ds-field input:hover{border-color:var(--color-border-emphasized,#918F9D)}.ds-field input:focus-visible{outline:2px solid var(--focus-outline-color,#52682D);outline-offset:2px;}"
-    },
-    {
-      "name": "Selected Navigation",
-      "kind": "nav",
-      "refersTo": "navigation-selected",
-      "description": "Signature olive and cream destination treatment.",
-      "html": "<nav class=\"ds-nav\" aria-label=\"Điều hướng\"><a href=\"#\" aria-current=\"page\">Tổng quan</a></nav>",
-      "css": ".ds-nav{font-family:var(--font-family-body,system-ui,sans-serif);color:var(--color-text-primary,#29321E);background:#A3B565;padding:var(--spacing-4,16px)}.ds-nav a{display:flex;align-items:center;min-height:48px;padding-inline:var(--spacing-3,12px);background:#FDF8E2;color:#29321E;text-decoration:none;border-radius:var(--radius-element,10px)}.ds-nav a:hover{background-image:linear-gradient(#0000000d,#0000000d)}.ds-nav a:focus-visible{outline:2px solid white;outline-offset:2px}"
-    },
-    {
-      "name": "Summary Card",
-      "kind": "card",
-      "refersTo": "card",
-      "description": "Standalone summary container preview.",
-      "html": "<article class=\"ds-card\"><h2>Tổng hợp hồ sơ</h2><p>Thông tin quản lý khu đất</p></article>",
-      "css": ".ds-card{font-family:var(--font-family-body,system-ui,sans-serif);color:var(--color-text-primary,#29321E);background:var(--color-background-card,#D0D6A3);border:1px solid var(--color-border,#D1D6B8);border-radius:var(--radius-container,15px);padding:var(--spacing-4,16px)}.ds-card h2{font-size:var(--font-size-xl,1.4375rem);margin:0}.ds-card p{color:var(--color-text-secondary,#555F42);margin-bottom:0}"
-    }
-  ],
+  "title": "Quản lý đất đai — Matcha",
+  "extensions": {},
+  "components": [],
   "narrative": {
-    "northStar": "Olive and cream workspace",
-    "overview": "A clear operational workspace for Vietnamese property management teams. Olive anchors navigation and primary actions; cream marks the selected destination. Warm cream surfaces and dark olive text keep dense records readable while making the identity visibly bolder.",
+    "northStar": "Astryx Matcha workspace",
+    "overview": "Use the installed Matcha theme; source of truth is src/themes/matcha/matchaTheme.ts.",
     "keyCharacteristics": [
-      "Bold navigation, calm working surfaces.",
-      "Readable Vietnamese typography.",
-      "Mobile-first access to operational features."
-    ],
-    "rules": [
-      {
-        "name": "The Semantic Color Rule",
-        "body": "Use semantic theme tokens and retain labeled status information; do not introduce page-local brand colors.",
-        "section": "colors"
-      },
-      {
-        "name": "The Records Rule",
-        "body": "Use tables or lists for dense collections; reserve cards for standalone summaries, charts and distinct detail groups.",
-        "section": "layout"
-      }
-    ],
-    "dos": [
-      "Do use Astryx layout components and token-backed spacing.",
-      "Do preserve Vietnamese labels and clear property, customer and rental-period identity.",
-      "Do keep dense records in tables or lists and standalone summaries in cards.",
-      "Do keep invoice history in BottomSheet and preserve plot identifiers."
-    ],
-    "donts": [
-      "Don't add raw layout elements, inline styles or arbitrary color and spacing values.",
-      "Don't use color alone to convey payment or availability status.",
-      "Don't replace operational information with decorative imagery or invented metrics."
+      "Earthy green palette",
+      "DM Sans and Playwrite US Trad typography",
+      "Responsive operational layouts"
     ]
   }
 }

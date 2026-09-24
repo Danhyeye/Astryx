@@ -9,9 +9,9 @@ export function useAllLands(enabled = true) {
   return useQuery({enabled, queryKey: ['lands', 'all'], queryFn: ({signal}) =>
     fetchAllPages((page, pageSize) => landsService.getLands({page, pageSize}), signal)});
 }
-export function useAllPlots(enabled = true) {
-  return useQuery({enabled, queryKey: ['plots', 'all'], queryFn: ({signal}) =>
-    fetchAllPages((page, pageSize) => plotsService.getPlots({page, pageSize}), signal)});
+export function useAllPlots(enabled = true, landId?: string) {
+  return useQuery({enabled, queryKey: ['plots', 'all', landId ?? null], queryFn: ({signal}) =>
+    fetchAllPages((page, pageSize) => plotsService.getPlots({page, pageSize, landId}), signal)});
 }
 export function useAllCustomers(enabled = true) {
   return useQuery({enabled, queryKey: ['customers', 'all'], queryFn: ({signal}) =>

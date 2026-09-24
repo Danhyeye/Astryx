@@ -1,8 +1,9 @@
+import {listParams} from '@/lib/api/listParams';
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { mapImage, mapLand, mapPlot } from "@/lib/mappers";
 import { plotSchema } from "@/lib/validations/plot";
-import type { PlotsResponse, PlotResponse, Status } from "@/types/plot";
+import type { PlotsResponse, PlotResponse } from "@/types/plot";
 import type { ApiErrorResponse } from "@/types/api-response";
 import type { Database } from "@/types/database.types";
 
@@ -16,24 +17,32 @@ type PlotRowWithRelations = PlotRow & {
 
 export async function GET(request: NextRequest) {
   const { searchParams } = request.nextUrl;
-  const page = Number(searchParams.get("page") ?? 1);
-  const pageSize = Number(searchParams.get("pageSize") ?? 10);
-  const status = searchParams.get("status") as Status | null;
-  const from = (page - 1) * pageSize;
-  const to = from + pageSize - 1;
+  const {page, pageSize, from, to, sort, ascending, sort2, ascending2, search} = listParams(searchParams, "plots");
+  const status = searchParams.get("status");
+
 
   const supabase = await createClient();
   let query = supabase
     .from("plots")
-    .select("*, lands(*), land_images(*)")
-    .order("created_at", { ascending: false }).order("id", { ascending: true })
+    .select("*, lands(*), land_images(*)", {count: "exact"})
+    .order(sort, {ascending}).order(sort2, {ascending: ascending2}).order("id", { ascending: true })
     .range(from, to);
 
   if (status) {
     query = query.eq("status", status.toLowerCase() as PlotRow["status"]);
   }
 
-  const { data, error } = await query;
+
+  if (search) {
+    const terms = ["plot_number", "description"].map(column => `${column}.ilike.%${search}%`);
+    const {data: matchingLands, error: landError} = await supabase.from("lands").select("id").or(`name.ilike.%${search}%,location.ilike.%${search}%`);
+    if (landError) return NextResponse.json({message: landError.message}, {status: 500});
+    if (matchingLands?.length) terms.push(`land_id.in.(${matchingLands.map(row => row.id).join(",")})`);
+    query = query.or(terms.join(","));
+  }
+  if (searchParams.get("landId")) query = query.eq("land_id", searchParams.get("landId")!);
+
+  const { data, error, count } = await query;
 
   if (error) {
     return NextResponse.json<ApiErrorResponse>(
@@ -49,6 +58,7 @@ export async function GET(request: NextRequest) {
   });
 
   return NextResponse.json<PlotsResponse>({
+    total: count ?? 0, page, pageSize,
     code: 200,
     message: "Thành công",
     data: plots,
