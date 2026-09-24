@@ -1,4 +1,4 @@
-import type {ReactNode} from 'react';
+import {useState, type ReactNode} from 'react';
 import {EntityFormBanner as Banner} from './EntityFormBanner';
 import {Button} from '@astryxdesign/core/Button';
 import {Grid} from '@astryxdesign/core/Grid';
@@ -14,11 +14,18 @@ export function EntityFormStepper({
   activeStep,
   onStepChange,
   steps,
+  canAdvance = false,
+  isDisabled = false,
 }: {
   activeStep: number;
   onStepChange: (step: number) => void;
   steps: readonly EntityFormStep[];
+  canAdvance?: boolean;
+  isDisabled?: boolean;
 }) {
+  const [furthestStep, setFurthestStep] = useState(activeStep);
+  if (activeStep > furthestStep) setFurthestStep(activeStep);
+  const reachableStep = Math.min(steps.length - 1, Math.max(furthestStep, activeStep + (canAdvance ? 1 : 0)));
   const currentStep = steps[activeStep];
 
   return (
@@ -26,10 +33,10 @@ export function EntityFormStepper({
       <Stepper
         activeStep={activeStep}
         density="compact"
-        indicatorPosition="on-track"
+        indicatorPosition="separated"
         label="Tiến trình biểu mẫu"
         onStepClick={step => {
-          if (step < activeStep) {
+          if (!isDisabled && step <= reachableStep && step !== activeStep) {
             onStepChange(step);
           }
         }}>
@@ -38,14 +45,14 @@ export function EntityFormStepper({
             key={step.label}
             step={index}
             label={step.label}
-            indicator="number"
-            isDisabled={index > activeStep}
+            indicator="none"
+            isDisabled={isDisabled || index > reachableStep}
           />
         ))}
       </Stepper>
 
       {currentStep != null && (
-        <Grid columns={{minWidth: 240, max: 2, repeat: 'fit'}} gap={4}>
+        <Grid columns={1} gap={4}>
           {currentStep.content}
         </Grid>
       )}

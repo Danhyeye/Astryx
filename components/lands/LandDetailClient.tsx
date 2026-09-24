@@ -122,7 +122,7 @@ export function LandDetailClient({ id }: { id: string }) {
 
   const selectedPlot = plots.find(plot => plot.id === selectedPlotId);
 
-  const selectedPlotRow = selectedPlot ? buildPlotRows([{...selectedPlot, lands: land ? [land] : selectedPlot.lands}])[0] : null;
+  const selectedPlotRow = selectedPlot ? {...buildPlotRows([{...selectedPlot, lands: land ? [land] : selectedPlot.lands}])[0], rentalStatus: selectedPlot.rentalStatus} : null;
 
   const status = (filters[0]?.value as { value?: string } | undefined)?.value;
   const results = plots.filter(

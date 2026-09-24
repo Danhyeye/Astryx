@@ -3,6 +3,7 @@ import { pathToFileURL } from "node:url";
 import { createClient } from "@supabase/supabase-js";
 
 import { generateSeedData } from "./generate.mjs";
+import {seedInvoiceRows} from './invoices.mjs';
 
 const TABLES = [
   ["lands", "lands"],
@@ -81,6 +82,20 @@ export async function main(args = process.argv.slice(2), env = process.env) {
     await upsertBatches(client, table, rows);
   }
   await upsertBatches(client, 'plots', data.plots.filter(plot => activePlotIds.has(plot.id)));
+  // Paid flags are fixture metadata only. Persist receipts, preserving any
+  // existing migrated invoices or installments when the seed is run again.
+  const paid = data.contractPayments.filter(payment => payment.status === 'paid');
+  for (let start = 0; start < paid.length; start += 500) {
+    const batch = paid.slice(start, start + 500);
+    const {data: schedules, error} = await client.from('contract_payments')
+      .select('id,invoices(id)').in('id', batch.map(row => row.id));
+    if (error) throw new Error(error.message);
+    const invoices = seedInvoiceRows(batch, schedules ?? []);
+    if (invoices.length) {
+      const {error: invoiceError} = await client.from('invoices').insert(invoices);
+      if (invoiceError) throw new Error(`Seed invoices: ${invoiceError.message}`);
+    }
+  }
 }
 
 if (import.meta.url === pathToFileURL(process.argv[1] ?? "").href) {

@@ -101,30 +101,39 @@ export function buildContractCalendarEvents(
       }),
     );
     const valid = (date: Date | null): date is Date => date != null && date >= today && date >= start && (end == null || date <= end);
-    let due: Date | null = null;
-    let amount = contract.rent_amount;
-    if (contract.payments?.length) {
-      const payment = [...contract.payments]
-        .filter(payment => payment.status.toUpperCase() !== 'PAID' && !payment.paid_at && valid(parseContractDate(payment.due_date)))
-        .sort((a, b) => a.due_date.localeCompare(b.due_date))[0];
-      if (payment) {due = parseContractDate(payment.due_date); amount = payment.amount;}
-    } else {
-      const explicit = parseContractDate(contract.next_payment_due_date);
-      if (valid(explicit)) due = explicit;
-      else {
-        const step = FREQUENCY_MONTH_STEP[contract.payment_frequency];
-        const day = dueDayOf(contract);
-        if (step != null && day >= 1 && day <= 31) {
-          const months = Math.max(0, (today.getUTCFullYear() - start.getUTCFullYear()) * 12 + today.getUTCMonth() - start.getUTCMonth());
-          const offset = Math.floor(months / step) * step;
-          // At most the current anchored period and the next are needed.
-          for (const monthOffset of [offset, offset + step]) {
-            const candidate = contractDateFromParts(start.getUTCFullYear(), start.getUTCMonth() + monthOffset, day);
-            if (valid(candidate)) {due = candidate; break;}
-          }
-        }
+    const paidDates = new Set((contract.payments ?? []).filter(payment => payment.status === 'PAID').map(payment => payment.due_date));
+    const candidates = new Map<string, number>();
+    for (const payment of contract.payments ?? []) {
+      if (!paidDates.has(payment.due_date) && valid(parseContractDate(payment.due_date))) {
+        candidates.set(payment.due_date, payment.remaining);
       }
     }
+    const step = FREQUENCY_MONTH_STEP[contract.payment_frequency];
+    const day = dueDayOf(contract);
+    if (step != null && day >= 1 && day <= 31) {
+      const months = Math.max(0, (today.getUTCFullYear() - start.getUTCFullYear()) * 12 + today.getUTCMonth() - start.getUTCMonth());
+      const offset = Math.floor(months / step) * step;
+      // Recorded invoices cover only visited dues. Continue generating dates
+      // after the last paid period, including payments made in advance.
+      for (let index = 0; index <= paidDates.size + 1; index++) {
+        const candidate = contractDateFromParts(start.getUTCFullYear(), start.getUTCMonth() + offset + index * step, day);
+        if (end && candidate > end) break;
+        const key = formatContractDate(candidate);
+        if (valid(candidate) && !paidDates.has(key)) {
+          if (!candidates.has(key)) candidates.set(key, contract.rent_amount);
+          break;
+        }
+      }
+    } else {
+      const explicit = parseContractDate(contract.next_payment_due_date);
+      if (valid(explicit)) {
+        const key = formatContractDate(explicit);
+        if (!paidDates.has(key) && !candidates.has(key)) candidates.set(key, contract.rent_amount);
+      }
+    }
+    const nearest = [...candidates.entries()].sort(([a], [b]) => a.localeCompare(b))[0];
+    const due = nearest ? parseContractDate(nearest[0]) : null;
+    const amount = nearest?.[1] ?? contract.rent_amount;
     if (due == null) continue;
     const date = formatContractDate(due);
     events.push({id: `${contract.id}:${date}`, contractId: contract.id,

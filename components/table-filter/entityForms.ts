@@ -248,13 +248,13 @@ export function createContractFormFromContract(
     plotIds: contract.plotIds,
     depositAmount: contract.depositAmount,
     rentAmount: contract.rentAmount,
-    dueDay: dueDayFromStartDate(contract.startDate),
+    dueDay: contract.dueDay,
     leaseDurationMonths: contract.leaseDurationMonths > 0 ? contract.leaseDurationMonths : null,
     paymentFrequency: contract.paymentFrequency,
     paymentDueDay: contract.paymentDueDay,
     nextPaymentDueDate: contract.nextPaymentDueDate,
     startDate: contract.startDate,
-    endDate: contract.endDate,
+    endDate: resolveContractEndDate({startDate: contract.startDate, endDate: null, leaseDurationMonths: contract.leaseDurationMonths}) ?? '',
     status: contract.status,
     notes: contract.notes,
   };
@@ -270,9 +270,7 @@ export function updateContractFormDates(
     ...('startDate' in change
       ? {dueDay: dueDayFromStartDate(next.startDate), paymentDueDay: dueDayFromStartDate(next.startDate)}
       : {}),
-    endDate: next.leaseDurationMonths != null || 'leaseDurationMonths' in change
-      ? resolveContractEndDate({...next, endDate: null}) ?? ''
-      : next.endDate,
+    endDate: resolveContractEndDate({...next, endDate: null}) ?? '',
   };
 }
 
@@ -309,7 +307,7 @@ export function isContractFormStepValid(
     );
   }
 
-  const nextDate = form.nextPaymentDueDate;
+  const nextDate = form.paymentFrequency === 'CUSTOM' ? form.nextPaymentDueDate : '';
   const effectiveEndDate = resolveContractEndDate({
     startDate: form.startDate,
     endDate: form.endDate,
@@ -358,9 +356,9 @@ export function buildContractPayload(
     lease_duration_months: form.leaseDurationMonths,
     payment_frequency: form.paymentFrequency,
     payment_due_day: form.paymentDueDay,
-    next_payment_due_date: optionalText(form.nextPaymentDueDate),
+    next_payment_due_date: form.paymentFrequency === 'CUSTOM' ? optionalText(form.nextPaymentDueDate) : null,
     start_date: form.startDate,
-    end_date: optionalText(form.endDate),
+    end_date: resolveContractEndDate({...form, endDate: null}),
     status: form.status,
     notes: optionalText(form.notes),
   };

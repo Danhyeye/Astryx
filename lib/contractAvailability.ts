@@ -16,7 +16,7 @@ export function rentalOverlaps(contract: RentalContract, period: RentalPeriod): 
 
 export function isPlotManuallyRented(plot: {id: string; land_id: string; status: string}, contracts: readonly RentalContract[]): boolean {
   return plot.status === 'RENTED' && !contracts.some(contract =>
-    contract.land_id === plot.land_id && (contract.status === 'active' || contract.status === 'pending')
+    contract.land_id === plot.land_id
     && (contract.plot_ids.length === 0 || contract.plot_ids.includes(plot.id)));
 }
 
@@ -39,8 +39,8 @@ export function getPlotRentalStatus(
   const matches = contracts.filter(contract => contract.land_id === plot.land_id
     && (contract.plot_ids.length === 0 || contract.plot_ids.includes(plot.id)));
   const today = contractToday();
-  if (matches.some(contract => contract.status === 'active' && rentalOverlaps(contract, {startDate: today, endDate: today}))) return 'RENTED';
+  if (matches.some(contract => (contract.status === 'active' || contract.status === 'pending') && rentalOverlaps(contract, {startDate: today, endDate: today}))) return 'RENTED';
   if (matches.some(contract => (contract.status === 'pending' && (!contract.start_date || contract.start_date > today)) || (contract.status === 'active' && !!contract.start_date && contract.start_date > today))) return 'PENDING';
-  if (plot.status === 'RENTED' && matches.some(contract => contract.status === 'active' || contract.status === 'pending')) return 'AVAILABLE';
+  if (plot.status === 'RENTED' && matches.length > 0) return 'AVAILABLE';
   return plot.status;
 }

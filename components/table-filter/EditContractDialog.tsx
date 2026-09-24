@@ -1,3 +1,6 @@
+import {TextInput} from '@astryxdesign/core/TextInput';
+import {formatDate} from '@/utils/format';
+import {nextContractPayment} from '@/lib/nextContractPayment';
 import {Grid, GridSpan} from '@astryxdesign/core/Grid';
 import {Heading} from '@astryxdesign/core/Heading';
 import {Divider} from '@astryxdesign/core/Divider';
@@ -54,7 +57,6 @@ const PAYMENT_FREQUENCY_OPTIONS: PaymentFrequency[] = [
   'MONTHLY',
   'QUARTERLY',
   'YEARLY',
-  'CUSTOM',
 ];
 const ISO_DATE_PATTERN = /^\d{4}-\d{2}-\d{2}$/;
 
@@ -106,6 +108,7 @@ export function EditContractDialog({
   const [submitError, setSubmitError] = useState<string | null>(null);
   const updateContract = useUpdateContract();
   const isSubmitting = updateContract.isPending || isUploading;
+  const nextDueDate = nextContractPayment({...form, payments: contract.payments});
   const validationOptions = {
     allowCustomWithoutNextDue: contract.hasPayments === true,
   };
@@ -236,13 +239,20 @@ export function EditContractDialog({
                 )}
 
                 <EntityFormStepper
+                  key={isOpen ? 'open' : 'closed'}
+                  canAdvance={isCurrentStepValid}
+                  isDisabled={isSubmitting}
                   activeStep={activeStep}
                   onStepChange={setActiveStep}
                   steps={[
                     {
                       label: 'Tài sản và thời hạn',
-                      content: <>
-                        <Selector
+                      content: <GridSpan columns="full">
+                        <VStack gap={6}>
+                          <VStack gap={3}>
+                            <Heading level={3}>Khách thuê</Heading>
+                            <Grid columns={{minWidth: 240, max: 2, repeat: 'fit'}} gap={4}>
+                              <Selector
                     label="Khách hàng"
                     value={form.customerId}
                     options={customerOptions}
@@ -257,33 +267,7 @@ export function EditContractDialog({
                     isRequired
                     isDisabled={isSubmitting}
                         />
-                        <Selector
-                          label="Khu đất"
-                          value={form.landId}
-                          options={landOptions}
-                          onChange={landId => setForm(current => ({
-                            ...current, landId: landId ?? '', plotIds: [],
-                          }))}
-                          placeholder={availability.isPending ? "Đang tải tình trạng cho thuê…" : "Chọn khu đất trước"}
-                          hasSearch
-                          isRequired
-                          isDisabled={isSubmitting || !availability.isSuccess}
-                        />
-
-                        <NumberInput
-                          label="Thời hạn thuê"
-                          value={form.leaseDurationMonths}
-                          onChange={leaseDurationMonths =>
-                            setForm(current => updateContractFormDates(current, {leaseDurationMonths}))
-                          }
-                          min={1}
-                          units="tháng"
-                          hasClear
-                          isIntegerOnly
-                          isWheelEnabled={false}
-                          isDisabled={isSubmitting}
-                        />
-                        <Selector
+<Selector
                           label="Trạng thái"
                           value={form.status}
                           options={CONTRACT_STATUS_OPTIONS.map(status => ({
@@ -295,7 +279,49 @@ export function EditContractDialog({
                           }
                           isDisabled={isSubmitting}
                         />
-                        <DateInput
+                            </Grid>
+                          </VStack>
+                          <Divider />
+                          <VStack gap={3}>
+                            <Heading level={3}>Tài sản thuê</Heading>
+                            <Grid columns={{minWidth: 240, max: 2, repeat: 'fit'}} gap={4}>
+                              <Selector
+                          label="Khu đất"
+                          description="Chọn khu đất để xem các lô đất và lịch thuê hiện có."
+                          value={form.landId}
+                          options={landOptions}
+                          onChange={landId => setForm(current => ({
+                            ...current, landId: landId ?? '', plotIds: [],
+                          }))}
+                          placeholder={availability.isPending ? "Đang tải tình trạng cho thuê…" : "Chọn khu đất trước"}
+                          hasSearch
+                          isRequired
+                          isDisabled={isSubmitting || !availability.isSuccess}
+                        />
+<MultiSelector
+                            label="Lô đất"
+                            width="100%"
+                            size="md"
+                            value={form.plotIds}
+                            options={plotOptions}
+                            onChange={plotIds => setForm(current => ({...current, plotIds}))}
+                            placeholder={form.landId ? "Chọn một hoặc nhiều lô đất" : "Chọn khu đất trước"}
+                            description={
+                              rentalState.hasActiveContract || plotOptions.some(option => option.disabled)
+                                ? 'Chọn một hoặc nhiều lô đất còn trống để tiếp tục.'
+                                : 'Không chọn lô đất để thuê toàn bộ khu đất.'
+                            }
+                            hasSearch
+                            hasClear
+                            triggerDisplay="labels"
+                            isDisabled={isSubmitting || form.landId === '' || !availability.isSuccess}
+                          />
+                            </Grid>
+                          </VStack>
+                          <VStack gap={3}>
+                            <Heading level={3}>Thời hạn hợp đồng</Heading>
+                            <Grid columns={{minWidth: 180, max: 3, repeat: 'fit'}} gap={4}>
+                              <DateInput
                           label="Ngày bắt đầu"
                           status={!isPendingStartDateValid(form.status, form.startDate)
                             ? {type: 'error', message: 'Hợp đồng chờ hiệu lực phải bắt đầu sau hôm nay (giờ Việt Nam).'}
@@ -308,44 +334,33 @@ export function EditContractDialog({
                           hasClear
                           isDisabled={isSubmitting}
                         />
-                        <DateInput
-                          label="Ngày kết thúc"
-                          isOptional
-                          value={asISODateString(form.endDate)}
-                          onChange={endDate =>
-                            setForm(current => ({...current, endDate: endDate ?? ''}))
+<NumberInput
+                          label="Thời hạn thuê"
+                          value={form.leaseDurationMonths}
+                          onChange={leaseDurationMonths =>
+                            setForm(current => updateContractFormDates(current, {leaseDurationMonths}))
                           }
+                          min={1}
+                          units="tháng"
                           hasClear
+                          isIntegerOnly
+                          isWheelEnabled={false}
                           isDisabled={isSubmitting}
                         />
-
-                        <GridSpan columns="full">
-                          <MultiSelector
-                            label="Lô đất"
-                            width="100%"
-                            size="lg"
-                            value={form.plotIds}
-                            options={plotOptions}
-                            onChange={plotIds => setForm(current => ({...current, plotIds}))}
-                            placeholder="Chọn một hoặc nhiều lô đất"
-                            description={
-                              rentalState.hasActiveContract || plotOptions.some(option => option.disabled)
-                                ? 'Chọn một hoặc nhiều lô đất còn trống để tiếp tục.'
-                                : 'Không chọn lô đất để thuê toàn bộ khu đất.'
-                            }
-                            hasSearch
-                            hasClear
-                            triggerDisplay="labels"
-                            isDisabled={isSubmitting || form.landId === '' || !availability.isSuccess}
-                          />
-                        </GridSpan>
+<TextInput label="Ngày kết thúc (tự động)"
+                          value={form.endDate ? formatDate(form.endDate, true) : 'Không thời hạn'} isReadOnly />
+                            </Grid>
+                          </VStack>
+                          <Grid columns={1} gap={3}>
                         {form.landId !== '' && availability.isSuccess && <GridSpan columns="full">
                           <ContractRentalSchedule key={form.landId} landId={form.landId} contracts={availability.data}
                             excludeId={contract.id} plots={plots} period={form} selectedPlotIds={form.plotIds} />
                         </GridSpan>}
                         {availability.isError && <Banner status="error" title="Không thể tải tình trạng cho thuê" description={availability.error.message} />}
                         {availability.isSuccess && form.landId !== '' && !isTargetAvailable && (form.plotIds.length > 0 || !plotOptions.some(option => !option.disabled)) && <Banner status="warning" title="Tài sản không khả dụng" description="Chọn các lô còn trống. Đổi thời gian thuê hoặc chọn lô khác để tránh trùng hợp đồng." />}
-                      </>,
+                          </Grid>
+                        </VStack>
+                      </GridSpan>,
                     },
                     {
                       label: 'Thanh toán và ghi chú',
@@ -355,7 +370,7 @@ export function EditContractDialog({
                             <Heading level={3}>Chi phí thuê</Heading>
                             <Grid columns={{minWidth: 240, max: 2, repeat: 'fit'}} gap={4}>
                               <CurrencyInput
-                              label="Tiền thuê"
+                              label="Tiền thuê mỗi kỳ"
                               value={form.rentAmount}
                               onChange={rentAmount =>
                               setForm(current => ({
@@ -389,20 +404,23 @@ export function EditContractDialog({
                               />
                             </Grid>
                           </VStack>
+                          <Divider />
                           <VStack gap={4}>
                             <Heading level={3}>Lịch thanh toán</Heading>
                             <Grid columns={{minWidth: 240, max: 2, repeat: 'fit'}} gap={4}>
                               <Selector
                               label="Chu kỳ thanh toán"
                               value={form.paymentFrequency}
-                              options={PAYMENT_FREQUENCY_OPTIONS.map(frequency => ({
+                              options={[...PAYMENT_FREQUENCY_OPTIONS, ...(form.paymentFrequency === 'CUSTOM' ? ['CUSTOM' as PaymentFrequency] : [])].map(frequency => ({
                               value: frequency,
-                              label: PAYMENT_FREQUENCY_META[frequency].label,
+                              label: frequency === 'CUSTOM' ? 'Lịch tùy chỉnh hiện có' : PAYMENT_FREQUENCY_META[frequency].label,
+                              disabled: frequency === 'CUSTOM',
                               }))}
                               onChange={paymentFrequency =>
                               setForm(current => ({
                               ...current,
                               paymentFrequency: paymentFrequency as PaymentFrequency,
+                              nextPaymentDueDate: '',
                               }))
                               }
                               isDisabled={isSubmitting}
@@ -411,7 +429,7 @@ export function EditContractDialog({
                               label="Ngày đến hạn"
                               value={form.dueDay}
                               onChange={dueDay =>
-                                setForm(current => ({...current, dueDay}))
+                                setForm(current => ({...current, dueDay, paymentDueDay: dueDay}))
                               }
                               min={1}
                               max={28}
@@ -420,38 +438,21 @@ export function EditContractDialog({
                               isWheelEnabled={false}
                               isDisabled={isSubmitting}
                               />
-                              <NumberInput
-                              label="Ngày thanh toán"
-                              value={form.paymentDueDay}
-                              onChange={paymentDueDay =>
-                              setForm(current => ({
-                              ...current,
-                              paymentDueDay,
-                              }))
-                              }
-                              min={1}
-                              max={31}
-                              isIntegerOnly
-                              isRequired
-                              isWheelEnabled={false}
-                              isDisabled={isSubmitting}
-                              />
-                              <DateInput
-                              label="Thanh toán tiếp theo"
-                              description={form.paymentFrequency === 'CUSTOM' ? 'Chọn ngày cho lịch thanh toán tùy chỉnh.' : undefined}
-                              value={asISODateString(form.nextPaymentDueDate)}
-                              onChange={nextPaymentDueDate =>
-                              setForm(current => ({
-                              ...current,
-                              nextPaymentDueDate: nextPaymentDueDate ?? '',
-                              }))
-                              }
-                              hasClear
-                              isDisabled={isSubmitting}
-                              />
+
                             </Grid>
+                            {/* <Section variant="muted" padding={4}>
+                              <VStack gap={1}>
+                                <Text type="supporting">Kỳ đến hạn chưa thanh toán gần nhất</Text>
+                                <Text type="large" weight="semibold">
+                                  {nextDueDate ? formatDate(nextDueDate, true) : 'Không còn kỳ đến hạn'}
+                                </Text>
+                                <Text type="supporting">Tự động theo lịch thanh toán; bao gồm kỳ quá hạn chưa trả.</Text>
+                              </VStack>
+                            </Section> */}
                           </VStack>
                           <Divider />
+                          <VStack gap={3}>
+                            <Heading level={3}>Ghi chú và tài liệu</Heading>
                               <TextArea
                               label="Ghi chú"
                               isOptional
@@ -467,12 +468,15 @@ export function EditContractDialog({
                               isDisabled={isSubmitting}
                               />
                               <ContractFileInput files={files} onChange={setFiles} isDisabled={isSubmitting} />
+                          </VStack>
                         </VStack>
                       </GridSpan>,
                     },
                     {
                       label: 'Xem trước',
                       content: <ContractFormPreview
+                        onEditStep={setActiveStep}
+                        nextDueDate={nextDueDate}
                         form={form}
                         customerOptions={customerOptions}
                         landOptions={landOptions}

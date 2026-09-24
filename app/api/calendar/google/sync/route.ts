@@ -1,3 +1,5 @@
+import {derivePayment} from '@/lib/invoices';
+import type {Invoice} from '@/types/contract';
 import {fetchAllPages} from '@/lib/api/fetchAllPages';
 import {NextResponse} from 'next/server';
 
@@ -32,14 +34,14 @@ type CalendarOauthTokenRow =
 type CalendarSyncEventRow =
   Database['public']['Tables']['calendar_sync_events']['Row'];
 type ContractRowWithRelations = ContractRow & {
-  contract_payments: Database['public']['Tables']['contract_payments']['Row'][] | null;
+  contract_payments: (Database['public']['Tables']['contract_payments']['Row'] & {invoices: Invoice[]})[] | null;
   customers: CustomerRow | null;
   lands: LandRow | null;
   plots: (PlotRow & {lands: LandRow | null}) | null;
 };
 
 const CONTRACT_SELECT = `*,
-  contract_payments (*), customers (*),
+  contract_payments (*, invoices (*)), customers (*),
   lands (*),
   plots (*, lands(*))`;
 
@@ -73,7 +75,7 @@ function toContract(row: ContractRowWithRelations): Contract {
     notes: contract.notes ?? '',
     created_at: contract.created_at,
     updated_at: contract.updated_at,
-    payments: row.contract_payments ?? [],
+    payments: (row.contract_payments ?? []).map(payment => derivePayment(payment)),
     customers: customers ? [mapCustomer(customers)] : [],
     lands: lands ? [mapLand(lands)] : [],
     plots: plots ? [mapPlot(plots, plotLand ? [plotLand] : [])] : [],

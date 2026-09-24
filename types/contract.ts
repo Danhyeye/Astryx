@@ -6,6 +6,24 @@ import type { Plot } from "./plot";
 export type ContractStatus = "PENDING" | "ACTIVE" | "COMPLETED" | "CANCELLED";
 export type PaymentFrequency = "MONTHLY" | "QUARTERLY" | "YEARLY" | "CUSTOM";
 
+export type Invoice = {
+  id: string;
+  payment_schedule_id: string;
+  payment_date: string;
+  amount: number;
+  created_at: string;
+};
+export type ContractPayment = {
+  id?: string;
+  due_date: string;
+  amount: number;
+  paid_at: string | null;
+  status: string;
+  invoices: Invoice[];
+  total_paid: number;
+  remaining: number;
+};
+
 export type Contract = {
   id: string;
   deposit_amount: number;
@@ -21,7 +39,7 @@ export type Contract = {
   notes: string;
   created_at: string;
   updated_at: string;
-  payments?: {due_date: string; amount: number; paid_at: string | null; status: string}[];
+  payments?: ContractPayment[];
   customers: Customer[];
   lands: Land[];
   plots: Plot[];

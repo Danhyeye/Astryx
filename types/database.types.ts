@@ -299,6 +299,12 @@ export type Database = {
           },
         ];
       };
+      invoices: {
+        Row: {id: string; payment_schedule_id: string; payment_date: string; amount: number; created_at: string};
+        Insert: {id?: string; payment_schedule_id: string; payment_date: string; amount: number; created_at?: string};
+        Update: {id?: string; payment_schedule_id?: string; payment_date?: string; amount?: number; created_at?: string};
+        Relationships: [{foreignKeyName: "invoices_payment_schedule_id_fkey"; columns: ["payment_schedule_id"]; isOneToOne: false; referencedRelation: "contract_payments"; referencedColumns: ["id"]}];
+      };
       calendar_integrations: {
         Row: {
           id: string;
@@ -455,9 +461,9 @@ export type Database = {
     };
     Views: Record<string, never>;
     Functions: {
-      record_contract_payment: {
-        Args: {p_contract_id: string; p_due_date: string; p_paid: boolean};
-        Returns: undefined;
+      pay_contract_invoice: {
+        Args: {p_contract_id: string; p_due_date: string; p_payment_date: string; p_amount: number; p_invoice_id: string};
+        Returns: {id: string; payment_schedule_id: string; payment_date: string; amount: number; created_at: string};
       };
     };
     Enums: Record<string, never>;

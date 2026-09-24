@@ -110,6 +110,7 @@ export type ContractTableRow = EntityTableRow & {
   plotStatus: PlotStatusValue;
   paymentFrequency: PaymentFrequency;
   hasPayments?: boolean;
+  payments?: Contract['payments'];
   rentAmount: number;
   depositAmount: number;
   dueDay: number;
@@ -146,6 +147,7 @@ export type PlotTableRow = EntityTableRow & {
   landId: string;
   landLocation: string;
   status: PlotStatus;
+  rentalStatus?: PlotStatus | 'PENDING';
   areaSqm: number;
   description: string;
   images: Images[];
@@ -322,6 +324,7 @@ export function buildContractRows(
       plotStatus,
       paymentFrequency: contract.payment_frequency,
       hasPayments: (contract.payments?.length ?? 0) > 0,
+      payments: contract.payments,
       rentAmount: contract.rent_amount,
       depositAmount: contract.deposit_amount,
       dueDay: contract.due_day,
@@ -604,7 +607,7 @@ export function createFieldDefs({
     },
     {key: 'rentAmount', type: 'number', label: 'Tiền thuê'},
     {key: 'depositAmount', type: 'number', label: 'Tiền đặt cọc'},
-    {key: 'nextPaymentDueOn', type: 'date', label: 'Thanh toán tiếp theo'},
+    {key: 'nextPaymentDueOn', type: 'date', label: 'Kỳ chưa thanh toán gần nhất'},
     {key: 'startOn', type: 'date', label: 'Ngày bắt đầu'},
     {key: 'endOn', type: 'date', label: 'Ngày kết thúc'},
   ];
@@ -834,7 +837,7 @@ export const COLUMN_LABELS: Record<string, string> = {
   paymentFrequency: 'Chu kỳ',
   rentAmount: 'Tiền thuê',
   depositAmount: 'Tiền đặt cọc',
-  nextPaymentDueDate: 'Thanh toán tiếp theo',
+  nextPaymentDueDate: 'Kỳ chưa thanh toán gần nhất',
   areaSqm: 'Diện tích',
   startDate: 'Bắt đầu',
   endDate: 'Kết thúc',
@@ -1270,7 +1273,7 @@ const FIELD_LABELS: Record<string, string> = {
   rentAmount: 'Tiền thuê',
   depositAmount: 'Tiền đặt cọc',
   areaSqm: 'Diện tích',
-  nextPaymentDueOn: 'Thanh toán tiếp theo',
+  nextPaymentDueOn: 'Kỳ chưa thanh toán gần nhất',
   startOn: 'Ngày bắt đầu',
   endOn: 'Ngày kết thúc',
 };

@@ -192,9 +192,10 @@ export function ContractCalendarClient() {
                 : <List key={selectedDate} hasDividers density="balanced" className="max-h-96 overflow-y-auto">
                   {selectedEvents.map(event => {
                     const payment = paymentsByEvent.get(`${event.contractId}:${event.date}`);
-                    const paid = !!payment?.paid_at || payment?.status.toUpperCase() === 'PAID';
-                    const status = <EntityStatus variant={paid ? 'green' : event.date < today ? 'red' : 'neutral'}
-                      label={paid ? 'Đã thanh toán' : event.date < today ? 'Quá hạn' : 'Chưa thanh toán'} />;
+                    const paid = payment?.status === 'PAID';
+                    const partial = payment?.status === 'PARTIALLY_PAID';
+                    const status = <EntityStatus variant={paid ? 'green' : partial ? 'orange' : event.date < today ? 'red' : 'neutral'}
+                      label={paid ? 'Đã thanh toán' : partial ? 'Thanh toán một phần' : event.date < today ? 'Quá hạn' : 'Chưa thanh toán'} />;
                     return <ListItem key={event.id}
                       label={event.customerName}
                       href={`/contracts/${encodeURIComponent(event.contractId)}`}

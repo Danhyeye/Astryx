@@ -56,7 +56,7 @@ export function PlotDetailPanel({
   const [viewing, setViewing] = useState<{ plotId: string; imageId: string } | null>(null);
   const images = [...plot.images].sort((a, b) => a.sort_order - b.sort_order);
   const imageIndex = viewing?.plotId === plot.id ? images.findIndex(image => image.id === viewing.imageId) : -1;
-  const plotStatus = PLOT_STATUS_META[plot.status];
+  const plotStatus = plot.rentalStatus === 'PENDING' ? {label: 'Đã đặt trước', badge: 'neutral'} : PLOT_STATUS_META[plot.rentalStatus ?? plot.status];
 
   return (
     <>
