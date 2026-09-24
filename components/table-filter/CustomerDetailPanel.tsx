@@ -32,7 +32,7 @@ export function CustomerDetailPanel({
 }: {
   customer: CustomerTableRow;
   contracts: ContractTableRow[];
-  resizable: ResizableProps;
+  resizable?: ResizableProps;
   onClose: () => void;
   onSelectContract: (contractId: string) => void;
   onEditCustomer: (customer: CustomerTableRow) => void;
@@ -40,14 +40,14 @@ export function CustomerDetailPanel({
 }) {
   return (
     <>
-      <ResizeHandle
+      {resizable && <ResizeHandle
         resizable={resizable}
         isReversed
         isAlwaysVisible={false}
         label="Thay đổi kích thước chi tiết khách hàng"
-      />
+      />}
       <LayoutPanel
-        resizable={resizable}
+        width={resizable ? undefined : '100%'}        resizable={resizable}
         hasDivider
         padding={0}
         label="Chi tiết khách hàng">

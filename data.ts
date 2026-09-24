@@ -926,7 +926,7 @@ export const SORT_RANKS: Record<string, Record<string, number>> = {
 
 export const PAGE_SIZE = 15;
 export const SELECTION_COLUMN_KEY = '__xds_selection';
-export const SKELETON_ROWS = 5;
+export const SKELETON_ROWS = 15;
 export const SELECTION_COLUMN_WIDTH = 48;
 
 export const DENSITY_PADDING: Record<Density, number> = {

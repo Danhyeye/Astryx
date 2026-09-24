@@ -1,5 +1,8 @@
 'use client';
 
+import {useMediaQuery} from '@astryxdesign/core/hooks';
+import {MobileRecordList} from '@/components/table-filter/MobileRecordList';
+
 import { useMemo, useState } from 'react';
 import {Grid} from '@astryxdesign/core/Grid';
 import {Overlay} from '@astryxdesign/core/Overlay';
@@ -80,6 +83,7 @@ function StatItem({ count, label }: { count: number; label: string }) {
 export function LandDetailClient({ id }: { id: string }) {
   const router = useRouter();
   const panelWidth = useResizable({defaultSize: 380, minSizePx: 320, maxSizePx: 560});
+  const isWide = useMediaQuery('(min-width: 768px)');
   const [editingPlot, setEditingPlot] = useState<PlotTableRow | null>(null);
   const [deletingPlot, setDeletingPlot] = useState<PlotTableRow | null>(null);
   const landQuery = useLandDetail(id);
@@ -159,16 +163,18 @@ export function LandDetailClient({ id }: { id: string }) {
 
   const resetPagination = () => setPagination({ key: '', page: 1 });
 
+  const plotDetail = selectedPlotRow && land ? <PlotDetailPanel
+        plot={selectedPlotRow} land={land} contracts={plotContracts.data ?? []}
+        isContractsLoading={plotContracts.isPending} contractsError={plotContracts.error?.message}
+        resizable={isWide ? panelWidth.props : undefined} onClose={() => setSelectedPlotId(null)}
+        onSelectLand={() => setSelectedPlotId(null)}
+        onSelectContract={contractId => router.push(`/contracts/${contractId}`)}
+        onEditPlot={plot => {if (!isWide) setSelectedPlotId(null); setEditingPlot(plot);}} onDeletePlot={setDeletingPlot} /> : undefined;
+
   return (
     <Layout
       padding={4}
-      end={selectedPlotRow && land ? <PlotDetailPanel
-        plot={selectedPlotRow} land={land} contracts={plotContracts.data ?? []}
-        isContractsLoading={plotContracts.isPending} contractsError={plotContracts.error?.message}
-        resizable={panelWidth.props} onClose={() => setSelectedPlotId(null)}
-        onSelectLand={() => setSelectedPlotId(null)}
-        onSelectContract={contractId => router.push(`/contracts/${contractId}`)}
-        onEditPlot={setEditingPlot} onDeletePlot={setDeletingPlot} /> : undefined}
+      end={isWide ? plotDetail : undefined}
       header={
         <LayoutHeader hasDivider>
           <VStack gap={3}>
@@ -307,7 +313,9 @@ export function LandDetailClient({ id }: { id: string }) {
                         description="Thử điều chỉnh bộ lọc hoặc từ khóa tìm kiếm."
                       />
                     ) : (
-                      <Table
+                      !isWide ? <MobileRecordList detailColumns={2} fullWidthKeys={['description', 'details']} actionKeys={['details']}
+                        rows={results.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE)}
+                        columns={[...columns, {key: 'details', header: 'Chi tiết', renderCell: plot => <Button label="Xem chi tiết" onClick={() => setSelectedPlotId(plot.id)} />}]} rowKey={row => row.id} label="Lô đất" /> : <Table
                         data={results.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE)}
                         columns={[...columns, {
                           key: 'details', header: 'Chi tiết', width: proportional(1),
@@ -334,6 +342,7 @@ export function LandDetailClient({ id }: { id: string }) {
               </>
             )}
 
+            {!isWide && plotDetail}
             {imageIndex >= 0 && <Lightbox isOpen hasZoom
               media={images.map(image => ({src: image.url, alt: image.caption || land?.name || 'Hình ảnh khu đất', caption: image.caption || undefined}))}
               index={imageIndex} onIndexChange={index => setViewingImageId(images[index]?.id ?? null)}

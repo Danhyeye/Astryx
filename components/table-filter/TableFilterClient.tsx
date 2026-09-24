@@ -3,6 +3,13 @@
 import {EntityStatus} from './EntityStatus';
 
 import {useCallback, useEffect, useMemo, useRef, useState} from 'react';
+import {useMediaQuery} from '@astryxdesign/core/hooks';
+import {Collapsible} from '@astryxdesign/core/Collapsible';
+import {Fragment} from 'react';
+import {List, ListItem} from '@astryxdesign/core/List';
+import {CheckboxInput} from '@astryxdesign/core/CheckboxInput';
+import {BottomSheet} from '@astryxdesign/core/BottomSheet';
+import {Selector} from '@astryxdesign/core/Selector';
 import {Button} from '@astryxdesign/core/Button';
 import {Heading} from '@astryxdesign/core/Heading';
 import {EmptyState} from '@astryxdesign/core/EmptyState';
@@ -141,6 +148,7 @@ export default function TableFilterClient({
   initialSelectedId?: string | null;
 } = {}) {
   const router = useRouter();
+  const isWide = useMediaQuery('(min-width: 768px)');
   const [isCreateLandDialogOpen, setIsCreateLandDialogOpen] = useState(false);
   const [editingLand, setEditingLand] = useState<LandTableRow | null>(null);
   const [deletingLands, setDeletingLands] = useState<LandTableRow[]>([]);
@@ -979,6 +987,7 @@ export default function TableFilterClient({
       filters={filters}
       query={query}
       resultCount={results.length}
+      isLoading={isInitialDataLoading}
       statusOptions={dataset === 'contracts' ? Object.entries(CONTRACT_STATUS_META).map(([value, meta]) => ({value, label: meta.label})) : dataset === 'plots' ? Object.entries(PLOT_STATUS_META).filter(([value]) => value !== 'UNASSIGNED').map(([value, meta]) => ({value, label: meta.label})) : []}
       searchLabel={`Tìm ${tableData.label.toLowerCase()}`}
       searchPlaceholder={tableData.searchPlaceholder}
@@ -990,6 +999,7 @@ export default function TableFilterClient({
 
   const bulkBar = (
     <BulkActionBar
+      hasDelete={dataset === 'plots'}
       selectedCount={selectedCount}
       singularLabel={tableData.singularLabel}
       pluralLabel={tableData.label.toLowerCase()}
@@ -1028,7 +1038,7 @@ export default function TableFilterClient({
       land={activeLand}
       plots={activeLandPlots}
       contracts={activeLandContracts}
-      resizable={detailWidth.props}
+      resizable={isWide ? detailWidth.props : undefined}
       onClose={() => setActiveRowId(null)}
       onSelectPlot={plotId => showDatasetRow('plots', plotId)}
       onSelectContract={contractId => showDatasetRow('contracts', contractId)}
@@ -1040,7 +1050,7 @@ export default function TableFilterClient({
       plot={activePlot}
       land={activePlotLand}
       contracts={activePlotContracts}
-      resizable={detailWidth.props}
+      resizable={isWide ? detailWidth.props : undefined}
       onClose={() => setActiveRowId(null)}
       onSelectLand={landId => showDatasetRow('lands', landId)}
       onSelectContract={contractId => showDatasetRow('contracts', contractId)}
@@ -1051,7 +1061,7 @@ export default function TableFilterClient({
     <CustomerDetailPanel
       customer={activeCustomer}
       contracts={activeCustomerContracts}
-      resizable={detailWidth.props}
+      resizable={isWide ? detailWidth.props : undefined}
       onClose={() => setActiveRowId(null)}
       onSelectContract={contractId => showDatasetRow('contracts', contractId)}
       onEditCustomer={editCustomer}
@@ -1068,7 +1078,7 @@ export default function TableFilterClient({
         height="fill"
         padding={0}
         xstyle={styles.pageShell}
-        end={detailPanel}
+        end={isWide ? detailPanel : undefined}
         header={
           <LayoutHeader
             hasDivider
@@ -1088,7 +1098,7 @@ export default function TableFilterClient({
                 padding={4}
                 xstyle={styles.toolbarContainer}>
                 <VStack gap={4}>
-                  <HStack gap={3} vAlign="center">
+                  <HStack gap={3} vAlign="center" wrap="wrap">
                     <StackItem size="fill">
                       <Heading level={1}>{DATASET_META[dataset].label}</Heading>
                     </StackItem>
@@ -1100,6 +1110,22 @@ export default function TableFilterClient({
                   </HStack>
 
                   {selectedCount > 0 ? bulkBar : filterBar}
+                  {!isWide && rows.length > 0 && <CheckboxInput
+                    label="Chọn tất cả trong trang"
+                    value={rows.every(item => selectedKeys.has(item.id)) ? true : rows.some(item => selectedKeys.has(item.id)) ? 'indeterminate' : false}
+                    onChange={checked => setSelectedKeys(current => {
+                      const next = new Set(current);
+                      rows.forEach(item => {if (checked) next.add(item.id); else next.delete(item.id);});
+                      return next;
+                    })}
+                  />}
+                  {!isWide && <Selector label="Sắp xếp" value={sort[0] ? `${sort[0].sortKey}:${sort[0].direction}` : null} hasClear
+                    options={columns.filter(column => column.sortable).flatMap(column => [
+                      {value: `${column.key}:ascending`, label: `${tableData.columnLabels[column.key] ?? column.key} · Tăng dần`},
+                      {value: `${column.key}:descending`, label: `${tableData.columnLabels[column.key] ?? column.key} · Giảm dần`},
+                    ])}
+                    onChange={value => {const [sortKey, direction] = String(value ?? '').split(':'); setSort(value ? [{sortKey, direction: direction as 'ascending' | 'descending'}] : []);}} />}
+
                 </VStack>
               </Section>
             </VStack>
@@ -1115,7 +1141,7 @@ export default function TableFilterClient({
                 actions={<Button label="Thử lại" onClick={refetchData} />}
               />
             ) : isInitialDataLoading ? (
-              <LoadingRows columns={columns} density={view.density} />
+              <LoadingRows columns={columns} density={view.density} isMobile={!isWide} />
             ) : results.length === 0 ? (
               <EmptyState
                 icon={<Icon icon={Search} size="lg" />}
@@ -1128,6 +1154,32 @@ export default function TableFilterClient({
                   </>
                 }
               />
+            ) : !isWide ? (
+              <List hasDividers density="spacious" aria-label={tableData.label}>
+                {rows.map((item, index) => <Fragment key={item.id}>
+                  {isGrouped && (index === 0 || groupBy(rows[index - 1]) !== groupBy(item)) && <ListItem label={<Button variant="ghost" label={`${groupBy(item)} · ${rows.filter(row => groupBy(row) === groupBy(item)).length}`} aria-expanded={!collapsedGroups.has(groupBy(item))} onClick={() => toggleGroup(groupBy(item))} />} />}
+                  {(!isGrouped || !collapsedGroups.has(groupBy(item))) && <ListItem key={item.id} label={<Text className="whitespace-normal break-words font-semibold">{item.summary}</Text>}
+                  description={<VStack gap={3}>
+                    {columns.filter(column => ['status', 'rentAmount', 'nextPaymentDueDate', 'phone', 'areaSqm'].includes(column.key)).map(column => <HStack key={column.key} gap={2} hAlign="between" vAlign="center" wrap="wrap">
+                      <Text type="supporting" color="secondary">{tableData.columnLabels[column.key] ?? column.key}</Text>
+                      {column.renderCell?.(item)}
+                    </HStack>)}
+                    {columns.some(column => !['summary', 'status', 'rentAmount', 'nextPaymentDueDate', 'phone', 'areaSqm'].includes(column.key)) && <Collapsible trigger="Thông tin khác" defaultIsOpen={false}>
+                      <VStack gap={2}>{columns.filter(column => !['summary', 'status', 'rentAmount', 'nextPaymentDueDate', 'phone', 'areaSqm'].includes(column.key)).map(column => <VStack key={column.key} gap={1} hAlign="start">
+                        <Text type="supporting" color="secondary">{tableData.columnLabels[column.key] ?? column.key}</Text>
+                        {column.renderCell?.(item)}
+                      </VStack>)}</VStack>
+                    </Collapsible>}
+                    <HStack gap={3} hAlign="between" vAlign="center" wrap="wrap">
+                      <CheckboxInput label={`Chọn ${item.summary}`} isLabelHidden value={selectedKeys.has(item.id)}
+                        onChange={checked => setSelectedKeys(current => {const next = new Set(current); if (checked) next.add(item.id); else next.delete(item.id); return next;})} />
+                      <Button label="Xem chi tiết" variant="secondary" onClick={() => {
+                        if (item.dataset === 'lands' || item.dataset === 'contracts') router.push(`/${item.dataset}/${item.id}`);
+                        else setActiveRowId(item.id);
+                      }} />
+                    </HStack>
+                  </VStack>} />}</Fragment>)}
+              </List>
             ) : (
               <Table<EntityTableRow>
                 data={isGrouped ? groupedRows : rows}
@@ -1156,6 +1208,8 @@ export default function TableFilterClient({
         }
       />
 
+      {!isWide && activePlot && detailPanel}
+      {!isWide && !activePlot && detailPanel && <BottomSheet isOpen label="Chi tiết" height="tall" onOpenChange={open => {if (!open) setActiveRowId(null);}}>{detailPanel}</BottomSheet>}
       {isCreateLandDialogOpen && (
         <CreateLandDialog
           isOpen={isCreateLandDialogOpen}

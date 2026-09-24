@@ -1,3 +1,5 @@
+import { BottomSheet } from '@astryxdesign/core/BottomSheet';
+import { useMediaQuery } from '@astryxdesign/core/hooks';
 import { useState } from 'react';
 import { Grid } from '@astryxdesign/core/Grid';
 import { AspectRatio } from '@astryxdesign/core/AspectRatio';
@@ -46,191 +48,201 @@ export function PlotDetailPanel({
   contracts: ContractTableRow[];
   isContractsLoading?: boolean;
   contractsError?: string;
-  resizable: ResizableProps;
+  resizable?: ResizableProps;
   onClose: () => void;
   onSelectLand: (landId: string) => void;
   onSelectContract: (contractId: string) => void;
   onEditPlot: (plot: PlotTableRow) => void;
   onDeletePlot: (plot: PlotTableRow) => void;
 }) {
+  const isWide = useMediaQuery('(min-width: 768px)');
   const [viewing, setViewing] = useState<{ plotId: string; imageId: string } | null>(null);
   const images = [...plot.images].sort((a, b) => a.sort_order - b.sort_order);
   const imageIndex = viewing?.plotId === plot.id ? images.findIndex(image => image.id === viewing.imageId) : -1;
-  const plotStatus = plot.rentalStatus === 'PENDING' ? {label: 'Đã đặt trước', badge: 'neutral'} : PLOT_STATUS_META[plot.rentalStatus ?? plot.status];
+  const plotStatus = plot.rentalStatus === 'PENDING' ? { label: 'Đã đặt trước', badge: 'neutral' } : PLOT_STATUS_META[plot.rentalStatus ?? plot.status];
 
-  return (
-    <>
-      <ResizeHandle
-        resizable={resizable}
-        isReversed
-        isAlwaysVisible={false}
-        label="Thay đổi kích thước chi tiết lô đất"
-      />
-      <LayoutPanel
-        resizable={resizable}
-        hasDivider
-        padding={0}
-        label="Chi tiết lô đất">
-        <VStack gap={0} xstyle={styles.detailPanel}>
-          <Section variant="transparent" padding={4}>
-            <VStack gap={4}>
-              <HStack gap={2}>
-                <StackItem size="fill">
-                  <VStack gap={2}>
-                    <HStack gap={2} vAlign="center" wrap="wrap">
-                      <EntityStatus variant={plotStatus.badge} label={plotStatus.label} />
-                      <Badge
-                        variant="neutral"
-                        label={`${contracts.length} ${'hợp đồng'
-                          }`}
-                      />
-                      <Text type="supporting" color="secondary">
+  const content = (
+    <VStack gap={0} xstyle={styles.detailPanel}>
+      <Section variant="transparent" padding={4}>
+        <VStack gap={4}>
+          <HStack gap={2}>
+            <StackItem size="fill">
+              <VStack gap={2}>
+                <HStack gap={2} vAlign="center" wrap="wrap">
+                  <EntityStatus variant={plotStatus.badge} label={plotStatus.label} />
+                  <Badge
+                    variant="neutral"
+                    label={`${contracts.length} ${'hợp đồng'
+                      }`}
+                  />
+                  {/* <Text type="supporting" color="secondary">
                         {plot.id}
-                      </Text>
-                    </HStack>
-                    <Heading level={2}>{plot.summary}</Heading>
-                    <Text type="supporting" color="secondary">
-                      {plot.landLocation || 'Chưa có vị trí'}
-                    </Text>
-                  </VStack>
-                </StackItem>
-                <IconButton
-                  label="Đóng chi tiết"
-                  variant="ghost"
-                  size="sm"
-                  icon={<Icon icon={X} size="sm" />}
-                  onClick={onClose}
-                />
-              </HStack>
+                      </Text> */}
+                </HStack>
+                <Heading level={2}>{plot.summary}</Heading>
+                <Text type="supporting" color="secondary">
+                  {plot.landLocation || 'Chưa có vị trí'}
+                </Text>
+              </VStack>
+            </StackItem>
+            <IconButton
+              label="Đóng chi tiết"
+              variant="ghost"
+              size={isWide ? "sm" : "md"}
+              icon={<Icon icon={X} size="sm" />}
+              onClick={onClose}
+            />
+          </HStack>
 
-              <HStack gap={2}>
-                <Button
-                  label="Chỉnh sửa lô đất"
-                  size="sm"
-                  width="100%"
-                  onClick={() => onEditPlot(plot)}
-                />
-                {/* <Button
+          <HStack gap={2}>
+            <Button
+              label="Chỉnh sửa lô đất"
+              size={isWide ? "sm" : "md"}
+              width="100%"
+              onClick={() => onEditPlot(plot)}
+            />
+            {/* <Button
                   label="Xóa"
                   variant="destructive"
                   size="sm"
                   width="100%"
                   onClick={() => onDeletePlot(plot)}
                 /> */}
-              </HStack>
+          </HStack>
 
-            </VStack>
-          </Section>
-
-          <Divider />
-
-          <Section variant="transparent" padding={4}>
-            <VStack gap={3}>
-              <Heading level={3}>Hình ảnh lô đất</Heading>
-              {images.length === 0 ? <Text color="secondary">Chưa có hình ảnh lô đất.</Text> : <Grid columns={2} gap={2}>
-                {images.slice(0, 4).map((image, index) => <Overlay key={image.id}
-                  showOn={index === 3 && images.length > 4 ? 'always' : 'hover-or-focus'} align="center"
-                  content={<Button size="sm" variant="secondary"
-                    label={index === 3 && images.length > 4 ? `+${images.length - 4}` : `Xem ảnh ${index + 1}`}
-                    onClick={() => setViewing({ plotId: plot.id, imageId: index === 3 && images.length > 4 ? images[4].id : image.id })} />}>
-                  <AspectRatio ratio={4 / 3} fit="contain" shape="rectangle">
-                    {/* Uploaded storage URLs are displayed directly. */}
-                    {/* eslint-disable-next-line @next/next/no-img-element */}
-                    <img src={image.url} alt={image.caption || `Lô ${plot.plotNumber}`} loading="lazy" />
-                  </AspectRatio>
-                </Overlay>)}
-              </Grid>}
-            </VStack>
-          </Section>
-
-          <Divider />
-
-          <Section variant="transparent" padding={4}>
-            <MetadataList columns="single" label={{ position: 'start', width: 116 }}>
-              <MetadataListItem label="Mã lô đất">
-                <Text type="body">{plot.plotNumber}</Text>
-              </MetadataListItem>
-              <MetadataListItem label="Khu đất">
-                <Text type="body">{plot.land}</Text>
-              </MetadataListItem>
-              <MetadataListItem label="Vị trí">
-                <Text type="body">{plot.landLocation || 'Chưa thiết lập'}</Text>
-              </MetadataListItem>
-              <MetadataListItem label="Diện tích">
-                <Text type="body">{formatArea(plot.areaSqm)}</Text>
-              </MetadataListItem>
-              <MetadataListItem label="Hình ảnh">
-                <Text type="body">{plot.imageCount.toLocaleString('vi-VN')}</Text>
-              </MetadataListItem>
-              <MetadataListItem label="Ngày tạo">
-                <Text type="body">{formatDate(plot.createdAt, true)}</Text>
-              </MetadataListItem>
-              <MetadataListItem label="Ngày cập nhật">
-                <Text type="body">{formatDate(plot.updatedAt, true)}</Text>
-              </MetadataListItem>
-              <MetadataListItem label="Mô tả">
-                <Text type="body">{plot.description || 'Không có'}</Text>
-              </MetadataListItem>
-            </MetadataList>
-          </Section>
-
-          <Divider />
-
-          <Section variant="transparent" padding={4}>
-            <VStack gap={2}>
-              <Heading level={3}>Khu đất</Heading>
-              {land == null ? (
-                <Text type="supporting" color="secondary">
-                  Không tìm thấy khu đất của lô đất này.
-                </Text>
-              ) : (
-                <Item
-                  align="center"
-                  label={land.name}
-                  labelLines={2}
-                  description={`${formatArea(land.area_sqm)} - ${land.location || 'Chưa có vị trí'
-                    }`}
-                  onClick={() => onSelectLand(land.id)}
-                />
-              )}
-            </VStack>
-          </Section>
-
-          <Divider />
-
-          <Section variant="transparent" padding={4}>
-            <VStack gap={2}>
-              <Heading level={3}>Hợp đồng</Heading>
-              {isContractsLoading ? <Text color="secondary">Đang tải hợp đồng…</Text> : contractsError ? <Text color="secondary">{contractsError}</Text> : contracts.length === 0 ? (
-                <Text type="supporting" color="secondary">
-                  Lô đất chưa có hợp đồng.
-                </Text>
-              ) : (
-                <VStack gap={0}>
-                  {contracts.map(contract => {
-                    const meta = CONTRACT_STATUS_META[contract.status];
-                    return (
-                      <Item
-                        key={contract.id}
-                        align="center"
-                        label={contract.summary}
-                        labelLines={2}
-                        description={`${contract.customer} - ${formatMoney(
-                          contract.rentAmount,
-                        )}`}
-                        endContent={
-                          <EntityStatus variant={meta.badge} label={meta.label} />
-                        }
-                        onClick={() => onSelectContract(contract.id)}
-                      />
-                    );
-                  })}
-                </VStack>
-              )}
-            </VStack>
-          </Section>
         </VStack>
-      </LayoutPanel>
+      </Section>
+
+      <Divider />
+
+      <Section variant="transparent" padding={4}>
+        <VStack gap={3}>
+          <Heading level={3}>Hình ảnh lô đất</Heading>
+          {images.length === 0 ? <Text color="secondary">Chưa có hình ảnh lô đất.</Text> : <Grid columns={2} gap={2}>
+            {images.slice(0, 4).map((image, index) => <Overlay key={image.id}
+              showOn={index === 3 && images.length > 4 ? 'always' : 'hover-or-focus'} align="center"
+              content={<Button size="sm" variant="secondary"
+                label={index === 3 && images.length > 4 ? `+${images.length - 4}` : `Xem ảnh ${index + 1}`}
+                onClick={() => setViewing({ plotId: plot.id, imageId: index === 3 && images.length > 4 ? images[4].id : image.id })} />}>
+              <AspectRatio ratio={4 / 3} fit="contain" shape="rectangle">
+                {/* Uploaded storage URLs are displayed directly. */}
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img src={image.url} alt={image.caption || `Lô ${plot.plotNumber}`} loading="lazy" />
+              </AspectRatio>
+            </Overlay>)}
+          </Grid>}
+        </VStack>
+      </Section>
+
+      <Divider />
+
+      <Section variant="transparent" padding={4}>
+        <MetadataList columns="single" label={isWide ? { position: 'start', width: 116 } : { position: 'top' }}>
+          <MetadataListItem label="Mã lô đất">
+            <Text type="body">{plot.plotNumber}</Text>
+          </MetadataListItem>
+          <MetadataListItem label="Khu đất">
+            <Text type="body">{plot.land}</Text>
+          </MetadataListItem>
+          <MetadataListItem label="Vị trí">
+            <Text type="body">{plot.landLocation || 'Chưa thiết lập'}</Text>
+          </MetadataListItem>
+          <MetadataListItem label="Diện tích">
+            <Text type="body">{formatArea(plot.areaSqm)}</Text>
+          </MetadataListItem>
+          <MetadataListItem label="Hình ảnh">
+            <Text type="body">{plot.imageCount.toLocaleString('vi-VN')}</Text>
+          </MetadataListItem>
+          <MetadataListItem label="Ngày tạo">
+            <Text type="body">{formatDate(plot.createdAt, true)}</Text>
+          </MetadataListItem>
+          <MetadataListItem label="Ngày cập nhật">
+            <Text type="body">{formatDate(plot.updatedAt, true)}</Text>
+          </MetadataListItem>
+          <MetadataListItem label="Mô tả">
+            <Text type="body">{plot.description || 'Không có'}</Text>
+          </MetadataListItem>
+        </MetadataList>
+      </Section>
+
+      <Divider />
+
+      <Section variant="transparent" padding={4}>
+        <VStack gap={2}>
+          <Heading level={3}>Khu đất</Heading>
+          {land == null ? (
+            <Text type="supporting" color="secondary">
+              Không tìm thấy khu đất của lô đất này.
+            </Text>
+          ) : (
+            <Item
+              align="center"
+              label={land.name}
+              labelLines={2}
+              description={`${formatArea(land.area_sqm)} - ${land.location || 'Chưa có vị trí'
+                }`}
+              onClick={() => onSelectLand(land.id)}
+            />
+          )}
+        </VStack>
+      </Section>
+
+      <Divider />
+
+      <Section variant="transparent" padding={4}>
+        <VStack gap={2}>
+          <Heading level={3}>Hợp đồng</Heading>
+          {isContractsLoading ? <Text color="secondary">Đang tải hợp đồng…</Text> : contractsError ? <Text color="secondary">{contractsError}</Text> : contracts.length === 0 ? (
+            <Text type="supporting" color="secondary">
+              Lô đất chưa có hợp đồng.
+            </Text>
+          ) : (
+            <VStack gap={0}>
+              {contracts.map(contract => {
+                const meta = CONTRACT_STATUS_META[contract.status];
+                return (
+                  <Item
+                    key={contract.id}
+                    align="center"
+                    label={contract.summary}
+                    labelLines={2}
+                    description={`${contract.customer} - ${formatMoney(
+                      contract.rentAmount,
+                    )}`}
+                    endContent={
+                      <EntityStatus variant={meta.badge} label={meta.label} />
+                    }
+                    onClick={() => onSelectContract(contract.id)}
+                  />
+                );
+              })}
+            </VStack>
+          )}
+        </VStack>
+      </Section>
+    </VStack>
+  );
+
+  return (
+    <>
+      {isWide && resizable && <ResizeHandle
+        resizable={resizable}
+        isReversed
+        isAlwaysVisible={false}
+        label="Thay đổi kích thước chi tiết lô đất"
+      />}
+      {isWide ? <LayoutPanel
+        width={resizable ? undefined : '100%'} resizable={resizable}
+        hasDivider
+        padding={0}
+        label="Chi tiết lô đất">
+        {content}
+      </LayoutPanel> : <BottomSheet isOpen height="tall" label="Chi tiết lô đất"
+        onOpenChange={open => { if (!open) onClose(); }}>
+        <VStack gap={0} className="py-4">
+          {content}
+        </VStack>
+      </BottomSheet>}
       {imageIndex >= 0 && <Lightbox isOpen hasZoom
         media={images.map(image => ({ src: image.url, alt: image.caption || `Lô ${plot.plotNumber}`, caption: image.caption || undefined }))}
         index={imageIndex}

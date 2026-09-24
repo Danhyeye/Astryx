@@ -1,3 +1,5 @@
+import {useMediaQuery} from '@astryxdesign/core/hooks';
+import {MobileRecordList} from '@/components/table-filter/MobileRecordList';
 import {EntityStatus} from './EntityStatus';
 import {useState} from 'react';
 import {Heading} from '@astryxdesign/core/Heading';
@@ -17,6 +19,7 @@ export function ContractRentalSchedule({contracts, landId, excludeId, plots, per
   period: RentalPeriod;
   selectedPlotIds: readonly string[];
 }) {
+  const isWide = useMediaQuery('(min-width: 768px)');
   const [requestedPage, setPage] = useState(1);
   const rows = contracts.filter(contract => contract.land_id === landId && contract.id !== excludeId)
     .sort((a, b) => (a.start_date ?? '').localeCompare(b.start_date ?? '') || a.id.localeCompare(b.id));
@@ -43,7 +46,7 @@ export function ContractRentalSchedule({contracts, landId, excludeId, plots, per
     <Heading level={3}>Lịch thuê của khu đất</Heading>
     <Text color="secondary">Ngày kết thúc được tính trong thời gian thuê. Hợp đồng mới có thể bắt đầu từ ngày tiếp theo.</Text>
     {rows.length === 0 ? <Text>Chưa có lịch thuê cho khu đất này.</Text> : <>
-      <Table data={rows.slice((page - 1) * pageSize, page * pageSize)} columns={columns} idKey="id" density="compact" />
+      {!isWide ? <MobileRecordList rows={rows.slice((page - 1) * pageSize, page * pageSize)} columns={columns} rowKey={row => row.id} label="Lịch thuê" /> : <Table data={rows.slice((page - 1) * pageSize, page * pageSize)} columns={columns} idKey="id" density="compact" />}
       {rows.length > pageSize && <Pagination label="Phân trang lịch thuê" page={page} pageSize={pageSize} totalItems={rows.length} onChange={setPage} />}
     </>}
   </VStack>;

@@ -1,5 +1,8 @@
 'use client';
 
+import {useMediaQuery} from '@astryxdesign/core/hooks';
+import {MobileRecordList} from '@/components/table-filter/MobileRecordList';
+
 import {useState} from 'react';
 import {useQuery} from '@tanstack/react-query';
 import {Banner} from '@astryxdesign/core/Banner';
@@ -40,6 +43,7 @@ const columns: TableColumn<ContractTableRow>[] = [
 ];
 
 export function LandContracts({landId}: {landId: string}) {
+  const isWide = useMediaQuery('(min-width: 768px)');
   const [page, setPage] = useState(1);
   const query = useQuery({
     queryKey: ['contracts', 'land', landId, page],
@@ -62,8 +66,8 @@ export function LandContracts({landId}: {landId: string}) {
             endContent={<Button label="Thử lại" onClick={() => {void query.refetch();}} />} />
           : query.data.total === 0 ? <EmptyState title="Chưa có hợp đồng" description="Hợp đồng thuê khu đất hoặc các lô trong khu đất sẽ hiển thị tại đây." />
           : <>
-            <Table data={query.data.rows} columns={columns} idKey="id" hasHover
-              rowCount={query.data.total} rowIndexStart={(page - 1) * PAGE_SIZE + 1} />
+            <>{!isWide ? <MobileRecordList detailColumns={2} fullWidthKeys={['plot', 'id']} actionKeys={['id']} rows={query.data.rows} columns={columns} rowKey={row => row.id} label="Hợp đồng của khu đất" /> : <Table data={query.data.rows} columns={columns} idKey="id" hasHover
+              rowCount={query.data.total} rowIndexStart={(page - 1) * PAGE_SIZE + 1} />}</>
             {query.data.total > PAGE_SIZE && <Pagination label="Phân trang hợp đồng" page={page}
               pageSize={PAGE_SIZE} totalItems={query.data.total} onChange={setPage} />}
           </>}

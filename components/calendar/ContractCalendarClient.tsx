@@ -1,6 +1,6 @@
 'use client';
 
-import { useMemo, useState } from 'react';
+import { useMemo, useRef, useState } from 'react';
 import {EntityStatus} from '@/components/table-filter/EntityStatus';
 import {PAYMENT_FREQUENCY_META} from '@/data';
 import { Banner } from '@astryxdesign/core/Banner';
@@ -37,6 +37,7 @@ function messageOf(error: unknown) {
 }
 
 export function ContractCalendarClient() {
+  const agendaRef = useRef<HTMLElement>(null);
   const isNarrow = useMediaQuery('(max-width: 640px)');
   const [today] = useState(todayInVietnam);
   const [month, setMonth] = useState(() => today.slice(0, 7) + '-01');
@@ -93,11 +94,7 @@ export function ContractCalendarClient() {
           <Selector label="Hợp đồng" options={options} value={selectedContractId} hasSearch
             onChange={value => {
               setSelectedContractId(value);
-              const contract = contracts.find(contract => contract.id === value);
-              if (contract?.start_date) {
-                setMonth(contract.start_date.slice(0, 7) + '-01');
-                setSelectedDate(contract.start_date);
-              }
+
             }} />
         </HStack>
       </LayoutHeader>}
@@ -114,6 +111,7 @@ export function ContractCalendarClient() {
                     <Text color="secondary">{formatNumber(events.length)} hạn thanh toán · {formatMoney(events.reduce((sum, event) => sum + event.amount, 0))}</Text>
                   </VStack>
                 </StackItem>
+                <HStack gap={2} vAlign="center">
                 <IconButton
                   icon={<Icon icon="chevronLeft" />}
                   label="Tháng trước"
@@ -135,6 +133,7 @@ export function ContractCalendarClient() {
                   variant="ghost"
                   onClick={() => navigateMonth(1)}
                 />
+                </HStack>
               </HStack>
             </Section>
             <Grid columns={7} gap={0} width="100%">
@@ -147,35 +146,32 @@ export function ContractCalendarClient() {
                 const inMonth = date.slice(0, 7) === month.slice(0, 7);
                 const dayEvents = eventsByDate.get(date) ?? [];
                 return <Section key={date} padding={1}
-                  minHeight="calc(var(--spacing-10) * 4)"
+                  minHeight={isNarrow ? undefined : "calc(var(--spacing-10) * 4)"}
                   variant={inMonth ? 'section' : 'muted'}
                   dividers={index % 7 === 6 ? ['bottom'] : ['bottom', 'end']}>
                   <VStack gap={1}>
                     <HStack>
-                      <Button label={String(Number(date.slice(-2)))} size="sm"
-                        aria-label={formatDate(date, true)}
+                      <Button label={String(Number(date.slice(-2)))} size={isNarrow ? "md" : "sm"} width={isNarrow ? "100%" : undefined}
+                        aria-label={`${formatDate(date, true)}, ${dayEvents.length} hạn thanh toán`}
                         variant={date === selectedDate ? 'primary' : 'ghost'}
-                        isDisabled={!inMonth} onClick={() => setSelectedDate(date)} />
+                        isDisabled={!inMonth} onClick={() => {setSelectedDate(date); if (isNarrow) requestAnimationFrame(() => agendaRef.current?.scrollIntoView({block: 'start'}));}} />
                       {date === today && !isNarrow && <Text type="supporting" color="accent">Hôm nay</Text>}
                     </HStack>
-                    {isNarrow && dayEvents.length > 0 && <Button
-                      label={String(dayEvents.length)} size="sm"
-                      tooltip={dayEvents.length + ' hạn thanh toán'}
-                      onClick={() => setSelectedDate(date)} />}
+                    {isNarrow && dayEvents.length > 0 && <Text type="supporting" justify="center">{dayEvents.length} kỳ</Text>}
                     {!isNarrow && dayEvents.slice(0, 3).map(event => (
                       <Button key={event.id} label={event.customerName} size="sm"
-                        variant="secondary" onClick={() => setSelectedDate(date)}
+                        variant="secondary" onClick={() => {setSelectedDate(date); if (isNarrow) requestAnimationFrame(() => agendaRef.current?.scrollIntoView({block: 'start'}));}}
                         tooltip={event.contractLabel + ' · ' + formatMoney(event.amount)} />
                     ))}
                     {!isNarrow && dayEvents.length > 3 && <Button size="sm" variant="ghost"
                       label={'+ ' + formatNumber(dayEvents.length - 3) + ' hạn khác'}
-                      onClick={() => setSelectedDate(date)} />}
+                      onClick={() => {setSelectedDate(date); if (isNarrow) requestAnimationFrame(() => agendaRef.current?.scrollIntoView({block: 'start'}));}} />}
                   </VStack>
                 </Section>;
               })}
             </Grid>
           </Section>
-          <Section padding={5}>
+          <Section padding={5} ref={agendaRef}>
             <VStack gap={4}>
               <HStack gap={3} hAlign="between" vAlign="center" wrap="wrap">
                 <VStack gap={1}>
@@ -189,7 +185,7 @@ export function ContractCalendarClient() {
               </HStack>
               {selectedEvents.length === 0 && !isPending
                 ? <Text color="secondary">Không có hạn thanh toán trong ngày này.</Text>
-                : <List key={selectedDate} hasDividers density="balanced" className="max-h-96 overflow-y-auto">
+                : <List key={selectedDate} hasDividers density="balanced" className={isNarrow ? undefined : "max-h-96 overflow-y-auto"}>
                   {selectedEvents.map(event => {
                     const payment = paymentsByEvent.get(`${event.contractId}:${event.date}`);
                     const paid = payment?.status === 'PAID';

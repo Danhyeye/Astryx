@@ -1,9 +1,9 @@
 import {derivePayment, type PaymentSource} from './invoices.ts';
 import type {Contract} from '../types/contract';
 import {buildContractMonthEvents} from '../components/calendar/contractCalendarData.ts';
-import {resolveContractEndDate} from './contractDates.ts';
+import {contractToday, resolveContractEndDate} from './contractDates.ts';
 
-export function buildContractPaymentSchedule(contract: Contract, throughMonth: string) {
+export function buildContractPaymentSchedule(contract: Contract, throughMonth: string, today = contractToday()) {
   const end = resolveContractEndDate({startDate: contract.start_date, endDate: contract.end_date, leaseDurationMonths: contract.lease_duration_months});
   const lastMonth = (end || throughMonth).slice(0, 7);
   const rows = new Map<string, PaymentSource>();
@@ -23,5 +23,5 @@ export function buildContractPaymentSchedule(contract: Contract, throughMonth: s
   }
   // Retain recorded payments even if the contract's dates or frequency changed.
   for (const payment of contract.payments ?? []) rows.set(payment.due_date, payment);
-  return [...rows.values()].map(payment => derivePayment(payment)).sort((a, b) => a.due_date.localeCompare(b.due_date));
+  return [...rows.values()].map(payment => derivePayment(payment, today)).sort((a, b) => a.due_date.localeCompare(b.due_date));
 }

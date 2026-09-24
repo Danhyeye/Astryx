@@ -18,6 +18,7 @@ export function BulkActionBar({
   onEditSelected,
   onDeleteSelected,
   onClearSelection,
+  hasDelete = true,
 }: {
   selectedCount: number;
   singularLabel: string;
@@ -29,6 +30,7 @@ export function BulkActionBar({
   onEditSelected: () => void;
   onDeleteSelected: () => void;
   onClearSelection: () => void;
+  hasDelete?: boolean;
 }) {
   const selectionLabel = selectedCount === 1 ? singularLabel : pluralLabel;
 
@@ -55,7 +57,7 @@ export function BulkActionBar({
               tooltip={isEditDisabled ? editDisabledMessage : undefined}
               onClick={onEditSelected}
             />
-            <Button
+            {hasDelete && <Button
               label="Xóa"
               variant="destructive"
               size="sm"
@@ -63,7 +65,7 @@ export function BulkActionBar({
               isDisabled={isDeleteDisabled}
               tooltip={isDeleteDisabled ? deleteDisabledMessage : undefined}
               onClick={onDeleteSelected}
-            />
+            />}
           </HStack>
         </StackItem>
 

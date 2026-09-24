@@ -38,7 +38,7 @@ export function LandDetailPanel({
   land: LandTableRow;
   plots: Plot[];
   contracts: ContractTableRow[];
-  resizable: ResizableProps;
+  resizable?: ResizableProps;
   onClose: () => void;
   onSelectPlot: (plotId: string) => void;
   onSelectContract: (contractId: string) => void;
@@ -47,14 +47,14 @@ export function LandDetailPanel({
 }) {
   return (
     <>
-      <ResizeHandle
+      {resizable && <ResizeHandle
         resizable={resizable}
         isReversed
         isAlwaysVisible={false}
         label="Thay đổi kích thước chi tiết khu đất"
-      />
+      />}
       <LayoutPanel
-        resizable={resizable}
+        width={resizable ? undefined : '100%'}        resizable={resizable}
         hasDivider
         padding={0}
         label="Chi tiết khu đất">

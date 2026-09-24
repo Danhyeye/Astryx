@@ -14,7 +14,6 @@ import {
   VStack,
 } from '@astryxdesign/core/Layout';
 import {ProgressBar} from '@astryxdesign/core/ProgressBar';
-import {Section} from '@astryxdesign/core/Section';
 import {Heading, Text} from '@astryxdesign/core/Text';
 import {useMediaQuery} from '@astryxdesign/core/hooks';
 import {useTheme} from '@astryxdesign/core/theme';
@@ -119,8 +118,8 @@ export function DashboardClient() {
 
   const chartColors = useMemo(
     () => ({
-      blue: token('--color-border-blue'),
-      blueFill: token('--color-background-blue'),
+      blue: token('--color-text-accent'),
+      blueFill: token('--color-accent'),
       green: token('--color-border-green'),
       greenFill: token('--color-background-green'),
       orange: token('--color-border-orange'),
@@ -339,7 +338,7 @@ export function DashboardClient() {
   return (
     <Layout
       height="fill"
-      padding={6}
+      padding={isSecondaryChartsStacked ? 3 : 6}
       contentWidth="fill"
       header={
         <LayoutHeader label="Tiêu đề tổng quan">
@@ -355,8 +354,8 @@ export function DashboardClient() {
         </LayoutHeader>
       }
       content={
-        <LayoutContent label="Biểu đồ tổng quan">
-          <VStack gap={2}>
+        <LayoutContent label="Biểu đồ tổng quan" padding={isSecondaryChartsStacked ? 3 : 6}>
+          <VStack gap={5}>
             {isLoading && (
               <ProgressBar
                 label="Đang tải tổng quan"
@@ -374,64 +373,59 @@ export function DashboardClient() {
               />
             )}
 
-            <Section variant="transparent" padding={4}>
               <Grid
                 gap={4}
-                columns={{minWidth: 240, max: 3, repeat: 'fit'}}
+                columns={isSecondaryChartsStacked ? 1 : 3}
                 width="100%"
               >
-                <Card padding={4} minHeight={116}>
+                <Card padding={5}>
                   <VStack gap={2}>
                     <Text color="secondary">Khu đất</Text>
-                    <div className="flex items-center gap-2">
+                    <HStack gap={2} vAlign="center" wrap="wrap">
                     <Heading level={2}>
                       {formatCompactNumber(dashboardData.metrics.landCount)} 
                     </Heading>
                     <LandPlot size={20} />
-                    </div>
+                    </HStack>
                     <Text type="supporting" color="secondary">
                       Khu đất đã đăng ký
                     </Text>
                   </VStack>
                 </Card>
-                <Card padding={4} minHeight={116}>
+                <Card padding={5}>
                   <VStack gap={2}>
                     <Text color="secondary">Hợp đồng</Text>
-                    <div className="flex items-center gap-2">
+                    <HStack gap={2} vAlign="center" wrap="wrap">
                     <Heading level={2}>
                       {formatCompactNumber(
                         dashboardData.metrics.contractCount,
                       )}
                     </Heading>
                     <ReceiptText size={20} />
-                    </div>
+                    </HStack>
                     <Text type="supporting" color="secondary">
                       Hợp đồng cho thuê
                     </Text>
                   </VStack>
                 </Card>
-                <Card padding={4} minHeight={116}>
+                <Card padding={5}>
                   <VStack gap={2}>
                     <Text color="secondary">Doanh thu</Text>
-                    <div className="flex items-center gap-2">
+                    <HStack gap={2} vAlign="center" wrap="wrap">
                       <Heading level={2}>
                         {formatMoney(dashboardData.metrics.totalRevenue)}
                       </Heading>
                       <HandCoins size={20} />
-                    </div>
+                    </HStack>
                     <Text type="supporting" color="secondary">
                       Tổng tiền thuê dự kiến
                     </Text>
                   </VStack>
                 </Card>
               </Grid>
-            </Section>
 
-            <Section variant="transparent" padding={4}>
               <VStack gap={4}>{primaryChartCards}</VStack>
-            </Section>
 
-            <Section variant="transparent" padding={4}>
               <Grid
                 gap={4}
                 columns={isSecondaryChartsStacked ? 1 : 10}
@@ -443,7 +437,6 @@ export function DashboardClient() {
                   </GridSpan>
                 ))}
               </Grid>
-            </Section>
           </VStack>
         </LayoutContent>
       }

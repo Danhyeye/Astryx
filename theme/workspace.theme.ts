@@ -1,0 +1,63 @@
+import {defineTheme} from '@astryxdesign/core/theme';
+
+export const workspaceTheme = defineTheme({
+  name: 'workspace',
+  color: {accent: ['#A3B565', '#A3B565'], neutralStyle: 'warm', contrast: 'standard'},
+  typography: {
+    scale: {base: 16, ratio: 1.2},
+    body: {family: 'var(--font-geist-sans)', fallbacks: 'system-ui, sans-serif'},
+    heading: {weight: 'semibold', weights: {1: 'bold', 2: 'bold'}},
+  },
+  radius: {base: 4, multiplier: 1.25},
+  motion: {fast: 140, medium: 240, slow: 400, ratio: 0.75},
+  tokens: {
+    '--color-background-body': ['#FDF8E2', '#20251A'],
+    '--color-background-surface': ['#FDF8E2', '#282E21'],
+    '--color-background-card': ['#D0D6A3', '#303827'],
+    '--color-background-muted': ['#D0D6A3', '#3A442E'],
+    '--color-text-primary': ['#29321E', '#FDF8E2'],
+    '--color-text-secondary': ['#555F42', '#D2D5BC'],
+    '--color-border': ['#D1D6B8', '#596348'],
+    '--focus-outline-color': ['#52682D', '#C7D794'],
+    '--color-accent': '#A3B565',
+    '--color-on-accent': '#29321E',
+    '--color-text-accent': ['#52682D', '#C7D794'],
+    '--color-icon-accent': ['#52682D', '#C7D794'],
+    '--color-icon-primary': ['#29321E', '#FDF8E2'],
+    '--color-icon-secondary': ['#555F42', '#D2D5BC'],
+    '--size-element-md': '44px',
+    '--size-element-lg': '48px',
+  },
+  components: {
+    'app-shell-sidenav': {base: {
+      borderInlineEndColor: 'var(--color-text-secondary)',
+    }},
+    'app-shell-header': {base: {
+      '--color-border': 'var(--color-text-secondary)',
+    }},
+    'side-nav': {'mode:topbar': {display: 'none'}, base: {
+      backgroundColor: '#A3B565',
+      '--color-text-primary': '#29321E',
+      '--color-text-secondary': '#354123',
+      '--color-icon-primary': '#29321E',
+      '--color-icon-secondary': '#354123',
+      '--color-border': '#788C49',
+      '--color-background-surface': '#A3B565',
+      '--color-background-muted': '#D0D6A3',
+      '--color-accent': '#FDF8E2',
+      '--color-text-accent': '#FDF8E2',
+      '--color-icon-accent': '#FDF8E2',
+      '--color-accent-muted': '#D0D6A3',
+      '--color-on-accent': '#29321E',
+    }},
+    'side-nav-item': {base: {minHeight: 'var(--size-element-lg)'}, 'selected': {
+      backgroundColor: 'var(--color-accent)', color: 'var(--color-on-accent)',
+      '--color-text-primary': 'var(--color-on-accent)',
+      '--color-icon-primary': 'var(--color-on-accent)',
+      '--color-text-accent': 'var(--color-on-accent)',
+      '--color-icon-accent': 'var(--color-on-accent)',
+    }},
+    card: {base: {borderColor: 'var(--color-border)'}},
+    'table-header-cell': {base: {backgroundColor: 'var(--color-background-muted)'}},
+  },
+});
