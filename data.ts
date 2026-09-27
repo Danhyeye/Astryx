@@ -297,7 +297,7 @@ export function buildContractRows(
       id: contract.id,
       dataset: 'contracts',
       contractId: contract.id,
-      summary: `${customerName} - ${landName} / ${plotName}`,
+      summary: `${customerName} - ${landName}${contract.plots.length ? ` / ${plotName}` : ''}`,
       searchText: [
         contract.id,
         customerName,

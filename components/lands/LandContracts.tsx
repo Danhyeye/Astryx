@@ -9,7 +9,7 @@ import {Banner} from '@astryxdesign/core/Banner';
 import {Button} from '@astryxdesign/core/Button';
 import {EmptyState} from '@astryxdesign/core/EmptyState';
 import {Heading} from '@astryxdesign/core/Heading';
-import {VStack} from '@astryxdesign/core/Layout';
+import {HStack, VStack} from '@astryxdesign/core/Layout';
 import {Link} from '@astryxdesign/core/Link';
 import {Pagination} from '@astryxdesign/core/Pagination';
 import {Section} from '@astryxdesign/core/Section';
@@ -68,8 +68,10 @@ export function LandContracts({landId}: {landId: string}) {
           : <>
             <>{!isWide ? <MobileRecordList detailColumns={2} fullWidthKeys={['plot', 'id']} actionKeys={['id']} rows={query.data.rows} columns={columns} rowKey={row => row.id} label="Hợp đồng của khu đất" /> : <Table data={query.data.rows} columns={columns} idKey="id" hasHover
               rowCount={query.data.total} rowIndexStart={(page - 1) * PAGE_SIZE + 1} />}</>
-            {query.data.total > PAGE_SIZE && <Pagination label="Phân trang hợp đồng" page={page}
-              pageSize={PAGE_SIZE} totalItems={query.data.total} onChange={setPage} />}
+            {query.data.total > PAGE_SIZE && <HStack hAlign="center">
+              <Pagination label="Phân trang hợp đồng" page={page}
+                pageSize={PAGE_SIZE} totalItems={query.data.total} onChange={setPage} />
+            </HStack>}
           </>}
       </VStack>
     </Section>

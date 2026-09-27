@@ -80,7 +80,7 @@ function StatItem({ count, label }: { count: number; label: string }) {
   );
 }
 
-export function LandDetailClient({ id }: { id: string }) {
+export function LandDetailClient({ id, initialPlotId = null }: { id: string; initialPlotId?: string | null }) {
   const router = useRouter();
   const panelWidth = useResizable({defaultSize: 380, minSizePx: 320, maxSizePx: 560});
   const isWide = useMediaQuery('(min-width: 768px)');
@@ -97,7 +97,7 @@ export function LandDetailClient({ id }: { id: string }) {
   const [query, setQuery] = useState('');
   const [filters, setFilters] = useState<PowerSearchFilter[]>([]);
   const [pagination, setPagination] = useState({ key: '', page: 1 });
-  const [selectedPlotId, setSelectedPlotId] = useState<string | null>(null);
+  const [selectedPlotId, setSelectedPlotId] = useState<string | null>(initialPlotId);
   const plotContracts = useQuery({
     queryKey: ['contracts', 'land-plot-detail', id, selectedPlotId],
     enabled: selectedPlotId != null,
@@ -131,13 +131,14 @@ export function LandDetailClient({ id }: { id: string }) {
   const status = (filters[0]?.value as { value?: string } | undefined)?.value;
   const results = plots.filter(
     (plot) =>
+      (!initialPlotId || plot.id === initialPlotId) &&
       (!status || plot.rentalStatus === status) &&
       `${plot.plot_number} ${plot.description}`
         .toLocaleLowerCase('vi')
         .includes(query.trim().toLocaleLowerCase('vi'))
   );
 
-  const key = `${query}:${status}`;
+  const key = `${initialPlotId ?? ''}:${query}:${status}`;
   const page = Math.min(
     pagination.key === key ? pagination.page : 1,
     Math.max(1, Math.ceil(results.length / PAGE_SIZE))
@@ -222,7 +223,7 @@ export function LandDetailClient({ id }: { id: string }) {
               <EmptyState title="Không tìm thấy khu đất" description="Khu đất này có thể đã bị xóa." />
             ) : (
               <>
-                <Card>
+                <Card elevation="med" className="rounded-lg!">
                   <VStack gap={4}>
                     <HStack gap={3} hAlign="between" vAlign="center" wrap="wrap">
                       <Heading level={2}>Hình ảnh khu đất</Heading>
@@ -243,7 +244,7 @@ export function LandDetailClient({ id }: { id: string }) {
                     </Grid> : <Text color="secondary">Chưa có hình ảnh khu đất.</Text>}
                   </VStack>
                 </Card>
-                <Card>
+                <Card className="rounded-lg!">
                   <VStack gap={4}>
                     <MetadataList columns={2}>
                       {wholeLandRental && <MetadataListItem label="Tình trạng cho thuê">
@@ -329,13 +330,15 @@ export function LandDetailClient({ id }: { id: string }) {
                     )}
 
                     {results.length > PAGE_SIZE && (
-                      <Pagination
-                        label="Phân trang lô đất"
-                        page={page}
-                        pageSize={PAGE_SIZE}
-                        totalItems={results.length}
-                        onChange={(page) => setPagination({ key, page })}
-                      />
+                      <HStack hAlign="center">
+                        <Pagination
+                          label="Phân trang lô đất"
+                          page={page}
+                          pageSize={PAGE_SIZE}
+                          totalItems={results.length}
+                          onChange={(page) => setPagination({ key, page })}
+                        />
+                      </HStack>
                     )}
                   </VStack>
                 </Section>

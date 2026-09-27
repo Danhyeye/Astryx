@@ -19,6 +19,7 @@ import type { ResizableProps } from '@astryxdesign/core/Resizable';
 import { Section } from '@astryxdesign/core/Section';
 import { Heading, Text } from '@astryxdesign/core/Text';
 import { X } from 'lucide-react';
+import {resolveContractEndDate} from '@/lib/contractDates';
 
 import {
   CONTRACT_STATUS_META,
@@ -28,7 +29,7 @@ import {
 } from '@/data';
 import { styles } from '@/app/table-filter/styles';
 import type { Land } from '@/types/land';
-import { formatArea, formatDate, formatMoney } from '@/utils/format';
+import { formatArea, formatDate } from '@/utils/format';
 
 export function PlotDetailPanel({
   plot,
@@ -79,9 +80,9 @@ export function PlotDetailPanel({
                         {plot.id}
                       </Text> */}
                 </HStack>
-                <Heading level={2}>{plot.summary}</Heading>
+                <Heading level={2}>{plot.plot}</Heading>
                 <Text type="supporting" color="secondary">
-                  {plot.landLocation || 'Chưa có vị trí'}
+                  {plot.landLocation || 'Chưa có vị trí'} - {formatArea(plot.areaSqm)}
                 </Text>
               </VStack>
             </StackItem>
@@ -136,7 +137,7 @@ export function PlotDetailPanel({
 
       <Divider />
 
-      <Section variant="transparent" padding={4}>
+      {/* <Section variant="transparent" padding={4}>
         <MetadataList columns="single" label={isWide ? { position: 'start', width: 116 } : { position: 'top' }}>
           <MetadataListItem label="Mã lô đất">
             <Text type="body">{plot.plotNumber}</Text>
@@ -163,11 +164,11 @@ export function PlotDetailPanel({
             <Text type="body">{plot.description || 'Không có'}</Text>
           </MetadataListItem>
         </MetadataList>
-      </Section>
+      </Section> */}
 
       <Divider />
 
-      <Section variant="transparent" padding={4}>
+      {/* <Section variant="transparent" padding={4}>
         <VStack gap={2}>
           <Heading level={3}>Khu đất</Heading>
           {land == null ? (
@@ -185,7 +186,7 @@ export function PlotDetailPanel({
             />
           )}
         </VStack>
-      </Section>
+      </Section> */}
 
       <Divider />
 
@@ -203,12 +204,13 @@ export function PlotDetailPanel({
                 return (
                   <Item
                     key={contract.id}
-                    align="center"
+                    align="start"
                     label={contract.summary}
                     labelLines={2}
-                    description={`${contract.customer} - ${formatMoney(
-                      contract.rentAmount,
-                    )}`}
+                    description={<>
+                      Bắt đầu: {formatDate(contract.startDate, true)} -
+                      Kết thúc: {formatDate(resolveContractEndDate(contract), true)}
+                    </>}
                     endContent={
                       <EntityStatus variant={meta.badge} label={meta.label} />
                     }

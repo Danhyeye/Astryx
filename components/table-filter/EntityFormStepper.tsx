@@ -1,5 +1,5 @@
 import {useState, type ReactNode} from 'react';
-import {EntityFormBanner as Banner} from './EntityFormBanner';
+import {Banner} from '@astryxdesign/core/Banner';
 import {Button} from '@astryxdesign/core/Button';
 import {Grid} from '@astryxdesign/core/Grid';
 import {HStack, VStack} from '@astryxdesign/core/Layout';
@@ -84,15 +84,17 @@ export function EntityFormActions({
   invalidMessage?: string;
 }) {
   const isFinalStep = activeStep === stepCount - 1;
+  const guidanceId = `${formId}-guidance`;
 
   return (
-    <>
+    <VStack gap={3} className="w-full">
       {!isStepValid && (
         <Banner
-          status="error"
-          title="Thông tin chưa hợp lệ"
+          id={guidanceId}
+          status="info"
+          title={isFinalStep ? 'Hoàn tất thông tin trước khi lưu' : 'Hoàn tất thông tin để tiếp tục'}
           description={invalidMessage}
-          container="section"
+          container="card"
         />
       )}
       <HStack gap={2} hAlign="end" wrap="wrap">
@@ -120,6 +122,7 @@ export function EntityFormActions({
             variant="primary"
             isDisabled={!isStepValid || isSubmitting}
             isLoading={isSubmitting}
+            aria-describedby={!isStepValid ? guidanceId : undefined}
           />
         ) : (
           <Button
@@ -128,10 +131,11 @@ export function EntityFormActions({
             type="button"
             variant="primary"
             isDisabled={!isStepValid || isSubmitting}
+            aria-describedby={!isStepValid ? guidanceId : undefined}
             onClick={onNext}
           />
         )}
       </HStack>
-    </>
+    </VStack>
   );
 }

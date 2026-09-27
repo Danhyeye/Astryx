@@ -204,13 +204,14 @@ export function EditPlotDialog({
 
       const shouldPatchImages =
         uploadedImages.length > 0 || hasRetainedImageChanges;
+      const {plot_number, area_sqm, description, images} = buildPlotPayload(
+        form,
+        uploadedImages,
+        shouldPatchImages ? retainedImages : undefined,
+      );
       const response = await updatePlot.mutateAsync({
         id: plot.id,
-        data: buildPlotPayload(
-          form,
-          uploadedImages,
-          shouldPatchImages ? retainedImages : undefined,
-        ),
+        data: {plot_number, area_sqm, description, images},
       });
       const updatedPlot = response.data;
 
@@ -260,16 +261,10 @@ export function EditPlotDialog({
                     label="Khu đất"
                     value={form.landId}
                     options={landOptions}
-                    onChange={landId =>
-                      setForm(current => ({
-                        ...current,
-                        landId,
-                      }))
-                    }
                     placeholder="Chọn khu đất"
                     hasSearch
                     isRequired
-                    isDisabled={isSubmitting}
+                    isDisabled
                         />
                         <TextInput
                     label="Mã lô đất"
@@ -297,13 +292,7 @@ export function EditPlotDialog({
                       value: status,
                       label: PLOT_STATUS_META[status].label,
                     }))}
-                    onChange={status =>
-                      setForm(current => ({
-                        ...current,
-                        status: status as PlotStatus,
-                      }))
-                    }
-                    isDisabled={isSubmitting}
+                    isDisabled
                         />
                         <NumberInput
                     label="Diện tích"

@@ -81,7 +81,7 @@ export function ContractDetailPanel({
                         variant={contractStatus.badge}
                         label={contractStatus.label}
                       />
-                      <EntityStatus variant={plotStatus.badge} label={plotStatus.label} />
+                      {contract.plotIds.length > 0 && <EntityStatus variant={plotStatus.badge} label={plotStatus.label} />}
                       <Text type="supporting" color="secondary">
                         {contract.contractId}
                       </Text>
@@ -131,9 +131,9 @@ export function ContractDetailPanel({
               <MetadataListItem label="Vị trí">
                 <Text type="body">{contract.landLocation || 'Chưa thiết lập'}</Text>
               </MetadataListItem>
-              <MetadataListItem label="Lô đất">
+              {contract.plotIds.length > 0 && <MetadataListItem label="Lô đất">
                 <Text type="body">{contract.plot}</Text>
-              </MetadataListItem>
+              </MetadataListItem>}
               <MetadataListItem label="Diện tích">
                 <Text type="body">{formatArea(contract.areaSqm)}</Text>
               </MetadataListItem>

@@ -4,7 +4,8 @@ import { InternationalizationProvider } from '@astryxdesign/core/i18n';
 import vi from '@astryxdesign/core/locales/vi-VN.json';
 import type { ReactNode } from 'react';
 import { AppShell, type AppShellProps } from '@astryxdesign/core/AppShell';
-import { HStack } from '@astryxdesign/core/Layout';
+import { HStack, VStack } from '@astryxdesign/core/Layout';
+import {Divider} from '@astryxdesign/core/Divider';
 import { MobileNavToggle } from '@astryxdesign/core/MobileNav';
 import {
   SideNav,
@@ -41,9 +42,12 @@ export function AppFrame({
           contentPadding={contentPadding}
           mobileNav={{ breakpoint: 'md', hasToggle: false }}
           banner={
-            <HStack hAlign="end" className="border-b border-border p-2 md:hidden!">
-              <MobileNavToggle />
-            </HStack>
+            <VStack gap={0} className="md:hidden!">
+              <HStack hAlign="end" padding={2}>
+                <MobileNavToggle />
+              </HStack>
+              <Divider />
+            </VStack>
           }
           sideNav={
             <SideNav

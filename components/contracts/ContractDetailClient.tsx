@@ -93,7 +93,7 @@ export function ContractDetailClient({ id }: { id: string }) {
       content={<LayoutContent padding={isWide ? 5 : 3} label="Thông tin hợp đồng">
         <VStack gap={5}>
           <Grid columns={isWide ? 2 : 1} gap={5}>
-            <Card padding={isWide ? 5 : 3} height="100%"><VStack gap={4}>
+            <Card padding={isWide ? 5 : 3} height="100%" className="rounded-lg!"><VStack gap={4}>
               <VStack gap={1}>
                 <Text type="supporting" color="secondary">BÊN THUÊ</Text>
                 <Heading level={3}>Khách hàng</Heading>
@@ -105,18 +105,18 @@ export function ContractDetailClient({ id }: { id: string }) {
               </MetadataList>
               {customer && <Link href={'/customers?selected=' + customer.id}>Xem khách hàng</Link>}
             </VStack></Card>
-            <Card padding={isWide ? 5 : 3} height="100%"><VStack gap={4}>
+            <Card padding={isWide ? 5 : 3} height="100%" className="rounded-lg!"><VStack gap={4}>
               <VStack gap={1}>
                 <Text type="supporting" color="secondary">TÀI SẢN CHO THUÊ</Text>
                 <Heading level={2}>Khu đất</Heading>
                 <Text type="large" weight="semibold">{land?.name ?? 'Chưa có khu đất'}</Text>
               </VStack>
               <MetadataList>
-                <MetadataListItem label="Lô đất">{contract.plots.length ? contract.plots.map(plot => plot.plot_number).join(', ') : 'Toàn khu đất'}</MetadataListItem>
+                {contract.plots.length > 0 && <MetadataListItem label="Lô đất">{contract.plots.map(plot => plot.plot_number).join(', ')}</MetadataListItem>}
                 <MetadataListItem label="Diện tích">{formatArea(row.areaSqm)}</MetadataListItem>
                 <MetadataListItem label="Vị trí"><Text wordBreak="break-word">{land?.location || '—'}</Text></MetadataListItem>
               </MetadataList>
-              {land && <Link href={'/lands/' + land.id}>Xem khu đất</Link>}
+              {land && <Link href={`/lands/${land.id}${contract.plots[0] ? `?plot=${encodeURIComponent(contract.plots[0].id)}` : ''}`}>Xem khu đất</Link>}
             </VStack></Card>
           </Grid>
           <Section padding={isWide ? 5 : 3} variant="muted"><VStack gap={4}>

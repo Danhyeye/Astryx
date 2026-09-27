@@ -13,7 +13,6 @@ import {useMediaQuery} from '@astryxdesign/core/hooks';
 import {Collapsible} from '@astryxdesign/core/Collapsible';
 import {Fragment} from 'react';
 import {List, ListItem} from '@astryxdesign/core/List';
-import {CheckboxInput} from '@astryxdesign/core/CheckboxInput';
 import {BottomSheet} from '@astryxdesign/core/BottomSheet';
 import {Selector} from '@astryxdesign/core/Selector';
 import {Button} from '@astryxdesign/core/Button';
@@ -39,8 +38,6 @@ import {
   pixel,
   proportional,
   useTableGroupedRows,
-  useTableSelection,
-  useTableSelectionState,
   useTableSortable,
   useTableStickyColumns,
 } from '@astryxdesign/core/Table';
@@ -91,7 +88,6 @@ import {useAllLands} from '@/hooks/useAllRecords';
 import {useAllPlots} from '@/hooks/useAllRecords';
 import {formatArea, formatDate, formatMoney} from '@/utils/format';
 import {styles} from '@/app/table-filter/styles';
-import {BulkActionBar} from './BulkActionBar';
 import {CreateContractDialog} from './CreateContractDialog';
 import {CreateCustomerDialog} from './CreateCustomerDialog';
 import {CreateLandDialog} from './CreateLandDialog';
@@ -126,10 +122,6 @@ function textValue(row: EntityTableRow, key: string): string {
 function numberValue(row: EntityTableRow, key: string): number {
   const value = rowValue(row, key);
   return typeof value === 'number' ? value : 0;
-}
-
-function isContractRow(row: EntityTableRow | null): row is ContractTableRow {
-  return row?.dataset === 'contracts';
 }
 
 function isLandRow(row: EntityTableRow | null): row is LandTableRow {
@@ -171,7 +163,6 @@ export default function TableFilterClient({
   const [editingContract, setEditingContract] =
     useState<ContractTableRow | null>(null);
 
-  const [selectedKeys, setSelectedKeys] = useState<Set<string>>(new Set());
   const [activeRowId, setActiveRowId] = useState<string | null>(initialSelectedId);
   const dataset = initialDataset;
   const [filters, setFilters] = useState<PowerSearchFilter[]>(() =>
@@ -331,7 +322,6 @@ export default function TableFilterClient({
         router.push(`${DATASET_META[next].href}?selected=${encodeURIComponent(rowId)}`);
         return;
       }
-      setSelectedKeys(new Set());
       setActiveRowId(rowId);
 
       setCollapsedGroups(new Set());
@@ -364,7 +354,6 @@ export default function TableFilterClient({
 
   const handleRowSaved = useCallback((rowId: string) => {
     hasOpenedFirstRow.current = true;
-    setSelectedKeys(new Set());
     setActiveRowId(rowId);
 
     setCollapsedGroups(new Set());
@@ -373,7 +362,6 @@ export default function TableFilterClient({
   const handleRowsDeleted = useCallback((rowIds: string[]) => {
     const deletedIds = new Set(rowIds);
 
-    setSelectedKeys(new Set());
     setActiveRowId(current =>
       current != null && deletedIds.has(current) ? null : current,
     );
@@ -392,7 +380,6 @@ export default function TableFilterClient({
 
       setFilters(current => updater(current));
       setPageState({key: '', page: 1});
-      setSelectedKeys(new Set());
     },
     [],
   );
@@ -401,7 +388,6 @@ export default function TableFilterClient({
     setFilters([]);
     setQuery('');
     setPageState({key: '', page: 1});
-    setSelectedKeys(new Set());
 
   }, []);
 
@@ -421,12 +407,6 @@ export default function TableFilterClient({
     refetchPlots,
   ]);
 
-  const {selectionConfig} = useTableSelectionState({data: rows, idKey: 'id', selectedKeys, setSelectedKeys});
-  const selectionPlugin = useTableSelection<EntityTableRow>({
-    ...selectionConfig,
-    getRowLabel: (item: EntityTableRow) => `${item.id} ${item.summary}`,
-    hasRowHighlight: false,
-  });
   const sortablePlugin = useTableSortable<EntityTableRow>({
     sort,
     onSortChange: setSort,
@@ -544,14 +524,12 @@ export default function TableFilterClient({
 
   const plugins = useMemo<Record<string, TablePlugin<EntityTableRow>>>(
     () => ({
-      selection: selectionPlugin,
       sortable: sortablePlugin,
       sticky: stickyPlugin,
       rowActivation: rowActivationPlugin,
       ...(isGrouped ? {grouped: groupedPlugin} : null),
     }),
     [
-      selectionPlugin,
       sortablePlugin,
       stickyPlugin,
       rowActivationPlugin,
@@ -767,12 +745,12 @@ export default function TableFilterClient({
         align: 'end',
         sortable: true,
         renderCell: item => (
-          <Text type="body" maxLines={cellLines}>
+          <Text type="body" maxLines={cellLines} className="text-end">
             {formatArea(numberValue(item, 'areaSqm'))}
           </Text>
         ),
       },
-      description: textColumn('description', proportional(1, {minWidth: 240})),
+      description: textColumn('description', proportional(dataset === 'lands' ? 2 : 1, {minWidth: 300})),
       notes: textColumn('notes', proportional(1, {minWidth: 240})),
       imageCount: {
         key: 'imageCount',
@@ -822,12 +800,14 @@ export default function TableFilterClient({
       updatedAt: {
         key: 'updatedAt',
         header: label('updatedAt'),
-        width: pixel(130),
+        width: pixel(dataset === 'lands' ? 180 : 130),
         sortable: true,
         renderCell: item => (
-          <Text type="body" maxLines={cellLines}>
-            {formatDate(item.updatedAt, true)}
-          </Text>
+          <HStack paddingInlineEnd={dataset === 'lands' ? 3 : 0}>
+            <Text type="body" maxLines={cellLines}>
+              {formatDate(item.updatedAt, true)}
+            </Text>
+          </HStack>
         ),
       },
     };
@@ -844,33 +824,6 @@ export default function TableFilterClient({
     [view.columnKeys, allColumns, dataset],
   );
 
-  const selectedRecords = useMemo(
-    () => tableData.rows.filter(row => selectedKeys.has(row.id)),
-    [selectedKeys, tableData.rows],
-  );
-  const selectedLandRecords = useMemo(
-    () => selectedRecords.filter(isLandRow),
-    [selectedRecords],
-  );
-  const selectedPlotRecords = useMemo(
-    () => selectedRecords.filter(isPlotRow),
-    [selectedRecords],
-  );
-  const selectedCustomerRecords = useMemo(
-    () => selectedRecords.filter(isCustomerRow),
-    [selectedRecords],
-  );
-  const selectedCount = selectedKeys.size;
-  const isBulkEditDisabled = selectedCount !== 1;
-  const isBulkDeleteDisabled = dataset === 'contracts' || selectedCount === 0;
-  const bulkEditDisabledMessage =
-    selectedCount === 0
-      ? `Chọn một ${tableData.singularLabel.toLowerCase()} để chỉnh sửa.`
-      : `Chỉ chọn một ${tableData.singularLabel.toLowerCase()} để chỉnh sửa.`;
-  const bulkDeleteDisabledMessage =
-    dataset === 'contracts'
-      ? 'Không thể xóa hợp đồng từ bảng này.'
-      : `Chọn ít nhất một ${tableData.singularLabel.toLowerCase()} để xóa.`;
   const activeRow = tableData.rows.find(row => row.id === activeRowId) ?? null;
   const activeLand = isLandRow(activeRow) ? activeRow : null;
   const activePlot = isPlotRow(activeRow) ? activeRow : null;
@@ -936,48 +889,12 @@ export default function TableFilterClient({
       query={query}
       resultCount={totalResults}
       isLoading={isInitialDataLoading}
-      statusOptions={dataset === 'contracts' ? Object.entries(CONTRACT_STATUS_META).map(([value, meta]) => ({value, label: meta.label})) : dataset === 'plots' ? Object.entries(PLOT_STATUS_META).filter(([value]) => value !== 'UNASSIGNED').map(([value, meta]) => ({value, label: meta.label})) : []}
+      statusOptions={dataset === 'lands' ? [...Object.entries(PLOT_STATUS_META).filter(([value]) => value !== 'UNASSIGNED').map(([value, meta]) => ({value, label: meta.label})), {value: 'PENDING', label: 'Đã đặt trước'}] : dataset === 'contracts' ? Object.entries(CONTRACT_STATUS_META).map(([value, meta]) => ({value, label: meta.label})) : dataset === 'plots' ? Object.entries(PLOT_STATUS_META).filter(([value]) => value !== 'UNASSIGNED').map(([value, meta]) => ({value, label: meta.label})) : []}
       searchLabel={`Tìm ${tableData.label.toLowerCase()}`}
       searchPlaceholder={tableData.searchPlaceholder}
       onFiltersChange={updateFilters}
-      onQueryChange={value => {setQuery(value); setPageState({key: '', page: 1}); setSelectedKeys(new Set());}}
+      onQueryChange={value => {setQuery(value); setPageState({key: '', page: 1});}}
       onClearAll={clearAll}
-    />
-  );
-
-  const bulkBar = (
-    <BulkActionBar
-      hasDelete={dataset === 'plots'}
-      selectedCount={selectedCount}
-      singularLabel={tableData.singularLabel}
-      pluralLabel={tableData.label.toLowerCase()}
-      isEditDisabled={isBulkEditDisabled}
-      editDisabledMessage={bulkEditDisabledMessage}
-      isDeleteDisabled={isBulkDeleteDisabled}
-      deleteDisabledMessage={bulkDeleteDisabledMessage}
-      onEditSelected={() => {
-        const [record] = selectedRecords;
-
-        if (isLandRow(record)) {
-          setEditingLand(record);
-        } else if (isPlotRow(record)) {
-          setEditingPlot(record);
-        } else if (isCustomerRow(record)) {
-          setEditingCustomer(record);
-        } else if (isContractRow(record)) {
-          setEditingContract(record);
-        }
-      }}
-      onDeleteSelected={() => {
-        if (dataset === 'lands') {
-          setDeletingLands(selectedLandRecords);
-        } else if (dataset === 'plots') {
-          setDeletingPlots(selectedPlotRecords);
-        } else if (dataset === 'customers') {
-          setDeletingCustomers(selectedCustomerRecords);
-        }
-      }}
-      onClearSelection={() => setSelectedKeys(new Set())}
     />
   );
 
@@ -1057,16 +974,7 @@ export default function TableFilterClient({
                     />
                   </HStack>
 
-                  {selectedCount > 0 ? bulkBar : filterBar}
-                  {!isWide && rows.length > 0 && <CheckboxInput
-                    label="Chọn tất cả trong trang"
-                    value={rows.every(item => selectedKeys.has(item.id)) ? true : rows.some(item => selectedKeys.has(item.id)) ? 'indeterminate' : false}
-                    onChange={checked => setSelectedKeys(current => {
-                      const next = new Set(current);
-                      rows.forEach(item => {if (checked) next.add(item.id); else next.delete(item.id);});
-                      return next;
-                    })}
-                  />}
+                  {filterBar}
                   {!isWide && <Selector label="Sắp xếp" value={sort[0] ? `${sort[0].sortKey}:${sort[0].direction}` : null} hasClear
                     options={columns.filter(column => column.sortable).flatMap(column => [
                       {value: `${column.key}:ascending`, label: `${tableData.columnLabels[column.key] ?? column.key} · Tăng dần`},
@@ -1119,8 +1027,6 @@ export default function TableFilterClient({
                       </VStack>)}</VStack>
                     </Collapsible>}
                     <HStack gap={3} hAlign="between" vAlign="center" wrap="wrap">
-                      <CheckboxInput label={`Chọn ${item.summary}`} isLabelHidden value={selectedKeys.has(item.id)}
-                        onChange={checked => setSelectedKeys(current => {const next = new Set(current); if (checked) next.add(item.id); else next.delete(item.id); return next;})} />
                       <Button label="Xem chi tiết" variant="secondary" onClick={() => {
                         if (item.dataset === 'lands' || item.dataset === 'contracts') router.push(`/${item.dataset}/${item.id}`);
                         else setActiveRowId(item.id);
@@ -1148,7 +1054,7 @@ export default function TableFilterClient({
               <Section padding={4}>
                 <HStack hAlign="center">
                 <Pagination label="Phân trang" page={page} pageSize={PAGE_SIZE} totalItems={totalResults}
-                  onChange={next => {setPageState({key: pageKey, page: next}); setSelectedKeys(new Set()); setActiveRowId(null);}} />
+                  onChange={next => {setPageState({key: pageKey, page: next}); setActiveRowId(null);}} />
                 </HStack>
               </Section>
             )}

@@ -1,7 +1,12 @@
 import {AppFrame} from '@/components/app-frame/AppFrame';
 import {LandDetailClient} from '@/components/lands/LandDetailClient';
 
-export default async function LandDetailPage({params}: {params: Promise<{id: string}>}) {
+export default async function LandDetailPage({params, searchParams}: {
+  params: Promise<{id: string}>;
+  searchParams: Promise<{plot?: string | string[]}>;
+}) {
   const {id} = await params;
-  return <AppFrame><LandDetailClient id={id} /></AppFrame>;
+  const {plot} = await searchParams;
+  const initialPlotId = typeof plot === 'string' && plot ? plot : null;
+  return <AppFrame><LandDetailClient key={`${id}:${initialPlotId ?? ''}`} id={id} initialPlotId={initialPlotId} /></AppFrame>;
 }

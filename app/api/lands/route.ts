@@ -1,4 +1,6 @@
 import {listParams} from '@/lib/api/listParams';
+import {fetchAllPages} from '@/lib/api/fetchAllPages';
+import {landMatchesRentalStatus} from '@/lib/landAvailability';
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { mapImage, mapLand } from "@/lib/mappers";
@@ -17,6 +19,30 @@ export async function GET(request: NextRequest) {
 
 
   const supabase = await createClient();
+  const status = searchParams.get('status');
+  if (status && !['AVAILABLE', 'RENTED', 'PENDING', 'SOLD'].includes(status)) {
+    return NextResponse.json({message: 'Trạng thái không hợp lệ'}, {status: 400});
+  }
+  if (status) {
+    try {
+      const all = await fetchAllPages(async (batch, size) => {
+        let filtered = supabase.from('lands')
+          .select('*, land_images(*), plots(id, land_id, status), contracts(id, land_id, plot_ids, status, start_date, end_date, lease_duration_months)')
+          .order(sort, {ascending}).order(sort2, {ascending: ascending2}).order('id', {ascending: true})
+          .range((batch - 1) * size, batch * size - 1);
+        if (search) filtered = filtered.or(['name', 'location', 'description'].map(column => `${column}.ilike.%${search}%`).join(','));
+        const {data, error} = await filtered;
+        if (error) throw new Error(error.message);
+        return {data};
+      });
+      const matching = all.data.filter(land => landMatchesRentalStatus(land.id, land.plots, land.contracts, status));
+      const data = matching.slice(from, to + 1).map(land =>
+        mapLand(land, land.land_images.map(image => mapImage(image, image.storage_path))));
+      return NextResponse.json<LandsResponse>({total: matching.length, page, pageSize, code: 200, message: 'Thành công', data});
+    } catch (error) {
+      return NextResponse.json({message: error instanceof Error ? error.message : 'Không thể tải khu đất'}, {status: 500});
+    }
+  }
   let query = supabase
     .from("lands")
     .select("*, land_images(*)", {count: "exact"})
