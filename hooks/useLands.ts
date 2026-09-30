@@ -1,29 +1,7 @@
-import {useMemo} from 'react';
-import {useMutation, useQuery, useQueryClient} from '@tanstack/react-query';
+
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { landsService } from "@/lib/api/fetchLand";
-import type {CreateLandPayload, LandFilters, UpdateLandPayload} from '@/types/land';
-
-export function normalizeFilters(filters: LandFilters): LandFilters {
-  const normalized: LandFilters = {};
-
-  if (filters.page !== undefined) normalized.page = filters.page;
-  if (filters.pageSize !== undefined) normalized.pageSize = filters.pageSize;
-  return normalized;
-}
-
-export function useLands(filters: LandFilters, enabled: boolean = true) {
-  const {page, pageSize} = filters;
-  const normalizedFilters = useMemo(
-    () => normalizeFilters({page, pageSize}),
-    [page, pageSize],
-  );
-  
-  return useQuery({
-    queryKey: ["lands", normalizedFilters],
-    queryFn: () => landsService.getLands(normalizedFilters),
-    enabled,
-  });
-}
+import type { CreateLandPayload, UpdateLandPayload } from '@/types/land';
 
 export function useLandDetail(id: string, enabled: boolean = true) {
   return useQuery({
@@ -43,7 +21,6 @@ export function useCreateLand() {
     },
   });
 }
-
 
 export function useUpdateLand() {
   const queryClient = useQueryClient();

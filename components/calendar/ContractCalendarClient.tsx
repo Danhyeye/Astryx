@@ -1,8 +1,8 @@
 'use client';
 
 import { useMemo, useRef, useState } from 'react';
-import {EntityStatus} from '@/components/table-filter/EntityStatus';
-import {PAYMENT_FREQUENCY_META} from '@/data';
+import { EntityStatus } from '@/components/table-filter/EntityStatus';
+import { PAYMENT_FREQUENCY_META } from '@/data';
 import { Banner } from '@astryxdesign/core/Banner';
 import { Button } from '@astryxdesign/core/Button';
 import { Grid } from '@astryxdesign/core/Grid';
@@ -16,7 +16,7 @@ import { Selector } from '@astryxdesign/core/Selector';
 import { Heading, Text } from '@astryxdesign/core/Text';
 import { useMediaQuery } from '@astryxdesign/core/hooks';
 import { useAllContracts } from '@/hooks/useAllRecords';
-import { useGoogleCalendarStatus, useSyncGoogleCalendar } from '@/hooks/useGoogleCalendar';
+
 import { formatDate, formatMoney, formatNumber } from '@/utils/format';
 import { buildContractMonthEvents, buildContractOptions } from './contractCalendarData';
 
@@ -44,9 +44,6 @@ export function ContractCalendarClient() {
   const [selectedDate, setSelectedDate] = useState(today);
   const [selectedContractId, setSelectedContractId] = useState('all');
   const { data: contractsResponse, error, isFetching, isPending } = useAllContracts();
-  const { data: googleStatusResponse, error: googleStatusError,
-    isFetching: isGoogleStatusFetching, isPending: isGoogleStatusPending } = useGoogleCalendarStatus();
-  const syncGoogleCalendar = useSyncGoogleCalendar();
   const contracts = useMemo(() => contractsResponse?.data ?? [], [contractsResponse?.data]);
   const options = useMemo(() => [{ label: 'Tất cả hợp đồng', value: 'all' }, ...buildContractOptions(contracts)], [contracts]);
   const events = useMemo(() => buildContractMonthEvents(
@@ -74,9 +71,6 @@ export function ContractCalendarClient() {
   const paymentsByEvent = useMemo(() => new Map(contracts.flatMap(contract =>
     (contract.payments ?? []).map(payment => [`${contract.id}:${payment.due_date}`, payment] as const),
   )), [contracts]);
-  const googleStatus = googleStatusResponse?.data ?? null;
-  const googleErrorMessage = messageOf(googleStatusError) ?? messageOf(syncGoogleCalendar.error);
-  const googleSyncSummary = syncGoogleCalendar.data?.data ?? null;
 
   function navigateMonth(offset: number) {
     const next = moveMonth(month, offset);
@@ -212,80 +206,7 @@ export function ContractCalendarClient() {
                 </List>}
             </VStack>
           </Section>
-          {/* <Section padding={4} dividers={['top']}>
-            <VStack gap={3}>
-              <VStack gap={1}>
-                <Heading level={2}>Lịch Google</Heading>
-                <Text color="secondary">Đồng bộ tất cả hợp đồng đến hạn ngày {formatDate(selectedDate, true)}, kể cả khi đang lọc một hợp đồng.</Text>
-                <Text color="secondary">
-                  {googleStatus?.isConnected
-                    ? `Đã kết nối với ${googleStatus.calendarId}.`
-                    : 'Kết nối Google để đồng bộ hạn thanh toán hợp đồng.'}
-                </Text>
-              </VStack>
 
-              {isGoogleStatusPending || isGoogleStatusFetching ? (
-                <ProgressBar
-                  label="Đang tải trạng thái Lịch Google"
-                  isLabelHidden
-                  isIndeterminate
-                />
-              ) : null}
-
-              {googleStatus != null && !googleStatus.isConfigured ? (
-                <Text type="supporting" color="secondary">
-                  Thiếu cấu hình: {googleStatus.missing.join(', ')}
-                </Text>
-              ) : null}
-
-              {googleStatus?.accountEmail ? (
-                <Text type="supporting" color="secondary">
-                  {googleStatus.accountEmail}
-                </Text>
-              ) : null}
-
-              {googleStatus?.lastSyncedAt ? (
-                <Text type="supporting" color="secondary">
-                  Đồng bộ lần cuối{' '}
-                  {formatDate(googleStatus.lastSyncedAt, true)}
-                </Text>
-              ) : null}
-
-              {googleSyncSummary != null ? (
-                <Text type="supporting" color="secondary">
-                  Đã đồng bộ {formatNumber(googleSyncSummary.total)}{' '}
-                  hạn thanh toán ngày {formatDate(googleSyncSummary.date, true)}. Đã tạo {formatNumber(googleSyncSummary.created)},
-                  cập nhật {formatNumber(googleSyncSummary.updated)}, đã xóa{' '}
-                  {formatNumber(googleSyncSummary.deleted)}, thất bại{' '}
-                  {formatNumber(googleSyncSummary.failed)}.
-                </Text>
-              ) : null}
-
-              {googleErrorMessage != null ? (
-                <Text type="supporting" color="secondary">
-                  {googleErrorMessage}
-                </Text>
-              ) : null}
-
-              {googleStatus?.isConnected ? (
-                <Button
-                  label={`Đồng bộ ngày ${formatDate(selectedDate, true)}`}
-                  variant="secondary"
-                  icon={<Icon icon="calendar" />}
-                  isLoading={syncGoogleCalendar.isPending}
-                  onClick={() => syncGoogleCalendar.mutate(selectedDate)}
-                />
-              ) : (
-                <Button
-                  label="Kết nối Google"
-                  variant="secondary"
-                  icon={<Icon icon="externalLink" />}
-                  href="/api/calendar/google/connect"
-                  isDisabled={googleStatus?.isConfigured === false}
-                />
-              )}
-            </VStack>
-          </Section>         */}
           </VStack>
       </LayoutContent>}
     />

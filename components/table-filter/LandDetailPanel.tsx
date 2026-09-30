@@ -19,7 +19,7 @@ import {
   type ContractTableRow,
   type LandTableRow,
 } from '@/data';
-import {styles} from '@/app/table-filter/styles';
+import {styles} from '@/app/styles';
 import type {Plot} from '@/types/plot';
 import {formatArea, formatDate, formatMoney} from '@/utils/format';
 import {LandImageGallery} from './LandImageGallery';

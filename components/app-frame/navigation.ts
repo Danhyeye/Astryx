@@ -1,13 +1,5 @@
-import {DATASET_META} from '@/data';
-import {
-  Users,
-  CalendarDays,
-  FileText,
-  LayoutDashboard,
-  LayoutGrid,
-  Map,
-  type LucideIcon,
-} from 'lucide-react';
+import { DATASET_META } from '@/data';
+import { Users, CalendarDays, FileText, LayoutDashboard, Map, type LucideIcon } from 'lucide-react';
 
 export type AppNavItem = {
   label: string;

@@ -61,11 +61,6 @@ function dueDayOf(contract: Contract): number {
     : contract.payment_due_day;
 }
 
-export function eventDateKey(value: string | Date): string {
-  const date = value instanceof Date ? value : parseContractDate(value);
-  return date == null ? '' : formatContractDate(date);
-}
-
 export function buildContractOptions(
   contracts: readonly Contract[],
 ): ContractOption[] {
@@ -77,72 +72,6 @@ export function buildContractOptions(
     .sort((a, b) => a.label.localeCompare(b.label, undefined, {
       sensitivity: 'base',
     }));
-}
-
-/** One nearest unpaid date per active contract. Payment rows are authoritative when present. */
-export function buildContractCalendarEvents(
-  contracts: readonly Contract[],
-  now: Date = new Date(),
-): ContractCalendarEvent[] {
-  // Business dates follow Vietnam, including around UTC midnight.
-  const todayKey = new Intl.DateTimeFormat('en-CA', {
-    timeZone: 'Asia/Ho_Chi_Minh', year: 'numeric', month: '2-digit', day: '2-digit',
-  }).format(now);
-  const today = parseContractDate(todayKey)!;
-  const events: ContractCalendarEvent[] = [];
-  for (const contract of contracts) {
-    const start = parseContractDate(contract.start_date);
-    if (!start || contract.status !== 'ACTIVE') continue;
-    const end = parseContractDate(
-      resolveContractEndDate({
-        startDate: contract.start_date,
-        endDate: contract.end_date,
-        leaseDurationMonths: contract.lease_duration_months,
-      }),
-    );
-    const valid = (date: Date | null): date is Date => date != null && date >= today && date >= start && (end == null || date <= end);
-    const paidDates = new Set((contract.payments ?? []).filter(payment => payment.status === 'PAID').map(payment => payment.due_date));
-    const candidates = new Map<string, number>();
-    for (const payment of contract.payments ?? []) {
-      if (!paidDates.has(payment.due_date) && valid(parseContractDate(payment.due_date))) {
-        candidates.set(payment.due_date, payment.remaining);
-      }
-    }
-    const step = FREQUENCY_MONTH_STEP[contract.payment_frequency];
-    const day = dueDayOf(contract);
-    if (step != null && day >= 1 && day <= 31) {
-      const months = Math.max(0, (today.getUTCFullYear() - start.getUTCFullYear()) * 12 + today.getUTCMonth() - start.getUTCMonth());
-      const offset = Math.floor(months / step) * step;
-      // Recorded invoices cover only visited dues. Continue generating dates
-      // after the last paid period, including payments made in advance.
-      for (let index = 0; index <= paidDates.size + 1; index++) {
-        const candidate = contractDateFromParts(start.getUTCFullYear(), start.getUTCMonth() + offset + index * step, day);
-        if (end && candidate > end) break;
-        const key = formatContractDate(candidate);
-        if (valid(candidate) && !paidDates.has(key)) {
-          if (!candidates.has(key)) candidates.set(key, contract.rent_amount);
-          break;
-        }
-      }
-    } else {
-      const explicit = parseContractDate(contract.next_payment_due_date);
-      if (valid(explicit)) {
-        const key = formatContractDate(explicit);
-        if (!paidDates.has(key) && !candidates.has(key)) candidates.set(key, contract.rent_amount);
-      }
-    }
-    const nearest = [...candidates.entries()].sort(([a], [b]) => a.localeCompare(b))[0];
-    const due = nearest ? parseContractDate(nearest[0]) : null;
-    const amount = nearest?.[1] ?? contract.rent_amount;
-    if (due == null) continue;
-    const date = formatContractDate(due);
-    events.push({id: `${contract.id}:${date}`, contractId: contract.id,
-      contractLabel: contractLabelOf(contract), customerName: customerNameOf(contract),
-      targetLabel: targetLabelOf(contract), date, amount, frequency: contract.payment_frequency,
-      status: contract.status, startDate: formatContractDate(start), endDate: end ? formatContractDate(end) : '',
-    });
-  }
-  return events.sort((a, b) => a.date.localeCompare(b.date) || a.contractLabel.localeCompare(b.contractLabel, 'vi'));
 }
 
 /** Full due-day schedule for the displayed month, including payment history. */

@@ -87,7 +87,7 @@ import {useRouter} from 'next/navigation';
 import {useAllLands} from '@/hooks/useAllRecords';
 import {useAllPlots} from '@/hooks/useAllRecords';
 import {formatArea, formatDate, formatMoney} from '@/utils/format';
-import {styles} from '@/app/table-filter/styles';
+import {styles} from '@/app/styles';
 import {CreateContractDialog} from './CreateContractDialog';
 import {CreateCustomerDialog} from './CreateCustomerDialog';
 import {CreateLandDialog} from './CreateLandDialog';
@@ -572,9 +572,11 @@ export default function TableFilterClient({
       summary: {
         key: 'summary',
         header: label('summary'),
-        width: dataset === 'contracts' || dataset === 'customers'
-          ? proportional(2, {minWidth: 240})
-          : proportional(1, {minWidth: 220}),
+        width: dataset === 'contracts'
+          ? proportional(1.5, {minWidth: 300})
+          : dataset === 'customers'
+            ? proportional(2, {minWidth: 240})
+            : proportional(1, {minWidth: 220}),
         sortable: true,
         renderCell: item => {
           const secondary = summarySecondary(item);
@@ -648,7 +650,7 @@ export default function TableFilterClient({
       status: {
         key: 'status',
         header: label('status'),
-        width: pixel(140),
+        width: dataset === 'contracts' ? proportional(0.9, {minWidth: 180}) : pixel(140),
         sortable: true,
         renderCell: item => {
           const value = textValue(item, 'status');
@@ -687,7 +689,7 @@ export default function TableFilterClient({
       paymentFrequency: {
         key: 'paymentFrequency',
         header: label('paymentFrequency'),
-        width: pixel(140),
+        width: dataset === 'contracts' ? proportional(0.6, {minWidth: 120}) : pixel(140),
         sortable: true,
         renderCell: item => {
           const value = textValue(item, 'paymentFrequency');
@@ -705,8 +707,8 @@ export default function TableFilterClient({
       rentAmount: {
         key: 'rentAmount',
         header: label('rentAmount'),
-        width: pixel(180),
-        align: 'center',
+        width: dataset === 'contracts' ? proportional(0.8, {minWidth: 160}) : pixel(180),
+        align: dataset === 'contracts' ? 'start' : 'center',
         sortable: true,
         renderCell: item => (
           <Text type="body" className="whitespace-nowrap tabular-nums">
@@ -729,7 +731,7 @@ export default function TableFilterClient({
       nextPaymentDueDate: {
         key: 'nextPaymentDueDate',
         header: label('nextPaymentDueDate'),
-        width: pixel(280),
+        width: dataset === 'contracts' ? proportional(1.4, {minWidth: 280}) : pixel(280),
         sortable: {sortKey: 'nextPaymentDueSort'},
         align: 'center',
         renderCell: item => (
@@ -741,11 +743,11 @@ export default function TableFilterClient({
       areaSqm: {
         key: 'areaSqm',
         header: label('areaSqm'),
-        width: pixel(120),
-        align: 'end',
+        width: dataset === 'contracts' ? proportional(0.7, {minWidth: 140}) : pixel(120),
+        align: 'center',
         sortable: true,
         renderCell: item => (
-          <Text type="body" maxLines={cellLines} className="text-end">
+          <Text type="body" maxLines={cellLines}>
             {formatArea(numberValue(item, 'areaSqm'))}
           </Text>
         ),

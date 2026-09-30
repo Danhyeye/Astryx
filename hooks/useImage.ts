@@ -1,15 +1,6 @@
-import {useMutation, useQuery} from '@tanstack/react-query';
-import type {UploadedImage} from '@/types/image';
+import { useMutation } from '@tanstack/react-query';
 
-import {imageService} from '@/lib/api/fetchImage';
-
-export function useUploadImages(files: File[], enabled: boolean = true) {
-  return useQuery<UploadedImage[]>({
-    queryKey: ['images', ...files.map(f => f.name)],
-    queryFn: () => imageService.uploadMany(files),
-    enabled,
-  });
-}
+import { imageService } from '@/lib/api/fetchImage';
 
 export function useUploadImage() {
   return useMutation({

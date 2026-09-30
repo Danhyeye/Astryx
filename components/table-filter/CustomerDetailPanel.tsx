@@ -18,7 +18,7 @@ import {
   type ContractTableRow,
   type CustomerTableRow,
 } from '@/data';
-import {styles} from '@/app/table-filter/styles';
+import {styles} from '@/app/styles';
 import {formatDate, formatMoney} from '@/utils/format';
 
 export function CustomerDetailPanel({
@@ -28,7 +28,6 @@ export function CustomerDetailPanel({
   onClose,
   onSelectContract,
   onEditCustomer,
-  onDeleteCustomer,
 }: {
   customer: CustomerTableRow;
   contracts: ContractTableRow[];
@@ -90,13 +89,7 @@ export function CustomerDetailPanel({
                   width="100%"
                   onClick={() => onEditCustomer(customer)}
                 />
-                {/* <Button
-                  label="Xóa"
-                  variant="destructive"
-                  size="sm"
-                  width="100%"
-                  onClick={() => onDeleteCustomer(customer)}
-                /> */}
+
               </HStack>
             </VStack>
           </Section>

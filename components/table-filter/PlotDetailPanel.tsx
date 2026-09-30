@@ -13,36 +13,28 @@ import { Icon } from '@astryxdesign/core/Icon';
 import { IconButton } from '@astryxdesign/core/IconButton';
 import { Item } from '@astryxdesign/core/Item';
 import { HStack, LayoutPanel, StackItem, VStack } from '@astryxdesign/core/Layout';
-import { MetadataList, MetadataListItem } from '@astryxdesign/core/MetadataList';
+
 import { ResizeHandle } from '@astryxdesign/core/Resizable';
 import type { ResizableProps } from '@astryxdesign/core/Resizable';
 import { Section } from '@astryxdesign/core/Section';
 import { Heading, Text } from '@astryxdesign/core/Text';
 import { X } from 'lucide-react';
-import {resolveContractEndDate} from '@/lib/contractDates';
+import { resolveContractEndDate } from '@/lib/contractDates';
 
-import {
-  CONTRACT_STATUS_META,
-  PLOT_STATUS_META,
-  type ContractTableRow,
-  type PlotTableRow,
-} from '@/data';
-import { styles } from '@/app/table-filter/styles';
+import { CONTRACT_STATUS_META, PLOT_STATUS_META, type ContractTableRow, type PlotTableRow } from '@/data';
+import { styles } from '@/app/styles';
 import type { Land } from '@/types/land';
 import { formatArea, formatDate } from '@/utils/format';
 
 export function PlotDetailPanel({
   plot,
-  land,
   contracts,
   isContractsLoading = false,
   contractsError,
   resizable,
   onClose,
-  onSelectLand,
   onSelectContract,
   onEditPlot,
-  onDeletePlot,
 }: {
   plot: PlotTableRow;
   land: Land | null;
@@ -76,9 +68,7 @@ export function PlotDetailPanel({
                     label={`${contracts.length} ${'hợp đồng'
                       }`}
                   />
-                  {/* <Text type="supporting" color="secondary">
-                        {plot.id}
-                      </Text> */}
+
                 </HStack>
                 <Heading level={2}>{plot.plot}</Heading>
                 <Text type="supporting" color="secondary">
@@ -102,13 +92,7 @@ export function PlotDetailPanel({
               width="100%"
               onClick={() => onEditPlot(plot)}
             />
-            {/* <Button
-                  label="Xóa"
-                  variant="destructive"
-                  size="sm"
-                  width="100%"
-                  onClick={() => onDeletePlot(plot)}
-                /> */}
+
           </HStack>
 
         </VStack>
@@ -137,56 +121,7 @@ export function PlotDetailPanel({
 
       <Divider />
 
-      {/* <Section variant="transparent" padding={4}>
-        <MetadataList columns="single" label={isWide ? { position: 'start', width: 116 } : { position: 'top' }}>
-          <MetadataListItem label="Mã lô đất">
-            <Text type="body">{plot.plotNumber}</Text>
-          </MetadataListItem>
-          <MetadataListItem label="Khu đất">
-            <Text type="body">{plot.land}</Text>
-          </MetadataListItem>
-          <MetadataListItem label="Vị trí">
-            <Text type="body">{plot.landLocation || 'Chưa thiết lập'}</Text>
-          </MetadataListItem>
-          <MetadataListItem label="Diện tích">
-            <Text type="body">{formatArea(plot.areaSqm)}</Text>
-          </MetadataListItem>
-          <MetadataListItem label="Hình ảnh">
-            <Text type="body">{plot.imageCount.toLocaleString('vi-VN')}</Text>
-          </MetadataListItem>
-          <MetadataListItem label="Ngày tạo">
-            <Text type="body">{formatDate(plot.createdAt, true)}</Text>
-          </MetadataListItem>
-          <MetadataListItem label="Ngày cập nhật">
-            <Text type="body">{formatDate(plot.updatedAt, true)}</Text>
-          </MetadataListItem>
-          <MetadataListItem label="Mô tả">
-            <Text type="body">{plot.description || 'Không có'}</Text>
-          </MetadataListItem>
-        </MetadataList>
-      </Section> */}
-
       <Divider />
-
-      {/* <Section variant="transparent" padding={4}>
-        <VStack gap={2}>
-          <Heading level={3}>Khu đất</Heading>
-          {land == null ? (
-            <Text type="supporting" color="secondary">
-              Không tìm thấy khu đất của lô đất này.
-            </Text>
-          ) : (
-            <Item
-              align="center"
-              label={land.name}
-              labelLines={2}
-              description={`${formatArea(land.area_sqm)} - ${land.location || 'Chưa có vị trí'
-                }`}
-              onClick={() => onSelectLand(land.id)}
-            />
-          )}
-        </VStack>
-      </Section> */}
 
       <Divider />
 

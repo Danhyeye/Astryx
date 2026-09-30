@@ -1,22 +1,11 @@
-import type {
-  FieldDefinition,
-  PowerSearchFilter,
-} from '@astryxdesign/core/PowerSearch';
+import type { FieldDefinition, PowerSearchFilter } from '@astryxdesign/core/PowerSearch';
 
-import type {
-  Contract,
-  ContractStatus,
-  PaymentFrequency,
-} from './types/contract';
-import type {Customer} from './types/customer';
-import type {Images} from './types/image';
-import type {Land} from './types/land';
-import type {Plot, Status as PlotStatus} from './types/plot';
-import {
-  formatArea,
-  formatDate,
-  formatMoney,
-} from './utils/format.ts';
+import type { Contract, ContractStatus, PaymentFrequency } from './types/contract';
+import type { Customer } from './types/customer';
+import type { Images } from './types/image';
+import type { Land } from './types/land';
+import type { Plot, Status as PlotStatus } from './types/plot';
+
 export {
   MONTHS,
   formatArea,
@@ -246,7 +235,6 @@ const PAYMENT_FREQUENCY_ORDER: PaymentFrequency[] = [
 const NO_CUSTOMER = 'Chưa có khách hàng';
 const NO_LAND = 'Chưa có khu đất';
 const NO_PLOT = 'Chưa có lô đất';
-const DAY_MS = 86_400_000;
 const INVALID_DATE_SORT = Number.MAX_SAFE_INTEGER;
 
 function parseDateSort(value: string | null | undefined): number {
@@ -1136,44 +1124,12 @@ const DATASET_GROUPING_OPTIONS: Record<
   customers: [groupOption('none', 'Không có')],
 };
 
-const DATASET_SAVED_VIEWS: Record<DatasetKey, readonly SavedView[]> = {
-  lands: [
-    {
-      id: 'lands-by-location',
-      name: 'Theo vị trí',
-      filters: [],
-      view: {
-        ...DATASET_INITIAL_VIEWS.lands,
-        grouping: 'location',
-      },
-    },
-  ],
-  plots: [
-    {
-      id: 'available-plots',
-      name: 'Lô đất còn trống',
-      filters: [PLOT_PRESET_FILTERS[0].filter],
-      view: DATASET_INITIAL_VIEWS.plots,
-    },
-  ],
-  contracts: INITIAL_SAVED_VIEWS,
-  customers: [],
-};
-
 function cloneFilters(filters: readonly PowerSearchFilter[]): PowerSearchFilter[] {
   return [...filters];
 }
 
 function cloneView(view: ViewState): ViewState {
   return {...view, columnKeys: [...view.columnKeys]};
-}
-
-function cloneSavedView(saved: SavedView): SavedView {
-  return {
-    ...saved,
-    filters: cloneFilters(saved.filters),
-    view: cloneView(saved.view),
-  };
 }
 
 export function getDatasetInitialFilters(
@@ -1188,18 +1144,6 @@ export function getDatasetInitialView(dataset: DatasetKey): ViewState {
 
 export function getDatasetInitialSort(dataset: DatasetKey): TableSortState {
   return DATASET_INITIAL_SORTS[dataset].map(sortItem => ({...sortItem}));
-}
-
-export function createInitialSavedViewsByDataset(): Record<
-  DatasetKey,
-  SavedView[]
-> {
-  return {
-    lands: DATASET_SAVED_VIEWS.lands.map(cloneSavedView),
-    plots: DATASET_SAVED_VIEWS.plots.map(cloneSavedView),
-    contracts: DATASET_SAVED_VIEWS.contracts.map(cloneSavedView),
-    customers: DATASET_SAVED_VIEWS.customers.map(cloneSavedView),
-  };
 }
 
 export interface DatasetTableData {
@@ -1232,21 +1176,6 @@ export interface DatasetTableData {
   newButtonLabel: string;
 }
 
-export function filterValueText(filter: PowerSearchFilter): string {
-  const raw = filter.value as {value?: unknown; unixSeconds?: number};
-  if (typeof raw.unixSeconds === 'number') {
-    return formatDate(new Date(raw.unixSeconds * 1000), true);
-  }
-
-  const label = (value: unknown) => {
-    const key = String(value ?? '');
-    return VALUE_LABELS[key] ?? key;
-  };
-  return Array.isArray(raw.value)
-    ? raw.value.map(label).join(', ')
-    : label(raw.value);
-}
-
 export const OPERATOR_LABELS: Record<string, string> = {
   is: 'is',
   is_any_of: 'is any of',
@@ -1255,55 +1184,6 @@ export const OPERATOR_LABELS: Record<string, string> = {
   after: 'after',
   before: 'before',
 };
-
-const FIELD_LABELS: Record<string, string> = {
-  summary: 'Tên',
-  customer: 'Khách hàng',
-  land: 'Khu đất',
-  plot: 'Lô đất',
-  phone: 'Số điện thoại',
-  email: 'Email',
-  address: 'Địa chỉ',
-  location: 'Vị trí',
-  description: 'Mô tả',
-  notes: 'Ghi chú',
-  status: 'Trạng thái',
-  plotStatus: 'Trạng thái lô đất',
-  paymentFrequency: 'Chu kỳ thanh toán',
-  rentAmount: 'Tiền thuê',
-  depositAmount: 'Tiền đặt cọc',
-  areaSqm: 'Diện tích',
-  nextPaymentDueOn: 'Kỳ chưa thanh toán gần nhất',
-  startOn: 'Ngày bắt đầu',
-  endOn: 'Ngày kết thúc',
-};
-
-export function filterTokenLabel(filter: PowerSearchFilter): string {
-  const name = FIELD_LABELS[filter.field] ?? filter.field;
-  const operator = OPERATOR_LABELS[filter.operator] ?? filter.operator;
-  const raw = filter.value as {value?: unknown; unixSeconds?: number};
-  let value: string;
-
-  if (typeof raw.unixSeconds === 'number') {
-    value = formatDate(new Date(raw.unixSeconds * 1000), true);
-  } else if (Array.isArray(raw.value) && raw.value.length > 1) {
-    const [firstValue, ...rest] = raw.value.map(
-      item => VALUE_LABELS[String(item)] ?? item,
-    );
-    value = `${firstValue} +${rest.length}`;
-  } else if (
-    (filter.field === 'rentAmount' || filter.field === 'depositAmount') &&
-    typeof raw.value === 'number'
-  ) {
-    value = formatMoney(raw.value);
-  } else if (filter.field === 'areaSqm' && typeof raw.value === 'number') {
-    value = formatArea(raw.value);
-  } else {
-    value = filterValueText(filter);
-  }
-
-  return `${name} ${operator} ${value}`;
-}
 
 export interface ContractTableData {
   rows: ContractTableRow[];
@@ -1490,20 +1370,6 @@ export function buildDatasetTableData({
   };
 }
 
-export function contractsForCustomer(
-  rows: readonly ContractTableRow[],
-  active: ContractTableRow,
-): ContractTableRow[] {
-  return rows
-    .filter(
-      row =>
-        row.id !== active.id &&
-        row.customerId !== '' &&
-        row.customerId === active.customerId,
-    )
-    .sort((a, b) => b.createdAt.localeCompare(a.createdAt));
-}
-
 export function contractsForCustomerRecord(
   rows: readonly ContractTableRow[],
   active: Pick<CustomerTableRow, 'id'>,
@@ -1531,15 +1397,6 @@ export function contractsForPlotRecord(
     .sort((a, b) => b.createdAt.localeCompare(a.createdAt));
 }
 
-export function plotsForLand(
-  plots: readonly Plot[],
-  active: ContractTableRow,
-): Plot[] {
-  return plots
-    .filter(plot => active.landId !== '' && plot.land_id === active.landId)
-    .sort((a, b) => a.plot_number.localeCompare(b.plot_number));
-}
-
 export function plotsForLandRecord(
   plots: readonly Plot[],
   active: Pick<LandTableRow, 'id'>,
@@ -1554,14 +1411,6 @@ export function landForPlotRecord(
   active: Pick<PlotTableRow, 'landId'>,
 ): Land | null {
   return lands.find(land => land.id === active.landId) ?? null;
-}
-
-export function daysUntil(value: string): number | null {
-  const sortValue = parseDateSort(value);
-  if (sortValue === INVALID_DATE_SORT) {
-    return null;
-  }
-  return Math.ceil((sortValue - Date.now()) / DAY_MS);
 }
 
 export const stickyKeys = (

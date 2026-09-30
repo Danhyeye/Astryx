@@ -1,41 +1,7 @@
-import {useMemo} from 'react';
-import {useQuery, useMutation, useQueryClient} from '@tanstack/react-query';
+
+import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { customersService } from "@/lib/api/fetchCustomer";
-import {
-  CustomerFilters,
-  CreateCustomerPayload,
-  UpdateCustomerPayload,
-} from '@/types/customer';
-
-export function normalizeFilters(filters: CustomerFilters): CustomerFilters {
-  const normalized: CustomerFilters = {};
-
-  if (filters.page !== undefined) normalized.page = filters.page;
-  if (filters.pageSize !== undefined) normalized.pageSize = filters.pageSize;
-  return normalized;
-}
-
-export function useCustomers(filters: CustomerFilters, enabled: boolean = true) {
-  const {page, pageSize} = filters;
-  const normalizedFilters = useMemo(
-    () => normalizeFilters({page, pageSize}),
-    [page, pageSize],
-  );
-  
-  return useQuery({
-    queryKey: ["customers", normalizedFilters],
-    queryFn: () => customersService.getCustomers(normalizedFilters),
-    enabled,
-  });
-}
-
-export function useCustomerDetail(customerId: string, enabled: boolean = true) {
-  return useQuery({
-    queryKey: ["customerDetail", customerId],
-    queryFn: () => customersService.getCustomerDetails(customerId),
-    enabled,
-  });
-}
+import { CreateCustomerPayload, UpdateCustomerPayload } from '@/types/customer';
 
 export function useCreateCustomer() {
   const queryClient = useQueryClient();
