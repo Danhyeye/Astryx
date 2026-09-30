@@ -19,7 +19,7 @@ Use Matcha semantic tokens for surfaces, actions, borders and statuses. System l
 
 ## Typography
 
-Be Vietnam Pro body text, Playwrite VN headings, and JetBrains Mono code are loaded with Next fonts and connected through CSS variables.
+Montserrat body text, Pacifico headings, and JetBrains Mono code are loaded with Next fonts and connected through CSS variables.
 
 ## Layout
 
