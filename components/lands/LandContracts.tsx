@@ -17,8 +17,7 @@ import {Skeleton} from '@astryxdesign/core/Skeleton';
 import {EntityStatus} from '@/components/table-filter/EntityStatus';
 import {Table, proportional, type TableColumn} from '@astryxdesign/core/Table';
 import {buildContractRows, CONTRACT_STATUS_META, type ContractTableRow} from '@/data';
-import {CONTRACT_SELECT, toContract, type ContractRowWithRelations} from '@/lib/api/contractRows';
-import {createClient} from '@/lib/supabase/client';
+import {fetchContractsPage} from '@/lib/api/fetchContractsPage';
 import {formatDate, formatMoney} from '@/utils/format';
 import {resolveContractEndDate} from '@/lib/contractDates';
 
@@ -48,12 +47,8 @@ export function LandContracts({landId}: {landId: string}) {
   const query = useQuery({
     queryKey: ['contracts', 'land', landId, page],
     queryFn: async ({signal}) => {
-      const {data, count, error} = await createClient().from('contracts')
-        .select(CONTRACT_SELECT, {count: 'exact'}).eq('land_id', landId)
-        .order('created_at', {ascending: false}).order('id')
-        .range((page - 1) * PAGE_SIZE, page * PAGE_SIZE - 1).abortSignal(signal);
-      if (error) throw new Error('Không thể tải danh sách hợp đồng. Vui lòng thử lại.');
-      return {rows: buildContractRows((data as ContractRowWithRelations[]).map(toContract)), total: count ?? 0};
+      const result = await fetchContractsPage({landId, page, pageSize: PAGE_SIZE}, signal);
+      return {rows: buildContractRows(result.data ?? []), total: result.total ?? 0};
     },
   });
 

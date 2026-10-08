@@ -14,8 +14,8 @@ import {useRouter} from 'next/navigation';
 import {PlotDetailPanel} from '@/components/table-filter/PlotDetailPanel';
 import {EditPlotDialog} from '@/components/table-filter/EditPlotDialog';
 import {DeletePlotsDialog} from '@/components/table-filter/DeletePlotsDialog';
-import {CONTRACT_SELECT, toContract, type ContractRowWithRelations} from '@/lib/api/contractRows';
-import {createClient} from '@/lib/supabase/client';
+import {fetchContractsPage} from '@/lib/api/fetchContractsPage';
+import type {Contract} from '@/types/contract';
 import {fetchAllPages} from '@/lib/api/fetchAllPages';
 import {LandContracts} from './LandContracts';
 import { Banner } from '@astryxdesign/core/Banner';
@@ -102,14 +102,10 @@ export function LandDetailClient({ id, initialPlotId = null }: { id: string; ini
     queryKey: ['contracts', 'land-plot-detail', id, selectedPlotId],
     enabled: selectedPlotId != null,
     queryFn: async ({signal}) => {
-      const response = await fetchAllPages<ContractRowWithRelations>(async (page, size) => {
-        const {data, error} = await createClient().from('contracts').select(CONTRACT_SELECT)
-          .eq('land_id', id).or(`plot_ids.cs.{${selectedPlotId}},plot_ids.eq.{}`)
-          .order('start_date').order('id').range((page - 1) * size, page * size - 1).abortSignal(signal);
-        if (error) throw new Error(error.message);
-        return {data: data as ContractRowWithRelations[] | null};
-      }, signal);
-      return buildContractRows(response.data.map(toContract));
+      const response = await fetchAllPages<Contract>((page, pageSize) =>
+        fetchContractsPage({landId: id, plotId: selectedPlotId!, page, pageSize,
+          sort: 'startDate', direction: 'ascending'}, signal), signal);
+      return buildContractRows(response.data);
     },
   });
   const [editing, setEditing] = useState(false);

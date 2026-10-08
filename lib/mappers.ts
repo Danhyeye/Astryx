@@ -1,3 +1,4 @@
+import {protectedImageUrl} from './imageAccess';
 import type { Database } from "@/types/database.types";
 import type { Customer } from "@/types/customer";
 import type { Images } from "@/types/image";
@@ -13,7 +14,7 @@ export function mapImage(row: ImageRow, publicUrl: string): Images {
   return {
     id: row.id,
     path: row.storage_path,
-    url: publicUrl,
+    url: protectedImageUrl(publicUrl),
     caption: row.caption ?? "",
     sort_order: row.sort_order,
     created_at: row.created_at,

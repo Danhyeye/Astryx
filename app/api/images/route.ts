@@ -1,9 +1,26 @@
+import {authorizeRequest} from '@/lib/auth';
+import {imageStoragePath, protectedImageUrl} from '@/lib/imageAccess';
 import { NextRequest, NextResponse } from "next/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import type { ApiResponse } from "@/types/api-response";
 
 const BUCKET = "land-images";
 const MAX_FILE_SIZE = 5 * 1024 * 1024; // 5MB
+
+export async function GET(request: NextRequest) {
+  const denied = await authorizeRequest(request);
+  if (denied) return denied;
+  const path = imageStoragePath(request.nextUrl.searchParams.get('path') ?? '');
+  if (!path) return NextResponse.json({message: 'Đường dẫn không hợp lệ.'}, {status: 400});
+  const {data, error} = await createAdminClient().storage.from(BUCKET).download(path);
+  if (error) return NextResponse.json({message: 'Không tìm thấy hình ảnh.'}, {status: 404});
+  return new Response(data, {headers: {
+    'Content-Type': data.type || 'application/octet-stream',
+    'Cache-Control': 'private, no-store',
+    'X-Content-Type-Options': 'nosniff',
+    'Content-Security-Policy': "default-src 'none'; sandbox",
+  }});
+}
 
 type UploadedImage = {
   url: string;
@@ -50,6 +67,8 @@ async function detectImageType(
 }
 
 export async function POST(request: NextRequest) {
+  const denied = await authorizeRequest(request);
+  if (denied) return denied;
   let formData: FormData;
   try {
     formData = await request.formData();
@@ -116,8 +135,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const { data: publicUrlData } = supabase.storage.from(BUCKET).getPublicUrl(path);
-    uploaded.push({ url: publicUrlData.publicUrl, path });
+    uploaded.push({ url: protectedImageUrl(path), path });
   }
 
   return NextResponse.json<ApiResponse<UploadedImage[]>>(

@@ -1,3 +1,4 @@
+import {authorizeRequest} from '@/lib/auth';
 import {NextResponse} from 'next/server';
 
 import {
@@ -29,7 +30,9 @@ function inactiveStatus(
   };
 }
 
-export async function GET() {
+export async function GET(request: Request) {
+  const denied = await authorizeRequest(request);
+  if (denied) return denied;
   const config = getGoogleCalendarEnv();
 
   if (!config.isConfigured) {

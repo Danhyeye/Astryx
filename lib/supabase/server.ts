@@ -1,46 +1,10 @@
-// import { createServerClient } from "@supabase/ssr";
-// import { cookies } from "next/headers";
-// import type { Database } from "@/types/database.types";
+import 'server-only';
+import {requireSession} from '@/lib/auth';
+import {createAdminClient} from './admin';
 
-// export async function createClient() {
-//   const cookieStore = await cookies();
-
-//   return createServerClient<Database>(
-//     process.env.NEXT_PUBLIC_SUPABASE_URL!,
-//     process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY!,
-//     {
-//       cookies: {
-//         getAll() {
-//           return cookieStore.getAll();
-//         },
-//         setAll(cookiesToSet) {
-//           try {
-//             cookiesToSet.forEach(({ name, value, options }) => {
-//               cookieStore.set(name, value, options);
-//             });
-//           } catch {
-//             // setAll is a no-op in Server Components.
-//           }
-//         },
-//       },
-//     },
-//   );
-// }
-
-import { createServerClient } from "@supabase/ssr";
-import { cookies } from "next/headers";
-import type { Database } from "@/types/database.types";
-
+// NextAuth authenticates the request before server-side database access.
+// Never expose the service-role key or a Supabase session to the browser.
 export async function createClient() {
-  const cookieStore = await cookies();
-  return createServerClient<Database>(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY!,
-    {
-      cookies: {
-        getAll: () => cookieStore.getAll(),
-        setAll: () => {}, // no-op for read-only route handlers
-      },
-    }
-  );
+  await requireSession();
+  return createAdminClient();
 }

@@ -1,3 +1,4 @@
+import {authorizeRequest} from '@/lib/auth';
 import {listParams} from '@/lib/api/listParams';
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
@@ -20,9 +21,17 @@ type ContractRow = Database["public"]["Tables"]["contracts"]["Row"];
 import {CONTRACT_SELECT, toContract, type ContractRowWithRelations} from '@/lib/api/contractRows';
 
 export async function GET(request: NextRequest) {
+  const denied = await authorizeRequest(request);
+  if (denied) return denied;
   const { searchParams } = request.nextUrl;
   const {page, pageSize, from, to, sort, ascending, sort2, ascending2, search} = listParams(searchParams, "contracts");
   const status = searchParams.get("status");
+  const landId = searchParams.get('landId');
+  const plotId = searchParams.get('plotId');
+  const uuid = /^[0-9a-f]{8}(-[0-9a-f]{4}){3}-[0-9a-f]{12}$/i;
+  if ((landId && !uuid.test(landId)) || (plotId && !uuid.test(plotId))) {
+    return NextResponse.json({message: 'Mã khu đất hoặc lô đất không hợp lệ.'}, {status: 400});
+  }
 
 
   const supabase = await createClient();
@@ -31,6 +40,9 @@ export async function GET(request: NextRequest) {
     .select(CONTRACT_SELECT, {count: "exact"})
     .order(sort, {ascending}).order(sort2, {ascending: ascending2}).order("id", { ascending: true })
     .range(from, to);
+
+  if (landId) query = query.eq('land_id', landId);
+  if (plotId) query = query.or(`plot_ids.cs.{${plotId}},plot_ids.eq.{}`);
 
   if (status) {
     query = query.eq(
@@ -74,6 +86,8 @@ export async function GET(request: NextRequest) {
 }
 
 export async function POST(request: NextRequest) {
+  const denied = await authorizeRequest(request);
+  if (denied) return denied;
   let json: unknown;
   try {
     json = await request.json();

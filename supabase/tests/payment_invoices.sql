@@ -16,7 +16,7 @@ begin
   insert into public.lands(id,name) values(land,'Invoice regression test');
   insert into public.contracts(id,customer_id,land_id,plot_ids,rent_amount,due_day,start_date,end_date,status,payment_frequency)
     values(rental,customer,land,'{}',1000,31,'2020-01-01','2020-12-31','completed','monthly');
-  set local role anon;
+  set local role service_role;
   receipt := public.pay_contract_invoice(rental,'2020-02-29','2020-03-01',300,request);
   if receipt.amount <> 300 or receipt.payment_date <> '2020-03-01'::date then raise exception 'Partial invoice not saved'; end if;
   repeated := public.pay_contract_invoice(rental,'2020-02-29','2020-03-01',300,request);

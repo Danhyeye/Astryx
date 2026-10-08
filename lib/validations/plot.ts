@@ -3,7 +3,7 @@ import { z } from "zod";
 z.config(z.locales.vi());
 
 const imageSchema = z.object({
-  url: z.string().url(),
+  url: z.string().url().or(z.string().startsWith('/api/images?path=')),
   caption: z.string().nullable().optional(),
 });
 

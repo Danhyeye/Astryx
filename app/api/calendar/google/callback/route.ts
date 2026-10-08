@@ -1,3 +1,4 @@
+import {authorizeRequest} from '@/lib/auth';
 import {NextRequest, NextResponse} from 'next/server';
 
 import {
@@ -56,6 +57,8 @@ async function existingOauthToken(integrationId: string) {
 }
 
 export async function GET(request: NextRequest) {
+  const denied = await authorizeRequest(request);
+  if (denied) return denied;
   const callbackError = request.nextUrl.searchParams.get('error');
 
   if (callbackError != null) {

@@ -1,6 +1,5 @@
 import {useQuery} from '@tanstack/react-query';
-import {createClient} from '@/lib/supabase/client';
-import type {Database} from '@/types/database.types';
+import {fetchAllPages} from '@/lib/api/fetchAllPages';
 import type {RentalContract} from '@/lib/contractAvailability';
 
 // One shared snapshot per form opening; changing land only filters cached data.
@@ -11,17 +10,12 @@ export function useContractAvailability(enabled: boolean) {
     staleTime: 0,
     refetchOnWindowFocus: true,
     queryFn: async ({signal}) => {
-      const supabase = createClient();
-      const rentals: RentalContract[] = [];
-      for (let offset = 0; ; offset += 500) {
-        const {data, error} = await supabase.from('contracts')
-          .select('id, land_id, plot_ids, status, start_date, end_date, lease_duration_months')
-          .in('status', ['active', 'pending', 'completed', 'cancelled'] as unknown as Database['public']['Tables']['contracts']['Row']['status'][])
-          .order('id').range(offset, offset + 499).abortSignal(signal);
-        if (error) throw new Error('Không thể tải tình trạng cho thuê. Vui lòng thử lại.');
-        rentals.push(...data);
-        if (data.length < 500) return rentals;
-      }
+      const result = await fetchAllPages<RentalContract>(async (page, pageSize) => {
+        const response = await fetch(`/api/contracts/availability?page=${page}&pageSize=${pageSize}`, {signal});
+        if (!response.ok) throw new Error('Không thể tải tình trạng cho thuê. Vui lòng thử lại.');
+        return response.json();
+      }, signal);
+      return result.data;
     },
   });
 }

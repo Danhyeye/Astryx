@@ -9,6 +9,12 @@ export type Json =
 export type Database = {
   public: {
     Tables: {
+      app_users: {
+        Row: {email: string; is_active: boolean; created_at: string};
+        Insert: {email: string; is_active?: boolean; created_at?: string};
+        Update: {email?: string; is_active?: boolean; created_at?: string};
+        Relationships: [];
+      };
       lands: {
         Row: {
           id: string;

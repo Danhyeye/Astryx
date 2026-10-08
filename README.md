@@ -48,6 +48,69 @@ This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-
 
 ## Getting Started
 
+### Google sign-in and authenticated access
+
+NextAuth (Auth.js v5 beta) allows sign-in only when Google's verified email
+matches an active row in `public.app_users`. The database is checked again on
+every session read, so deactivating or deleting a user blocks existing sessions
+on their next request. Missing tables and database errors deny access.
+All allowed users share the same application data; there are no separate roles.
+
+The sidebar footer shows your avatar and, when expanded, your email. Open
+**Cài đặt hồ sơ** to view `/settings/profile`: a read-only, paginated user list
+with active/disabled access counts. Access changes still happen in Supabase.
+
+Manage access in **Supabase → Table Editor → app_users**:
+
+- Add an email in lowercase and leave `is_active = true` to grant access.
+- Set `is_active = false` (or delete the row) to revoke access.
+- `danhtcse171725@fpt.edu.vn` is seeded by the user-table migration.
+- Only privileged database administration can edit this table. Users cannot
+  register themselves or change the access list through the app.
+
+Google's test-user list does not restrict basic Google sign-in; `app_users`
+is the application's access control. Sessions use encrypted HTTP-only cookies
+with a seven-day lifetime. Use **Đăng xuất** to end the session.
+
+1. Set `AUTH_SECRET` to a random secret (`openssl rand -base64 32`). A local
+   secret has been generated in the ignored `.env.local`; set a separate secret
+   in your deployment environment.
+2. Configure `AUTH_GOOGLE_ID` and `AUTH_GOOGLE_SECRET`, or reuse the existing
+   `GOOGLE_CLIENT_ID` and `GOOGLE_CLIENT_SECRET` used for Calendar.
+3. In the Google Cloud OAuth web client, add the authorized redirect URI
+   `http://localhost:3000/api/auth/callback/google`. For deployment set
+   `AUTH_URL=https://your-domain.example` and register
+   `https://your-domain.example/api/auth/callback/google`. The URI must match
+   the hostname used to open the app. Keep the separate Calendar callback.
+   For Calendar scopes in Testing mode, add accounts as Google test users.
+   This test-user setting does not restrict basic app sign-in.
+4. Deploy this code together with both
+   `supabase/migrations/20261008000000_owner_only_access.sql` and
+   `supabase/migrations/20261008010000_app_users.sql`. **Until this
+   migration is applied, the old direct Supabase access remains open.** It
+   revokes anonymous and Supabase-user access to public-schema tables and RPCs
+   and makes app storage private. This assumes this Supabase public schema is
+   dedicated to this application. Old clients that query Supabase directly
+   will stop working after the migration. Keep `SUPABASE_SERVICE_ROLE_KEY`
+   server-only; the authenticated APIs now perform database access.
+
+The login flow uses the Matcha-themed Vietnamese `/signin` page, including
+loading and error states. `/api/auth/signin` redirects to this page.
+Google Calendar authorization remains a separate, authenticated flow.
+Uploaded images are served through the authenticated image API; contract file
+downloads use short-lived signed links. Previously issued public URLs may
+remain in external caches until those caches expire.
+
+Validation: `npm test`, `npx tsc --noEmit`, and `npm run lint`. With a local
+development server running, `node --env-file=.env.local scripts/auth/smoke.mjs`
+checks every data API's signed-out/unlisted behavior, page redirects,
+read-only allowlisted access (defaults to the seeded email; override with
+`AUTH_SMOKE_EMAIL`), CSRF, and sign-out. It creates short-lived test cookies
+only in memory and does not perform a real Google consent flow. Run
+`supabase/tests/owner_only_access.sql` and `supabase/tests/payment_invoices.sql`
+against a migrated local test database to check database permissions and
+payment behavior; do not run fixture tests against production.
+
 First, run the development server:
 
 ```bash

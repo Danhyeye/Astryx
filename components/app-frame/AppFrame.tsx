@@ -3,13 +3,14 @@
 import { InternationalizationProvider } from '@astryxdesign/core/i18n';
 import vi from '@astryxdesign/core/locales/vi-VN.json';
 import type { ReactNode } from 'react';
+import type {Session} from 'next-auth';
+import {SidebarAccount} from './SidebarAccount';
 import { AppShell, type AppShellProps } from '@astryxdesign/core/AppShell';
 import { HStack, VStack } from '@astryxdesign/core/Layout';
 import {Divider} from '@astryxdesign/core/Divider';
 import { MobileNavToggle } from '@astryxdesign/core/MobileNav';
 import {
   SideNav,
-  SideNavCollapseButton,
   SideNavHeading,
   SideNavItem,
   SideNavSection,
@@ -24,9 +25,11 @@ import { getAppNavItems, isAppRouteSelected } from './navigation';
 
 export function AppFrame({
   children,
+  user,
   contentPadding = 0,
 }: {
   children: ReactNode;
+  user: NonNullable<Session['user']>;
   contentPadding?: AppShellProps['contentPadding'];
 }) {
   const pathname = usePathname();
@@ -60,7 +63,7 @@ export function AppFrame({
                   subheading="Không gian quản lý"
                 />
               }
-              footerIcons={<SideNavCollapseButton />}>
+              footerIcons={<SidebarAccount user={user} />}>
               <SideNavSection title="Chính" isHeaderHidden>
                 {getAppNavItems().map(item => (
                   <SideNavItem

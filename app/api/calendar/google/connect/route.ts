@@ -1,3 +1,4 @@
+import {authorizeRequest} from '@/lib/auth';
 import {NextRequest, NextResponse} from 'next/server';
 
 import {
@@ -15,6 +16,8 @@ function calendarRedirect(request: NextRequest, status: string): NextResponse {
 }
 
 export async function GET(request: NextRequest) {
+  const denied = await authorizeRequest(request);
+  if (denied) return denied;
   const config = getGoogleCalendarEnv();
 
   if (!config.isConfigured) {

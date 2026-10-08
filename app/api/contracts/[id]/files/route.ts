@@ -1,3 +1,4 @@
+import {authorizeRequest} from '@/lib/auth';
 import {NextResponse} from 'next/server';
 import {createAdminClient} from '@/lib/supabase/admin';
 import {CONTRACT_FILE_BUCKET, MAX_CONTRACT_FILE_SIZE, detectContractFile, contractFileName} from '@/lib/contractFiles';
@@ -15,6 +16,8 @@ async function getContract(context: Context) {
 }
 
 export async function GET(request: Request, context: Context) {
+  const denied = await authorizeRequest(request);
+  if (denied) return denied;
   try {
     const contract = await getContract(context);
     if (!contract) return fail('Không tìm thấy hợp đồng.',404);
@@ -44,6 +47,8 @@ export async function GET(request: Request, context: Context) {
 }
 
 export async function POST(request: Request, context: Context) {
+  const denied = await authorizeRequest(request);
+  if (denied) return denied;
   try {
     const contract = await getContract(context);
     if (!contract) return fail('Không tìm thấy hợp đồng.',404);
@@ -77,6 +82,8 @@ export async function POST(request: Request, context: Context) {
 
 
 export async function DELETE(request: Request, context: Context) {
+  const denied = await authorizeRequest(request);
+  if (denied) return denied;
   try {
     const contract = await getContract(context);
     if (!contract) return fail('Không tìm thấy hợp đồng.',404);

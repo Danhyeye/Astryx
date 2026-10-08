@@ -63,9 +63,9 @@ export function CustomerDetailPanel({
                           'hợp đồng'
                         }`}
                       />
-                      <Text type="supporting" color="secondary">
+                      {/* <Text type="supporting" color="secondary">
                         {customer.id}
-                      </Text>
+                      </Text> */}
                     </HStack>
                     <Heading level={2}>{customer.summary}</Heading>
                     <Text type="supporting" color="secondary">

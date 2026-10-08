@@ -1,3 +1,4 @@
+import {requireSession} from '@/lib/auth';
 import {redirect} from 'next/navigation';
 import {AppFrame} from '@/components/app-frame/AppFrame';
 import TableFilterClient from '@/components/table-filter/TableFilterClient';
@@ -7,12 +8,13 @@ export default async function ContractsPage({
 }: {
   searchParams: Promise<{selected?: string | string[]}>;
 }) {
+  const session = await requireSession();
   const {selected} = await searchParams;
   const selectedId = typeof selected === 'string' ? selected : null;
   if (selectedId) redirect('/contracts/' + encodeURIComponent(selectedId));
 
   return (
-    <AppFrame contentPadding={0}>
+    <AppFrame user={session.user} contentPadding={0}>
 
         <TableFilterClient key={selectedId ?? 'contracts'} initialDataset="contracts" initialSelectedId={selectedId} />
 

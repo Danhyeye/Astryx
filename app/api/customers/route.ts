@@ -1,3 +1,4 @@
+import {authorizeRequest} from '@/lib/auth';
 import {listParams} from '@/lib/api/listParams';
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
@@ -7,6 +8,8 @@ import type { ApiErrorResponse } from "@/types/api-response";
 import { customerSchema } from "@/lib/validations/customer";
 
 export async function GET(request: NextRequest) {
+  const denied = await authorizeRequest(request);
+  if (denied) return denied;
   const { searchParams } = request.nextUrl;
   const {page, pageSize, from, to, sort, ascending, sort2, ascending2, search} = listParams(searchParams, "customers");
 
@@ -40,6 +43,8 @@ export async function GET(request: NextRequest) {
 }
 
 export async function POST(request: NextRequest) {
+  const denied = await authorizeRequest(request);
+  if (denied) return denied;
   let json: unknown;
   try {
     json = await request.json();

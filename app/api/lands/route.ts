@@ -1,3 +1,4 @@
+import {authorizeRequest} from '@/lib/auth';
 import {listParams} from '@/lib/api/listParams';
 import {fetchAllPages} from '@/lib/api/fetchAllPages';
 import {landMatchesRentalStatus} from '@/lib/landAvailability';
@@ -14,6 +15,8 @@ type LandImageRow = Database["public"]["Tables"]["land_images"]["Row"];
 type LandRowWithImages = LandRow & { land_images: LandImageRow[] };
 
 export async function GET(request: NextRequest) {
+  const denied = await authorizeRequest(request);
+  if (denied) return denied;
   const { searchParams } = request.nextUrl;
   const {page, pageSize, from, to, sort, ascending, sort2, ascending2, search} = listParams(searchParams, "lands");
 
@@ -79,6 +82,8 @@ export async function GET(request: NextRequest) {
 }
 
 export async function POST(request: NextRequest) {
+  const denied = await authorizeRequest(request);
+  if (denied) return denied;
   const body = landSchema.safeParse(await request.json());
 
   if (!body.success) {

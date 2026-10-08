@@ -1,3 +1,4 @@
+import {authorizeRequest} from '@/lib/auth';
 import {derivePayment} from '@/lib/invoices';
 import type {Invoice} from '@/types/contract';
 import {fetchAllPages} from '@/lib/api/fetchAllPages';
@@ -268,6 +269,8 @@ async function markSyncEventFailed(
 }
 
 export async function POST(request: Request) {
+  const denied = await authorizeRequest(request);
+  if (denied) return denied;
   const date = parseSyncDate(await request.json().catch(() => null));
   if (date == null) {
     return apiError('Vui lòng chọn ngày đồng bộ hợp lệ (YYYY-MM-DD).', 400);

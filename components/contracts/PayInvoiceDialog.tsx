@@ -14,7 +14,6 @@ import {CurrencyInput} from '@/components/CurrencyInput';
 import {contractToday} from '@/lib/contractDates';
 import {validateInvoice} from '@/lib/invoices';
 import {invoiceErrorMessage} from '@/lib/invoiceFeedback';
-import {createClient} from '@/lib/supabase/client';
 import type {Contract, ContractPayment, ContractResponse, Invoice} from '@/types/contract';
 import {formatDate, formatMoney} from '@/utils/format';
 
@@ -37,11 +36,14 @@ export function PayInvoiceDialog({contract, payment, onClose, onRecorded}: {
     mutationFn: async () => {
       if (validation) throw new Error(validation);
       requestId.current ??= crypto.randomUUID();
-      const {data, error} = await createClient().rpc('pay_contract_invoice', {
-        p_contract_id: contractId, p_due_date: payment.due_date,
-        p_payment_date: date, p_amount: amount, p_invoice_id: requestId.current,
+      const response = await fetch(`/api/contracts/${contractId}/invoices`, {
+        method: 'POST', headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({dueDate: payment.due_date, paymentDate: date,
+          amount, invoiceId: requestId.current}),
       });
-      if (error) throw error;
+      const result = await response.json();
+      if (!response.ok) throw result;
+      const data = result.data as Invoice | null;
       if (!data) throw new Error('Missing invoice confirmation');
       return data;
     },
