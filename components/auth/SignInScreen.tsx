@@ -52,10 +52,10 @@ export function SignInScreen({destination, error}: {destination: string; error?:
                 </VStack>
               </VStack>
               <Divider />
-              <VStack gap={5}>
-                <VStack gap={2}>
-                  <Heading level={2}>Đăng nhập</Heading>
-                  <Text color="secondary">Dùng tài khoản Google của bạn để tiếp tục vào không gian quản lý.</Text>
+              <VStack gap={4}>
+                <VStack gap={4}>
+                  <Heading level={2} justify="center">Đăng nhập</Heading>
+                  <Text color="secondary" justify="center">Dùng tài khoản Google của bạn để tiếp tục vào không gian quản lý.</Text>
                 </VStack>
                 {(error || failed) && <Banner status="error" title="Chưa thể đăng nhập"
                   description={failed ? 'Không thể kết nối. Kiểm tra kết nối mạng và thử lại.' : errorDescription(error!)} />}
