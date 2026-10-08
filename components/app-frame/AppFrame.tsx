@@ -16,6 +16,7 @@ import {
   SideNavSection,
 } from '@astryxdesign/core/SideNav';
 import NextLink from 'next/link';
+import Image from 'next/image';
 import {LinkProvider} from '@astryxdesign/core/Link';
 import { usePathname } from 'next/navigation';
 
@@ -46,7 +47,10 @@ export function AppFrame({
           mobileNav={{ breakpoint: 'md', hasToggle: false }}
           banner={
             <VStack gap={0} className="md:hidden!">
-              <HStack hAlign="end" padding={2}>
+              <HStack hAlign="between" vAlign="center" padding={2}>
+                <NextLink href="/dashboard" aria-label="Quản lý đất đai — Trang chủ">
+                  <Image src="/images/astryx-dark.svg" alt="" width={80} height={80} className="size-4" />
+                </NextLink>
                 <MobileNavToggle />
               </HStack>
               <Divider />
@@ -58,6 +62,7 @@ export function AppFrame({
               collapsible={{ hasButton: false }}
               header={
                 <SideNavHeading
+                  icon={<Image src="/images/astryx-dark.svg" alt="" width={100} height={100} className="size-6" />}
                   heading="Quản lý đất đai"
                   headingHref="/dashboard"
                   subheading="Không gian quản lý"

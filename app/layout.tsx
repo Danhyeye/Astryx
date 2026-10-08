@@ -23,6 +23,7 @@ const pacifico = Pacifico({
 export const metadata: Metadata = {
   title: "Quản lý đất đai",
   description: "Quản lý khu đất, lô đất, khách hàng và hợp đồng cho thuê.",
+  icons: {icon: {url: '/images/astryx-dark.svg', type: 'image/svg+xml'}},
 };
 
 export default function RootLayout({ children }: { children: ReactNode }) {

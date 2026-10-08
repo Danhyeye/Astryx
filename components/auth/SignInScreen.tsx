@@ -2,14 +2,13 @@
 
 import {useState} from 'react';
 import {signIn} from 'next-auth/react';
-import {MapPinned} from 'lucide-react';
+import Image from 'next/image';
 import {Banner} from '@astryxdesign/core/Banner';
 import {Button} from '@astryxdesign/core/Button';
 import {Card} from '@astryxdesign/core/Card';
 import {Center} from '@astryxdesign/core/Center';
 import {Divider} from '@astryxdesign/core/Divider';
 import {Heading} from '@astryxdesign/core/Heading';
-import {Icon} from '@astryxdesign/core/Icon';
 import {VStack} from '@astryxdesign/core/Layout';
 import {Text} from '@astryxdesign/core/Text';
 import {Theme} from '@astryxdesign/core/theme';
@@ -45,7 +44,7 @@ export function SignInScreen({destination, error}: {destination: string; error?:
           <Card maxWidth={440} width="100%" padding={8} elevation="low">
             <VStack gap={8}>
               <VStack gap={4} hAlign="center">
-                <Icon icon={MapPinned} size="lg" className="text-accent" />
+                <Image src="/images/astryx-dark.svg" alt="Logo ứng dụng" width={280} height={280} className="size-16" />
                 <VStack gap={3}>
                   <Heading level={1} justify="center">Quản lý đất đai</Heading>
                   <Text color="secondary" justify="center">Khu đất, khách hàng và hợp đồng.<br />Một nơi để quản lý mỗi ngày.</Text>
