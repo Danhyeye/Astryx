@@ -1,145 +1,142 @@
-# Contract form feedback — 24 September 2026
+<p align="center">
+  <img src="public/images/astryx-dark.svg" alt="Astryx logo" width="96" height="96" />
+</p>
 
-## Feedback checklist
+# Astryx
 
-- [x] **End date:** make it read-only in create/edit; calculate it from the start date and duration in months, including before submission.
-- [x] **Plot availability:** release contract-backed occupancy after the inclusive end date; completed/cancelled contracts do not reserve plots. Keep overlapping active/pending rentals and sold plots blocked.
-- [x] **Custom payment cycle:** hide it from new choices; preserve existing custom contracts without silently converting them.
-- [x] **Next payment:** replace manual input with **Kỳ đến hạn chưa thanh toán gần nhất** (earliest unpaid due date), derived from the payment schedule and recorded payments.
-- [x] **Layout:** group the contract stepper into clear sections: customer/status, adjacent land/plot selectors, and rental dates; stack fields on small screens. Keep payment and review steps single-column and remove duplicate payment-day and unnecessary editable date fields.
-- [x] Apply and verify the plot-release migration in Supabase (`20260924100000`).
-- [ ] Build a complete custom payment schedule editor before enabling Custom again.
+A workspace for managing land, plots, customers, rental contracts, and payments. Astryx brings property records and rental activity together so you can check availability, track upcoming payments, and review contract history in one place.
 
-## Business rules
+Built with a responsive interface and the Matcha theme: olive green, sage, and warm cream, with light and dark modes.
 
-**Rental term:** end date = start date + duration in calendar months − one day. Month overflow is clamped to the last day of the destination month. For example, 15 September 2026 + 12 months ends 14 September 2027. Blank duration retains the existing open-ended rental feature. End dates on an existing contract are recalculated when its edit form is opened and persisted only on save; no bulk rewrite of old contracts is performed.
+## What you can do
 
-**Availability:** the end date is inclusive; a plot can be rented again the following day. The app derives occupancy from contract dates in Vietnam time, without waiting for cron or rewriting plot status. A future reservation is shown as reserved and only blocks overlapping dates. A sold plot remains sold. A manually marked rented plot with no associated contract remains unavailable because its release date is unknown. Rental history (including completed/cancelled contracts) means a stale stored RENTED flag no longer permanently blocks the plot. The same rule is enforced by `20260924100000_release_finished_plot_rentals.sql` at save time. Refreshing the page/refetching the availability snapshot updates the displayed state.
+| Area | Features |
+| --- | --- |
+| Overview | Open the dashboard for a summary of your rental operations. |
+| Land and plots | Organize land records and their plots, view details, and check rental availability. |
+| Customers | Maintain customer records and review their related contracts. |
+| Contracts | Create and edit rental contracts, calculate rental end dates, and manage attached files. |
+| Payments | Track scheduled dues, record partial or full payments, and review invoice history and outstanding balances. |
+| Payment calendar | View payment dates and connect Google Calendar through a separate authorization flow. |
+| Profile and access | Sign in with Google, view your profile, and see the list of accounts allowed to access the app. |
 
-**Next unpaid due:** monthly, quarterly and yearly schedules advance by 1, 3 and 12 months from the start month, using the contract's due day and clamping shorter months. Dates before the start or after the end are excluded. Paid dates are skipped; unpaid past dates remain visible until recorded as paid. The amount is the contract's configured amount per scheduled due date (no automatic multiplication). Existing custom schedules retain their recorded dates. Completed/cancelled contracts have no next due. The date is calculated for display rather than stored as a manually maintained recurring-payment override.
+## A typical workflow
 
-**Existing custom contracts:** the edit form shows their current cycle as a disabled legacy option. Users can deliberately switch to monthly/quarterly/yearly; otherwise the custom value and history are preserved. Backend support remains for existing records; hiding the option is not removal of their data.
+1. Add land and the plots available for rent.
+2. Create a customer record.
+3. Create a contract with the customer, plots, rental dates, and payment cycle.
+4. Follow the payment schedule and record payments as they arrive.
+5. Review invoices, upcoming dues, and plot availability as contracts progress.
 
-## Verification
+## Access control
 
-`npm test` checks date derivation, leap-year/month-end handling, paid-date skipping, expiry, completed/cancelled rentals, sold plots, and unknown manual rentals. `npx tsc --noEmit` and targeted ESLint check the changed UI. Database checks verify completed-history release, inclusive overlap rejection, next-day rentals and sold-plot protection. Browser visual review is still recommended.
-
-## Invoice payments
-
-- [x] Store every installment in `invoices`, linked through `payment_schedule_id` to `contract_payments` (one scheduled due, many invoices).
-- [x] Replace the paid toggle with **Thanh toán hóa đơn**. Default the payment date to today in Vietnam; allow backdating; reject future dates.
-- [x] Show total due, paid so far and remaining. Reject zero, negative and over-balance amounts in both the form and database.
-- [x] Derive **Thanh toán một phần** / **Đã thanh toán** from invoice totals. Partial dues remain payable and remain the earliest unpaid due until completed.
-- [x] Show **Xem hóa đơn** only when invoices exist. Open a right-side drawer showing payment dates and amounts.
-- [x] Lock schedules during payments to prevent concurrent overpayments; use a stable request UUID so retries do not duplicate invoices.
-- [x] Apply and verify the invoice migration in linked Supabase (`20260924110000`); all 1,906 legacy paid records were preserved.
-
-Apply `20260924110000_payment_invoices.sql` before using the updated application. It converts existing paid records into one invoice each and retires the old paid-toggle RPC. Original payment timestamps determine the migrated payment date in Vietnam; records without a timestamp use their due date, capped at the migration date. Legacy status columns remain only for compatibility and are no longer authoritative. Do not create payments by writing a paid flag; use `pay_contract_invoice`.
-
-Invoice history is append-only from the app. Each scheduled amount is the contract's configured amount for that cycle; an installment does not change it. A partial payment can also be overdue, so its remaining balance shows an overdue note. Existing recorded schedules remain visible even after contract dates change.
-
-The demo seed importer also creates invoice receipts for paid fixtures and preserves existing invoice history on subsequent runs.
-
-`npm test` includes invoice totals, amount/date validation, and advancing to the next unpaid period. `supabase/tests/payment_invoices.sql` verifies the RPC under the app's database role, including retries, backdating, overpayment, month-end dates, direct-insert guards and immutable paid history; run it only against a migrated local test database with `psql -v ON_ERROR_STOP=1 -f supabase/tests/payment_invoices.sql`.
-
----
-
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
-
-## Getting Started
-
-### Google sign-in and authenticated access
-
-NextAuth (Auth.js v5 beta) allows sign-in only when Google's verified email
-matches an active row in `public.app_users`. The database is checked again on
-every session read, so deactivating or deleting a user blocks existing sessions
-on their next request. Missing tables and database errors deny access.
-All allowed users share the same application data; there are no separate roles.
-
-The sidebar footer shows your avatar and, when expanded, your email. Open
-**Cài đặt hồ sơ** to view `/settings/profile`: a read-only, paginated user list
-with active/disabled access counts. Access changes still happen in Supabase.
+Sign-in is available only to verified Google accounts whose email matches an active row in Supabase's `public.app_users` table. All allowed users share the same application data; there are no separate application roles.
 
 Manage access in **Supabase → Table Editor → app_users**:
 
-- Add an email in lowercase and leave `is_active = true` to grant access.
-- Set `is_active = false` (or delete the row) to revoke access.
-- `danhtcse171725@fpt.edu.vn` is seeded by the user-table migration.
-- Only privileged database administration can edit this table. Users cannot
-  register themselves or change the access list through the app.
+- Add an email in lowercase with `is_active = true` to grant access.
+- Set `is_active = false`, or delete the row, to revoke access on the user's next request.
+- The migration seeds `danhtcse171725@fpt.edu.vn`; review this entry when setting up another installation.
 
-Google's test-user list does not restrict basic Google sign-in; `app_users`
-is the application's access control. Sessions use encrypted HTTP-only cookies
-with a seven-day lifetime. Use **Đăng xuất** to end the session.
+The **Cài đặt hồ sơ** page shows a read-only user list with active and disabled account counts. Users cannot register themselves or edit access permissions through the app. Google's OAuth test-user list is not the app's access list.
 
-1. Set `AUTH_SECRET` to a random secret (`openssl rand -base64 32`). A local
-   secret has been generated in the ignored `.env.local`; set a separate secret
-   in your deployment environment.
-2. Configure `AUTH_GOOGLE_ID` and `AUTH_GOOGLE_SECRET`, or reuse the existing
-   `GOOGLE_CLIENT_ID` and `GOOGLE_CLIENT_SECRET` used for Calendar.
-3. In the Google Cloud OAuth web client, add the authorized redirect URI
-   `http://localhost:3000/api/auth/callback/google`. For deployment set
-   `AUTH_URL=https://your-domain.example` and register
-   `https://your-domain.example/api/auth/callback/google`. The URI must match
-   the hostname used to open the app. Keep the separate Calendar callback.
-   For Calendar scopes in Testing mode, add accounts as Google test users.
-   This test-user setting does not restrict basic app sign-in.
-4. Deploy this code together with both
-   `supabase/migrations/20261008000000_owner_only_access.sql` and
-   `supabase/migrations/20261008010000_app_users.sql`. **Until this
-   migration is applied, the old direct Supabase access remains open.** It
-   revokes anonymous and Supabase-user access to public-schema tables and RPCs
-   and makes app storage private. This assumes this Supabase public schema is
-   dedicated to this application. Old clients that query Supabase directly
-   will stop working after the migration. Keep `SUPABASE_SERVICE_ROLE_KEY`
-   server-only; the authenticated APIs now perform database access.
+## Technology
 
-The login flow uses the Matcha-themed Vietnamese `/signin` page, including
-loading and error states. `/api/auth/signin` redirects to this page.
-Google Calendar authorization remains a separate, authenticated flow.
-Uploaded images are served through the authenticated image API; contract file
-downloads use short-lived signed links. Previously issued public URLs may
-remain in external caches until those caches expire.
+- **Application:** Next.js 16 App Router, React 19, TypeScript
+- **Interface:** Astryx Design, Matcha theme, Tailwind CSS, StyleX, Lucide icons
+- **Data:** Supabase PostgreSQL and Storage, TanStack Query
+- **Authentication:** NextAuth / Auth.js v5 beta with Google OAuth
+- **Charts:** Chart.js and react-chartjs-2
 
-Validation: `npm test`, `npx tsc --noEmit`, and `npm run lint`. With a local
-development server running, `node --env-file=.env.local scripts/auth/smoke.mjs`
-checks every data API's signed-out/unlisted behavior, page redirects,
-read-only allowlisted access (defaults to the seeded email; override with
-`AUTH_SMOKE_EMAIL`), CSRF, and sign-out. It creates short-lived test cookies
-only in memory and does not perform a real Google consent flow. Run
-`supabase/tests/owner_only_access.sql` and `supabase/tests/payment_invoices.sql`
-against a migrated local test database to check database permissions and
-payment behavior; do not run fixture tests against production.
+## Run locally
 
-First, run the development server:
+Use a Node.js version that supports the project's `--env-file` and `--experimental-strip-types` scripts, such as Node.js 22.19 or newer. You also need a Supabase project and a Google OAuth web application client.
+
+```bash
+npm install
+cp .env.example .env.local
+```
+
+Fill in `.env.local` using [.env.example](.env.example) as the reference:
+
+| Variable | Purpose |
+| --- | --- |
+| `NEXT_PUBLIC_SUPABASE_URL` | Your Supabase project URL. |
+| `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` | Supabase publishable key from the environment template. |
+| `SUPABASE_SERVICE_ROLE_KEY` | Server-side database and storage access. Keep this secret. |
+| `AUTH_SECRET` | Session encryption secret; generate with `openssl rand -base64 32`. |
+| `AUTH_GOOGLE_ID` | Google OAuth client ID for sign-in. |
+| `AUTH_GOOGLE_SECRET` | Matching Google OAuth client secret. |
+| `AUTH_URL` | The deployed app's origin, such as `https://your-domain.example`. |
+
+Sign-in can reuse `GOOGLE_CLIENT_ID` and `GOOGLE_CLIENT_SECRET` if the `AUTH_GOOGLE_*` values are omitted. For Calendar integration, configure the `GOOGLE_*` variables documented in `.env.example`.
+
+Register these authorized redirect URIs on the corresponding Google OAuth client:
+
+```text
+http://localhost:3000/api/auth/callback/google
+http://localhost:3000/api/calendar/google/callback
+```
+
+The first callback handles app sign-in; the second handles Google Calendar authorization. Calendar scopes may require adding test users while the OAuth application is in Testing mode.
+
+Apply the SQL migrations in [supabase/migrations](supabase/migrations) in order to your intended Supabase project before using the app. In particular:
+
+- `20260924100000_release_finished_plot_rentals.sql` enforces rental availability rules.
+- `20260924110000_payment_invoices.sql` enables invoice-based payments and migrates legacy paid records.
+- `20261008000000_owner_only_access.sql` restricts direct database access and makes app storage private.
+- `20261008010000_app_users.sql` creates the application access list.
+
+The access migration assumes the Supabase public schema is dedicated to this app. It revokes anonymous and Supabase-user access to application tables and RPCs; older clients that query Supabase directly will stop working. Database access now goes through authenticated server APIs.
+
+Start the app:
 
 ```bash
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Open [localhost:3000](http://localhost:3000) and sign in with an active account from `app_users`.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## Rental and payment rules
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+- **Rental dates:** an end date is calculated as the start date plus the duration in calendar months, minus one day. Month overflow is clamped. A blank duration keeps the rental open-ended.
+- **Availability:** the end date is inclusive; a plot becomes available the following day. Overlapping active or pending rentals and sold plots remain blocked. Completed or cancelled contracts do not reserve plots. Manually rented plots without contract history remain unavailable because their release date is unknown.
+- **Payment cycles:** monthly, quarterly, and yearly schedules advance by 1, 3, and 12 months. The configured amount applies to each scheduled due date. Short months clamp the due day.
+- **Outstanding dues:** the next payment is the earliest unpaid scheduled date. Partial payments leave the remaining balance due, including when overdue.
+- **Invoices:** one scheduled due can have multiple payment receipts. The app rejects future payment dates, non-positive amounts, and overpayments. Recorded invoice history is append-only; payments use `pay_contract_invoice`, not a manually changed paid flag.
+- **Legacy custom schedules:** existing custom contracts retain their schedules, but creating a new custom schedule is not currently available.
 
-## Learn More
+Rental and payment date handling uses Vietnam time. Existing recorded payment schedules remain visible when contract dates change.
 
-To learn more about Next.js, take a look at the following resources:
+## Development commands
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+| Command | Purpose |
+| --- | --- |
+| `npm run dev` | Start the development server. |
+| `npm run build` | Build for production. |
+| `npm start` | Run the production build. |
+| `npm run lint` | Run ESLint. |
+| `npx tsc --noEmit` | Check TypeScript types. |
+| `npm test` | Run the configured test suites. |
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+With the local server running, check authentication and protected routes:
 
-## Deploy on Vercel
+```bash
+node --env-file=.env.local scripts/auth/smoke.mjs
+```
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+The smoke script checks anonymous and unlisted requests, page redirects, allowed-user reads, CSRF protection, and sign-out. It uses temporary test cookies rather than a real Google consent flow. Set `AUTH_SMOKE_EMAIL` to an active account if you are not using the seeded account.
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+Database fixtures in [supabase/tests](supabase/tests) are intended for a migrated local test database, not production.
+
+## Deployment
+
+1. Apply the database migrations to the target Supabase project.
+2. Configure the environment variables in your hosting provider; local `.env.local` values are not automatically deployed.
+3. Set a production `AUTH_SECRET` and `AUTH_URL=https://your-domain.example`.
+4. Register the production Google callbacks, replacing `http://localhost:3000` with the deployed origin. Update `GOOGLE_REDIRECT_URI` for Calendar as well.
+5. Build and deploy, then verify sign-in with an active account.
+
+Keep service-role and OAuth secrets server-only. Uploaded images are served through an authenticated API, and contract downloads use short-lived signed links.
+
+If sign-in shows `Configuration`, inspect the deployment logs for the underlying `[auth][error]` message and check the production environment variables.
