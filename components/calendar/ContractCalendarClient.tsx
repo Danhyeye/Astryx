@@ -144,12 +144,12 @@ export function ContractCalendarClient() {
                   variant={inMonth ? 'section' : 'muted'}
                   dividers={index % 7 === 6 ? ['bottom'] : ['bottom', 'end']}>
                   <VStack gap={1} className="min-w-0">
-                    <HStack>
+                    <HStack hAlign="center">
                       <Button label={String(Number(date.slice(-2)))} size={isNarrow ? "md" : "sm"} width={isNarrow ? "100%" : undefined}
                         aria-label={`${formatDate(date, true)}, ${dayEvents.length} hạn thanh toán`}
                         variant={date === selectedDate ? 'primary' : 'ghost'}
                         isDisabled={!inMonth} onClick={() => {setSelectedDate(date); if (isNarrow) requestAnimationFrame(() => agendaRef.current?.scrollIntoView({block: 'start'}));}} />
-                      {date === today && !isNarrow && <Text type="supporting" color="accent">Hôm nay</Text>}
+                      {/* {date === today && !isNarrow && <Text type="supporting" color="accent">Hôm nay</Text>} */}
                     </HStack>
                     {isNarrow && dayEvents.length > 0 && <Text type="supporting" justify="center">{dayEvents.length} kỳ</Text>}
                     {!isNarrow && dayEvents.slice(0, 3).map(event => (

@@ -86,6 +86,8 @@ Apply the SQL migrations in [supabase/migrations](supabase/migrations) in order 
 - `20260924110000_payment_invoices.sql` enables invoice-based payments and migrates legacy paid records.
 - `20261008000000_owner_only_access.sql` restricts direct database access and makes app storage private.
 - `20261008010000_app_users.sql` creates the application access list.
+- `20261018130000_allow_invoice_overpayments.sql` allows actual receipts above a period's rent. Contract details show the excess separately from overdue debt; it is not automatically applied to another period.
+- `20261018140000_unique_customer_contacts.sql` prevents duplicate customer phones and emails, including equivalent domestic/+84 phone formats and email capitalization differences.
 
 The access migration assumes the Supabase public schema is dedicated to this app. It revokes anonymous and Supabase-user access to application tables and RPCs; older clients that query Supabase directly will stop working. Database access now goes through authenticated server APIs.
 

@@ -27,10 +27,13 @@ begin
     perform public.pay_contract_invoice(rental,'2020-02-29','2020-03-01',301,request);
     raise exception 'Changed retry unexpectedly accepted';
   exception when sqlstate '22023' then null; end;
-  begin
-    perform public.pay_contract_invoice(rental,'2020-02-29','2020-03-01',701,gen_random_uuid());
-    raise exception 'Overpayment unexpectedly accepted';
-  exception when sqlstate '22023' then null; end;
+  -- A receipt above the rent is preserved, rather than rejected or moved.
+  repeated := public.pay_contract_invoice(rental,'2020-03-31','2020-03-01',1100,gen_random_uuid());
+  perform public.pay_contract_invoice(rental,'2020-03-31','2020-03-01',1100,repeated.id);
+  select sum(amount), count(*) into total, quantity from public.invoices where payment_schedule_id = repeated.payment_schedule_id;
+  if total <> 1100 or quantity <> 1 then raise exception 'Overpayment amount or retry was not preserved'; end if;
+  select amount into total from public.contract_payments where id = repeated.payment_schedule_id;
+  if total <> 1000 then raise exception 'Overpayment changed the rent amount'; end if;
   begin
     perform public.pay_contract_invoice(rental,'2020-02-29','2020-03-01',0,gen_random_uuid());
     raise exception 'Zero unexpectedly accepted';
@@ -65,10 +68,10 @@ begin
   -- A lost response to the first installment must still retry safely after full payment.
   repeated := public.pay_contract_invoice(rental,'2020-02-29','2020-03-01',300,request);
   if repeated.id <> receipt.id then raise exception 'Late retry failed'; end if;
-  begin
-    insert into public.invoices(payment_schedule_id,payment_date,amount) values(receipt.payment_schedule_id,'2020-03-03',1);
-    raise exception 'Direct overpayment unexpectedly accepted';
-  exception when sqlstate '22023' then null; end;
+  insert into public.invoices(payment_schedule_id,payment_date,amount) values(receipt.payment_schedule_id,'2020-03-03',1);
+  select sum(amount) into total from public.invoices where payment_schedule_id = receipt.payment_schedule_id;
+  if total <> 1001 then raise exception 'Direct overpayment was not preserved'; end if;
+  update public.contract_payments set updated_at = now() where id = receipt.payment_schedule_id;
   begin
     update public.contract_payments set amount = 999 where id = receipt.payment_schedule_id;
     raise exception 'Schedule amount reduced below paid total';

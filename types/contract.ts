@@ -24,6 +24,7 @@ export type ContractPayment = {
   invoices: Invoice[];
   total_paid: number;
   remaining: number;
+  overpaid: number;
 };
 
 export type Contract = {

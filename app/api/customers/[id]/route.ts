@@ -3,6 +3,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { mapCustomer } from "@/lib/mappers";
 import { customerUpdateSchema } from "@/lib/validations/customer";
+import {customerContactConflict} from '@/lib/api/customerContactConflict';
 import type { CustomerResponse } from "@/types/customer";
 import type { ApiErrorResponse, ApiResponse } from "@/types/api-response";
 import type { Database } from "@/types/database.types";
@@ -80,9 +81,11 @@ export async function PATCH(
     .single();
 
   if (error) {
+    const conflict = customerContactConflict(error);
+    const status = conflict ? 409 : error.code === 'PGRST116' ? 404 : 500;
     return NextResponse.json<ApiErrorResponse>(
-      { code: error.code === "PGRST116" ? 404 : 500, message: error.message, data: null },
-      { status: error.code === "PGRST116" ? 404 : 500 }
+      { code: status, message: conflict ?? error.message, data: null },
+      { status }
     );
   }
 

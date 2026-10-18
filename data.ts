@@ -1091,16 +1091,13 @@ const DATASET_INITIAL_FILTERS: Record<DatasetKey, readonly PowerSearchFilter[]> 
 };
 
 const DATASET_INITIAL_SORTS: Record<DatasetKey, TableSortState> = {
-  lands: [{sortKey: 'summary', direction: 'ascending'}],
+  lands: [{sortKey: 'createdAt', direction: 'descending'}],
   plots: [
     {sortKey: 'status', direction: 'ascending'},
     {sortKey: 'plotNumber', direction: 'ascending'},
   ],
-  contracts: [
-    {sortKey: 'status', direction: 'ascending'},
-    {sortKey: 'nextPaymentDueSort', direction: 'ascending'},
-  ],
-  customers: [{sortKey: 'summary', direction: 'ascending'}],
+  contracts: [{sortKey: 'createdAt', direction: 'descending'}],
+  customers: [{sortKey: 'createdAt', direction: 'descending'}],
 };
 
 const DATASET_GROUPING_OPTIONS: Record<

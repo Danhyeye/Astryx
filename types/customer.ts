@@ -18,7 +18,7 @@ export type CustomerFilters = {
 
 export type CreateCustomerPayload = {
     name: string;
-    phone?: string | null;
+    phone: string;
     email?: string | null;
     address?: string | null;
     notes?: string | null;

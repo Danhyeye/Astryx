@@ -10,6 +10,7 @@ import {
 } from '@astryxdesign/core/Layout';
 import {TextArea} from '@astryxdesign/core/TextArea';
 import {TextInput} from '@astryxdesign/core/TextInput';
+import {PhoneInput} from '@/components/PhoneInput';
 
 import type {CustomerTableRow} from '@/data';
 import {useUpdateCustomer} from '@/hooks/useCustomers';
@@ -146,8 +147,9 @@ export function EditCustomerDialog({
                     {
                       label: 'Liên hệ',
                       content: <>
-                        <TextInput
+                        <PhoneInput
                     label="Số điện thoại"
+                    isRequired
                     placeholder="0912345678 hoặc +84912345678"
                     status={form.phone.trim() && !isVietnamPhone(form.phone) ? {type: 'error', message: PHONE_ERROR} : undefined}
                     value={form.phone}

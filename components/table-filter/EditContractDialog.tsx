@@ -48,7 +48,6 @@ import {
   updateContractFormDurationUnit,
   createContractFormFromContract,
   isContractFormValid,
-  isContractWizardStepValid,
 } from './entityForms';
 import { EntityFormActions, EntityFormStepper } from './EntityFormStepper';
 import { ContractFormPreview } from './ContractFormPreview';
@@ -164,7 +163,6 @@ export function EditContractDialog({
       : !rentalState.hasActiveContract && !plotOptions.some(option => option.disabled)
   );
   const isFormValid = areFieldsValid && isTargetAvailable;
-  const isCurrentStepValid = isContractWizardStepValid(form, activeStep, isTargetAvailable, validationOptions);
 
   const handleOpenChange = (open: boolean) => {
     if (!open && isSubmitting) {
@@ -242,7 +240,7 @@ export function EditContractDialog({
 
                 <EntityFormStepper
                   key={isOpen ? 'open' : 'closed'}
-                  canAdvance={isCurrentStepValid}
+                  allowStepJump
                   isDisabled={isSubmitting}
                   activeStep={activeStep}
                   onStepChange={setActiveStep}
@@ -528,11 +526,11 @@ export function EditContractDialog({
             <EntityFormActions
               activeStep={activeStep}
               formId={formId}
-              isStepValid={isCurrentStepValid}
+              isStepValid={activeStep !== 3 || isFormValid}
               isSubmitting={isSubmitting}
               onBack={() => setActiveStep(step => Math.max(0, step - 1))}
               onCancel={() => handleOpenChange(false)}
-              onNext={() => { if (isCurrentStepValid) setActiveStep(step => step + 1); }}
+              onNext={() => setActiveStep(step => Math.min(3, step + 1))}
               submitLabel="Lưu thay đổi"
               stepCount={4}
             />

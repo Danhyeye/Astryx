@@ -35,7 +35,7 @@ export function RentYearSummary({rows, rentAmount, startDate = '', endDate = '',
     {groupRentYears(rows).map(row => <ListItem key={row.fromYear}
       label={`${rangeLabel(row, basis, startDate, endDate)} · Tăng ${row.increase_percent}%`}
       description={<VStack gap={1}>
-        {basis === 'anniversary' && <Text color="secondary">{dateLabel(startDate, endDate, row.fromYear, row.toYear)}</Text>}
+        {/* {basis === 'anniversary' && <Text color="secondary">{dateLabel(startDate, endDate, row.fromYear, row.toYear)}</Text>} */}
         <Text>{formatMoney(rentForContractYear(rentAmount, row.increase_percent, 1))}/kỳ</Text>
       </VStack>} />)}
   </List>;

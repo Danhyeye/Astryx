@@ -204,7 +204,7 @@ export function isCustomerFormStepValid(
 
   if (step === 1) {
     const email = form.email.trim();
-    return (form.phone.trim() === '' || isVietnamPhone(form.phone)) &&
+    return isVietnamPhone(form.phone) &&
       (email === '' || isValidEmail(email));
   }
 
@@ -216,7 +216,7 @@ export function buildCustomerPayload(
 ): CreateCustomerPayload & UpdateCustomerPayload {
   return {
     name: form.name.trim(),
-    phone: optionalText(normalizeVietnamPhone(form.phone)),
+    phone: normalizeVietnamPhone(form.phone),
     email: optionalText(form.email),
     address: optionalText(form.address),
     notes: optionalText(form.notes),

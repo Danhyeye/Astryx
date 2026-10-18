@@ -6,6 +6,7 @@ import { mapCustomer } from "@/lib/mappers";
 import type { CustomerResponse, CustomersResponse } from "@/types/customer";
 import type { ApiErrorResponse } from "@/types/api-response";
 import { customerSchema } from "@/lib/validations/customer";
+import {customerContactConflict} from '@/lib/api/customerContactConflict';
 
 export async function GET(request: NextRequest) {
   const denied = await authorizeRequest(request);
@@ -77,9 +78,10 @@ export async function POST(request: NextRequest) {
     .single();
 
   if (error) {
+    const conflict = customerContactConflict(error);
     return NextResponse.json<ApiErrorResponse>(
-      { code: 500, message: error.message, data: null },
-      { status: 500 }
+      { code: conflict ? 409 : 500, message: conflict ?? error.message, data: null },
+      { status: conflict ? 409 : 500 }
     );
   }
 

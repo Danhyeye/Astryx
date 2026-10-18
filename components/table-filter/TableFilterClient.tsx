@@ -359,6 +359,15 @@ export default function TableFilterClient({
     setCollapsedGroups(new Set());
   }, []);
 
+  const handleRowCreated = useCallback((rowId: string) => {
+    setSort(getDatasetInitialSort(dataset));
+    setFilters([]);
+    setQuery('');
+    setDebouncedQuery('');
+    setPageState({key: '', page: 1});
+    handleRowSaved(rowId);
+  }, [dataset, handleRowSaved]);
+
   const handleRowsDeleted = useCallback((rowIds: string[]) => {
     const deletedIds = new Set(rowIds);
 
@@ -1070,7 +1079,7 @@ export default function TableFilterClient({
         <CreateLandDialog
           isOpen={isCreateLandDialogOpen}
           onOpenChange={setIsCreateLandDialogOpen}
-          onCreated={handleRowSaved}
+          onCreated={handleRowCreated}
         />
       )}
       {editingLand != null && (
@@ -1118,7 +1127,7 @@ export default function TableFilterClient({
         <CreateCustomerDialog
           isOpen={isCreateCustomerDialogOpen}
           onOpenChange={setIsCreateCustomerDialogOpen}
-          onCreated={handleRowSaved}
+          onCreated={handleRowCreated}
         />
       )}
       {editingCustomer != null && (
@@ -1144,7 +1153,7 @@ export default function TableFilterClient({
           plots={plots}
           isOpen={isCreateContractDialogOpen}
           onOpenChange={setIsCreateContractDialogOpen}
-          onCreated={id => router.push('/contracts/' + id)}
+          onCreated={id => {handleRowCreated(id); router.push('/contracts/' + id);}}
         />
       )}
       {editingContract != null && (

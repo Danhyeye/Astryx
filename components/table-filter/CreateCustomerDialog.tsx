@@ -1,6 +1,5 @@
 import {isVietnamPhone, isValidEmail, PHONE_ERROR, EMAIL_ERROR} from '@/utils/contact';
 import {type FormEvent, useState} from 'react';
-import {EntityFormBanner as Banner} from './EntityFormBanner';
 import {Dialog, DialogHeader} from '@astryxdesign/core/Dialog';
 import {
   Layout,
@@ -10,6 +9,7 @@ import {
 } from '@astryxdesign/core/Layout';
 import {TextArea} from '@astryxdesign/core/TextArea';
 import {TextInput} from '@astryxdesign/core/TextInput';
+import {PhoneInput} from '@/components/PhoneInput';
 
 import {useCreateCustomer} from '@/hooks/useCustomers';
 import {
@@ -112,15 +112,6 @@ export function CreateCustomerDialog({
           <LayoutContent padding={4} label="Biểu mẫu tạo khách hàng">
             <form id={formId} onSubmit={handleSubmit}>
               <VStack gap={4}>
-                {submitError != null && (
-                  <Banner
-                    status="error"
-                    title="Không thể tạo khách hàng"
-                    description={submitError}
-                    container="section"
-                  />
-                )}
-
                 <EntitySinglePageForm
                   sections={[
                     {
@@ -143,8 +134,9 @@ export function CreateCustomerDialog({
                     {
                       label: 'Liên hệ',
                       content: <>
-                        <TextInput
+                        <PhoneInput
                     label="Số điện thoại"
+                    isRequired
                     placeholder="Số điện thoại khách hàng"
                     status={form.phone.trim() && !isVietnamPhone(form.phone) ? {type: 'error', message: PHONE_ERROR} : undefined}
                     value={form.phone}
@@ -212,6 +204,8 @@ export function CreateCustomerDialog({
         footer={
           <LayoutFooter hasDivider>
             <EntitySinglePageActions
+              showValidationBanner
+              submitError={submitError ? {title: 'Không thể tạo khách hàng', message: submitError} : null}
               formId={formId}
               isFormValid={isFormValid}
               isSubmitting={isSubmitting}

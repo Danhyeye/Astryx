@@ -15,17 +15,20 @@ export function EntityFormStepper({
   onStepChange,
   steps,
   canAdvance = false,
+  allowStepJump = false,
   isDisabled = false,
 }: {
   activeStep: number;
   onStepChange: (step: number) => void;
   steps: readonly EntityFormStep[];
   canAdvance?: boolean;
+  allowStepJump?: boolean;
   isDisabled?: boolean;
 }) {
   const [furthestStep, setFurthestStep] = useState(activeStep);
   if (activeStep > furthestStep) setFurthestStep(activeStep);
-  const reachableStep = Math.min(steps.length - 1, Math.max(furthestStep, activeStep + (canAdvance ? 1 : 0)));
+  const reachableStep = allowStepJump ? steps.length - 1
+    : Math.min(steps.length - 1, Math.max(furthestStep, activeStep + (canAdvance ? 1 : 0)));
   const currentStep = steps[activeStep];
 
   return (
@@ -70,6 +73,8 @@ export function EntityFormActions({
   onNext,
   submitLabel,
   stepCount,
+  showValidationBanner = true,
+  submitError,
   invalidMessage = 'Vui lòng kiểm tra các trường trong bước này trước khi tiếp tục.',
 }: {
   activeStep: number;
@@ -81,19 +86,22 @@ export function EntityFormActions({
   onNext: () => void;
   submitLabel: string;
   stepCount: number;
+  showValidationBanner?: boolean;
+  submitError?: {title: string; message: string} | null;
   invalidMessage?: string;
 }) {
   const isFinalStep = activeStep === stepCount - 1;
   const guidanceId = `${formId}-guidance`;
+  const showGuidance = !!submitError || (showValidationBanner && !isStepValid);
 
   return (
     <VStack gap={3} className="w-full">
-      {!isStepValid && (
+      {showGuidance && (
         <Banner
           id={guidanceId}
-          status="info"
-          title={isFinalStep ? 'Hoàn tất thông tin trước khi lưu' : 'Hoàn tất thông tin để tiếp tục'}
-          description={invalidMessage}
+          status={submitError ? 'error' : 'info'}
+          title={submitError?.title ?? (isFinalStep ? 'Hoàn tất thông tin trước khi lưu' : 'Hoàn tất thông tin để tiếp tục')}
+          description={submitError?.message ?? invalidMessage}
           container="card"
         />
       )}
@@ -122,7 +130,7 @@ export function EntityFormActions({
             variant="primary"
             isDisabled={!isStepValid || isSubmitting}
             isLoading={isSubmitting}
-            aria-describedby={!isStepValid ? guidanceId : undefined}
+            aria-describedby={showGuidance ? guidanceId : undefined}
           />
         ) : (
           <Button
@@ -131,7 +139,7 @@ export function EntityFormActions({
             type="button"
             variant="primary"
             isDisabled={!isStepValid || isSubmitting}
-            aria-describedby={!isStepValid ? guidanceId : undefined}
+            aria-describedby={showGuidance ? guidanceId : undefined}
             onClick={onNext}
           />
         )}

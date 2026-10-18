@@ -20,6 +20,8 @@ export function EntitySinglePageActions(props: {
   isSubmitting: boolean;
   onCancel: () => void;
   submitLabel: string;
+  showValidationBanner?: boolean;
+  submitError?: {title: string; message: string} | null;
 }) {
   return (
     <EntityFormActions
@@ -27,6 +29,7 @@ export function EntitySinglePageActions(props: {
       activeStep={0}
       stepCount={1}
       isStepValid={props.isFormValid}
+      showValidationBanner={props.showValidationBanner ?? false}
       onBack={() => {}}
       onNext={() => {}}
       invalidMessage="Vui lòng kiểm tra các trường trong biểu mẫu trước khi lưu."

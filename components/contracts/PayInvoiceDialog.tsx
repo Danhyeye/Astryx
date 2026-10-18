@@ -12,7 +12,7 @@ import {Layout, LayoutContent, LayoutFooter, HStack, VStack} from '@astryxdesign
 import {Text} from '@astryxdesign/core/Text';
 import {CurrencyInput} from '@/components/CurrencyInput';
 import {contractToday} from '@/lib/contractDates';
-import {validateInvoice} from '@/lib/invoices';
+import {getPaymentBalance, validateInvoice} from '@/lib/invoices';
 import {invoiceErrorMessage} from '@/lib/invoiceFeedback';
 import type {Contract, ContractPayment, ContractResponse, Invoice} from '@/types/contract';
 import {formatDate, formatMoney} from '@/utils/format';
@@ -28,6 +28,7 @@ export function PayInvoiceDialog({contract, payment, onClose, onRecorded}: {
   const requestId = useRef<string | null>(null);
   const cache = useQueryClient();
   const validation = validateInvoice({amount, remaining: payment.remaining, paymentDate: date});
+  const balanceAfter = getPaymentBalance(payment.amount, payment.total_paid + (Number.isFinite(amount) && amount > 0 ? amount : 0));
   const refresh = () => Promise.all([
     cache.invalidateQueries({queryKey: ['contractDetail', contractId]}),
     cache.invalidateQueries({queryKey: ['contracts']}),
@@ -76,7 +77,14 @@ export function PayInvoiceDialog({contract, payment, onClose, onRecorded}: {
         </VStack>
         {save.error && <Banner status="error" title="Chưa thể xác nhận thanh toán" description={invoiceErrorMessage(save.error)} />}
         <DateInput label="Ngày nhận tiền" value={date ? date as ISODateString : undefined} max={contractToday() as ISODateString} onChange={value => setDate(value ?? '')} isRequired isDisabled={save.isPending} />
-        <CurrencyInput label="Số tiền đã nhận" value={amount} onChange={setAmount} isRequired isDisabled={save.isPending} />
+        <CurrencyInput label="Số tiền đã nhận" value={amount} onChange={setAmount} max={999999999999.99} isRequired isDisabled={save.isPending} />
+        <VStack gap={1} role="status" aria-live="polite">
+          <HStack hAlign="between" gap={3} wrap="wrap"><Text color="secondary">Còn nợ sau khoản này</Text><Text>{formatMoney(balanceAfter.remaining)}</Text></HStack>
+          {balanceAfter.overpaid > 0 && <>
+            <HStack hAlign="between" gap={3} wrap="wrap"><Text weight="semibold">Tiền thừa của kỳ này</Text><Text weight="semibold">{formatMoney(balanceAfter.overpaid)}</Text></HStack>
+            <Text type="supporting" color="secondary">Tiền thừa được ghi nhận ở kỳ này, chưa cấn trừ sang kỳ khác.</Text>
+          </>}
+        </VStack>
         {validation && <Text color="secondary" role="alert">{validation}</Text>}
       </VStack></form></LayoutContent>}
       footer={<LayoutFooter><VStack gap={2}>
