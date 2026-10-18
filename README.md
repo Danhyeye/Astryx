@@ -2,9 +2,9 @@
   <img src="public/images/astryx-dark.svg" alt="Astryx logo" width="96" height="96" />
 </p>
 
-# Astryx · Quản lý đất đai
+# Astryx
 
-A Vietnamese-language workspace for managing land, plots, customers, rental contracts, and payments. Astryx brings property records and rental activity together so you can check availability, track upcoming payments, and review contract history in one place.
+A workspace for managing land, plots, customers, rental contracts, and payments. Astryx brings property records and rental activity together so you can check availability, track upcoming payments, and review contract history in one place.
 
 Built with a responsive interface and the Matcha theme: olive green, sage, and warm cream, with light and dark modes.
 
