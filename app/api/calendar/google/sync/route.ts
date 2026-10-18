@@ -35,6 +35,7 @@ type CalendarOauthTokenRow =
 type CalendarSyncEventRow =
   Database['public']['Tables']['calendar_sync_events']['Row'];
 type ContractRowWithRelations = ContractRow & {
+  contract_rent_years: {year: number; increase_percent: number}[] | null;
   contract_payments: (Database['public']['Tables']['contract_payments']['Row'] & {invoices: Invoice[]})[] | null;
   customers: CustomerRow | null;
   lands: LandRow | null;
@@ -42,6 +43,7 @@ type ContractRowWithRelations = ContractRow & {
 };
 
 const CONTRACT_SELECT = `*,
+  contract_rent_years (year, increase_percent),
   contract_payments (*, invoices (*)), customers (*),
   lands (*),
   plots (*, lands(*))`;
@@ -65,6 +67,9 @@ function toContract(row: ContractRowWithRelations): Contract {
     id: contract.id,
     deposit_amount: contract.deposit_amount,
     rent_amount: contract.rent_amount,
+    annual_rent_increase_percent: contract.annual_rent_increase_percent ?? 0,
+    rent_year_basis: contract.rent_year_basis ?? 'calendar',
+    rent_years: [...(row.contract_rent_years ?? [])].sort((a, b) => a.year - b.year),
     due_day: contract.due_day,
     lease_duration_months: contract.lease_duration_months ?? 0,
     payment_frequency: paymentFrequencyFromDatabase(contract.payment_frequency),

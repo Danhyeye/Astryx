@@ -1,3 +1,4 @@
+import {rentYearLimit, validRentYears, type ContractRentYear, type RentYearBasis} from '../../lib/contractRent.ts';
 import {isVietnamPhone, isValidEmail, normalizeVietnamPhone} from '../../utils/contact.ts';
 import type {
   ContractStatus,
@@ -41,14 +42,20 @@ export type CustomerFormState = {
   notes: string;
 };
 
+export type LeaseDurationUnit = 'months' | 'years';
+
 export type ContractFormState = {
   customerId: string;
   landId: string;
   plotIds: string[];
   depositAmount: number | null;
   rentAmount: number | null;
+  annualRentIncreasePercent: number;
+  rentYears: ContractRentYear[];
+  rentYearBasis: RentYearBasis;
   dueDay: number | null;
   leaseDurationMonths: number | null;
+  leaseDurationUnit: LeaseDurationUnit;
   paymentFrequency: PaymentFrequency;
   paymentDueDay: number | null;
   nextPaymentDueDate: string;
@@ -227,8 +234,12 @@ export function createEmptyContractForm(today: string): ContractFormState {
     plotIds: [],
     depositAmount: 0,
     rentAmount: null,
+    annualRentIncreasePercent: 0,
+    rentYears: [],
+    rentYearBasis: 'anniversary',
     dueDay: dueDayFromStartDate(today),
     leaseDurationMonths: 12,
+    leaseDurationUnit: 'months',
     paymentFrequency: 'MONTHLY',
     paymentDueDay: dueDayFromStartDate(today),
     nextPaymentDueDate: '',
@@ -248,8 +259,12 @@ export function createContractFormFromContract(
     plotIds: contract.plotIds,
     depositAmount: contract.depositAmount,
     rentAmount: contract.rentAmount,
+    annualRentIncreasePercent: contract.annualRentIncreasePercent ?? 0,
+    rentYears: (contract.rentYears ?? []).map(row => ({...row})),
+    rentYearBasis: (contract.rentYears?.length ?? 0) ? contract.rentYearBasis ?? 'calendar' : 'anniversary',
     dueDay: contract.dueDay,
     leaseDurationMonths: contract.leaseDurationMonths > 0 ? contract.leaseDurationMonths : null,
+    leaseDurationUnit: contract.leaseDurationMonths > 0 && contract.leaseDurationMonths % 12 === 0 ? 'years' : 'months',
     paymentFrequency: contract.paymentFrequency,
     paymentDueDay: contract.paymentDueDay,
     nextPaymentDueDate: contract.nextPaymentDueDate,
@@ -274,6 +289,15 @@ export function updateContractFormDates(
   };
 }
 
+/** Changing the unit reinterprets the entered duration in the selected unit. */
+export function updateContractFormDurationUnit(form: ContractFormState, unit: LeaseDurationUnit): ContractFormState {
+  const amount = form.leaseDurationMonths === null ? null : form.leaseDurationMonths / (form.leaseDurationUnit === 'years' ? 12 : 1);
+  return {
+    ...updateContractFormDates(form, {leaseDurationMonths: amount === null ? null : amount * (unit === 'years' ? 12 : 1)}),
+    leaseDurationUnit: unit,
+  };
+}
+
 export function isContractFormValid(
   form: ContractFormState,
   options: ContractFormValidationOptions = {},
@@ -281,6 +305,17 @@ export function isContractFormValid(
   return [0, 1, 2].every(step =>
     isContractFormStepValid(form, step, options),
   );
+}
+
+/** Visible contract wizard steps: tenant, rental details, notes/files, review. */
+export function isContractWizardStepValid(
+  form: ContractFormState,
+  step: number,
+  isTargetAvailable: boolean,
+  options: ContractFormValidationOptions = {},
+): boolean {
+  if (step === 0) return form.customerId.trim() !== '';
+  return isTargetAvailable && isContractFormValid(form, options);
 }
 
 export function isContractFormStepValid(
@@ -326,6 +361,9 @@ export function isContractFormStepValid(
   return (
     form.rentAmount != null &&
     form.rentAmount >= 0 &&
+    Number.isFinite(form.annualRentIncreasePercent) &&
+    form.annualRentIncreasePercent >= 0 &&
+    validRentYears(form.rentYears, rentYearLimit(form.startDate, effectiveEndDate, form.rentYearBasis)) &&
     form.depositAmount != null &&
     form.depositAmount >= 0 &&
     form.dueDay != null &&
@@ -352,6 +390,9 @@ export function buildContractPayload(
     },
     deposit_amount: form.depositAmount ?? 0,
     rent_amount: form.rentAmount ?? 0,
+    annual_rent_increase_percent: form.rentYears.length ? 0 : form.annualRentIncreasePercent,
+    rent_year_basis: form.rentYearBasis,
+    rent_years: form.rentYears.length || form.annualRentIncreasePercent === 0 ? form.rentYears : undefined,
     due_day: form.dueDay ?? 1,
     lease_duration_months: form.leaseDurationMonths,
     payment_frequency: form.paymentFrequency,

@@ -112,28 +112,31 @@ export async function POST(request: NextRequest) {
     plots: body.data.plots,
   });
   const { data, error } = await supabase
-    .from("contracts")
-    .insert({
-      customer_id: body.data.customer.id,
-      land_id: target.land_id,
-      plot_id: target.plot_id,
-      plot_ids: target.plot_ids,
-      deposit_amount: body.data.deposit_amount,
-      rent_amount: body.data.rent_amount,
-      due_day: body.data.due_day,
-      lease_duration_months: body.data.lease_duration_months,
-      payment_frequency: paymentFrequencyToDatabase(
-        body.data.payment_frequency,
-      ) as ContractRow["payment_frequency"],
-      payment_due_day: body.data.payment_due_day,
-      next_payment_due_date: body.data.next_payment_due_date,
-      start_date: body.data.start_date,
-      end_date: body.data.end_date,
-      status: contractStatusToDatabase(body.data.status) as ContractRow["status"],
-      notes: body.data.notes,
-    })
-    .select("id")
-    .single();
+    .rpc("save_contract_with_rent_years", {
+      p_contract_id: null,
+      p_contract: {
+        customer_id: body.data.customer.id,
+        land_id: target.land_id,
+        plot_id: target.plot_id,
+        plot_ids: target.plot_ids,
+        deposit_amount: body.data.deposit_amount,
+        rent_amount: body.data.rent_amount,
+        rent_year_basis: body.data.rent_year_basis ?? 'anniversary',
+        annual_rent_increase_percent: body.data.annual_rent_increase_percent ?? 0,
+        due_day: body.data.due_day,
+        lease_duration_months: body.data.lease_duration_months,
+        payment_frequency: paymentFrequencyToDatabase(
+          body.data.payment_frequency,
+        ) as ContractRow["payment_frequency"],
+        payment_due_day: body.data.payment_due_day,
+        next_payment_due_date: body.data.next_payment_due_date,
+        start_date: body.data.start_date,
+        end_date: body.data.end_date,
+        status: contractStatusToDatabase(body.data.status) as ContractRow["status"],
+        notes: body.data.notes,
+      },
+      p_rent_years: body.data.rent_years,
+    });
 
   if (error) {
     return NextResponse.json<ApiErrorResponse>(
@@ -144,7 +147,7 @@ export async function POST(request: NextRequest) {
 
   // Read relations after the trigger has finished maintaining contract_plots.
   const {data: saved, error: readError} = await supabase.from('contracts')
-    .select(CONTRACT_SELECT).eq('id', data.id).single();
+    .select(CONTRACT_SELECT).eq('id', data!).single();
   if (readError) return NextResponse.json<ApiErrorResponse>(
     {code: 500, message: readError.message, data: null}, {status: 500},
   );

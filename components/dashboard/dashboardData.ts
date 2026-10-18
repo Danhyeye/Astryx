@@ -1,3 +1,4 @@
+import {contractScheduledRentOnDate} from '../../lib/contractRent';
 import type {Contract} from '@/types/contract';
 import type {Customer} from '@/types/customer';
 import type {Land} from '@/types/land';
@@ -77,7 +78,7 @@ function sumRentByDate(contracts: readonly Contract[]): Map<string, number> {
     }
 
     const key = dateKey(dueDate);
-    rentByDate.set(key, (rentByDate.get(key) ?? 0) + contract.rent_amount);
+    rentByDate.set(key, (rentByDate.get(key) ?? 0) + contractScheduledRentOnDate(contract, key));
   }
 
   return rentByDate;
@@ -119,7 +120,7 @@ function buildMonthlyRevenue(
       continue;
     }
 
-    rentByMonth[dueDate.getUTCMonth()] += contract.rent_amount;
+    rentByMonth[dueDate.getUTCMonth()] += contractScheduledRentOnDate(contract, dateKey(dueDate));
   }
 
   return MONTH_LABELS.map((label, index) => {

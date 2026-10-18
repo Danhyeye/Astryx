@@ -170,6 +170,12 @@ export type Database = {
         };
         Relationships: [];
       };
+      contract_rent_years: {
+        Row: {contract_id: string; year: number; increase_percent: number};
+        Insert: {contract_id: string; year: number; increase_percent?: number};
+        Update: {contract_id?: string; year?: number; increase_percent?: number};
+        Relationships: [{foreignKeyName: 'contract_rent_years_contract_id_fkey'; columns: ['contract_id']; isOneToOne: false; referencedRelation: 'contracts'; referencedColumns: ['id']}];
+      };
       contracts: {
         Row: {
           id: string;
@@ -179,9 +185,11 @@ export type Database = {
           plot_ids: string[];
           deposit_amount: number;
           rent_amount: number;
+          annual_rent_increase_percent: number;
+          rent_year_basis: 'calendar' | 'anniversary';
           due_day: number;
           lease_duration_months: number | null;
-          payment_frequency: "MONTHLY" | "QUARTERLY" | "YEARLY" | "CUSTOM";
+          payment_frequency: import('../lib/paymentFrequency').PaymentFrequency;
           payment_due_day: number | null;
           next_payment_due_date: string | null;
           start_date: string;
@@ -199,9 +207,11 @@ export type Database = {
           plot_ids?: string[];
           deposit_amount?: number;
           rent_amount: number;
+          annual_rent_increase_percent?: number;
+          rent_year_basis?: 'calendar' | 'anniversary';
           due_day: number;
           lease_duration_months?: number | null;
-          payment_frequency?: "MONTHLY" | "QUARTERLY" | "YEARLY" | "CUSTOM";
+          payment_frequency?: import('../lib/paymentFrequency').PaymentFrequency;
           payment_due_day?: number | null;
           next_payment_due_date?: string | null;
           start_date: string;
@@ -219,9 +229,11 @@ export type Database = {
           plot_ids?: string[];
           deposit_amount?: number;
           rent_amount?: number;
+          annual_rent_increase_percent?: number;
+          rent_year_basis?: 'calendar' | 'anniversary';
           due_day?: number;
           lease_duration_months?: number | null;
-          payment_frequency?: "MONTHLY" | "QUARTERLY" | "YEARLY" | "CUSTOM";
+          payment_frequency?: import('../lib/paymentFrequency').PaymentFrequency;
           payment_due_day?: number | null;
           next_payment_due_date?: string | null;
           start_date?: string;
@@ -467,6 +479,10 @@ export type Database = {
     };
     Views: Record<string, never>;
     Functions: {
+      save_contract_with_rent_years: {
+        Args: {p_contract_id: string | null; p_contract: Json; p_rent_years?: Json};
+        Returns: string;
+      };
       pay_contract_invoice: {
         Args: {p_contract_id: string; p_due_date: string; p_payment_date: string; p_amount: number; p_invoice_id: string};
         Returns: {id: string; payment_schedule_id: string; payment_date: string; amount: number; created_at: string};

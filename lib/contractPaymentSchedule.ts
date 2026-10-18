@@ -1,3 +1,4 @@
+import {contractRentOnDate} from './contractRent.ts';
 import {derivePayment, type PaymentSource} from './invoices.ts';
 import type {Contract} from '../types/contract';
 import {buildContractMonthEvents} from '../components/calendar/contractCalendarData.ts';
@@ -18,7 +19,7 @@ export function buildContractPaymentSchedule(contract: Contract, throughMonth: s
   if (contract.payment_frequency === 'CUSTOM' && contract.status !== 'CANCELLED') {
     const due = contract.next_payment_due_date;
     if (due && due >= contract.start_date && (!end || due <= end)) {
-      rows.set(due, {due_date: due, amount: contract.rent_amount, invoices: []});
+      rows.set(due, {due_date: due, amount: contractRentOnDate(contract, due), invoices: []});
     }
   }
   // Retain recorded payments even if the contract's dates or frequency changed.

@@ -1,5 +1,10 @@
 'use client';
 
+import {Trash2} from 'lucide-react';
+import {Icon} from '@astryxdesign/core/Icon';
+import {IconButton} from '@astryxdesign/core/IconButton';
+import {RentYearSummary} from '@/components/table-filter/AnnualRentIncreaseInput';
+
 import {EntityStatus} from '@/components/table-filter/EntityStatus';
 
 import {ContractPayments} from './ContractPayments';
@@ -128,8 +133,10 @@ export function ContractDetailClient({ id }: { id: string }) {
                 <MetadataListItem label="Ngày thanh toán">{contract.due_day || contract.payment_due_day}</MetadataListItem>
               </MetadataList>
               <MetadataList>
-                <MetadataListItem label="Tiền thuê">{formatMoney(contract.rent_amount)}</MetadataListItem>
+                <MetadataListItem label="Tiền thuê ban đầu mỗi kỳ">{formatMoney(contract.rent_amount)}</MetadataListItem>
+                {(contract.rent_years?.length ?? 0) === 0 && (contract.annual_rent_increase_percent ?? 0) > 0 && <MetadataListItem label="Tăng mỗi năm trên tiền thuê ban đầu">{contract.annual_rent_increase_percent}%</MetadataListItem>}
                 <MetadataListItem label="Tiền đặt cọc">{formatMoney(contract.deposit_amount)}</MetadataListItem>
+                {!!contract.rent_years?.length && <MetadataListItem label="Tiền thuê theo năm"><RentYearSummary rows={contract.rent_years} rentAmount={contract.rent_amount} startDate={contract.start_date} endDate={contract.end_date} basis={contract.rent_year_basis} /></MetadataListItem>}
                 <MetadataListItem label="Chu kỳ">{PAYMENT_FREQUENCY_META[contract.payment_frequency].label}</MetadataListItem>
               </MetadataList>
               </Grid>
@@ -153,7 +160,7 @@ export function ContractDetailClient({ id }: { id: string }) {
                 description={Math.max(1, Math.ceil(file.size / 1024)).toLocaleString('vi-VN') + ' KB'}
                 endContent={<HStack gap={3} vAlign="center" wrap="wrap">
                   <Link href={'/api/contracts/' + id + '/files?path=' + encodeURIComponent(file.path)}>Tải xuống</Link>
-                  <Button label="Xóa tệp" size="sm" variant="ghost" onClick={()=>{removeFile.reset();setRemovingFile(file);}} />
+                  <IconButton label={`Xóa tệp ${file.name}`} tooltip="Xóa tệp" icon={<Icon icon={Trash2} size="sm" />} type="button" size="sm" variant="ghost" isDisabled={removeFile.isPending} onClick={()=>{removeFile.reset();setRemovingFile(file);}} />
                 </HStack>} />)}
             </List>
           </VStack>

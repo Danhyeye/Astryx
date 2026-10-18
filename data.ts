@@ -1,3 +1,5 @@
+import type {ContractRentYear, RentYearBasis} from './lib/contractRent';
+import {PAYMENT_FREQUENCY_META, PAYMENT_FREQUENCIES, PAYMENT_FREQUENCY_OPTIONS} from './lib/paymentFrequency';
 import type { FieldDefinition, PowerSearchFilter } from '@astryxdesign/core/PowerSearch';
 
 import type { Contract, ContractStatus, PaymentFrequency } from './types/contract';
@@ -101,6 +103,9 @@ export type ContractTableRow = EntityTableRow & {
   hasPayments?: boolean;
   payments?: Contract['payments'];
   rentAmount: number;
+  annualRentIncreasePercent?: number;
+  rentYears?: ContractRentYear[];
+  rentYearBasis?: RentYearBasis;
   depositAmount: number;
   dueDay: number;
   paymentDueDay: number;
@@ -180,17 +185,7 @@ export const PLOT_STATUS_META: Record<
   UNASSIGNED: {label: 'Chưa có lô đất', badge: 'neutral'},
 };
 
-export const PAYMENT_FREQUENCY_META: Record<
-  PaymentFrequency,
-  {
-    label: string;
-  }
-> = {
-  MONTHLY: {label: 'Hằng tháng'},
-  QUARTERLY: {label: 'Hằng quý'},
-  YEARLY: {label: 'Hằng năm'},
-  CUSTOM: {label: 'Tùy chỉnh'},
-};
+export {PAYMENT_FREQUENCY_META};
 
 export const VALUE_LABELS: Record<string, string> = {
   ...Object.fromEntries(
@@ -225,12 +220,7 @@ const PLOT_STATUS_ORDER: PlotStatusValue[] = [
   'SOLD',
   'UNASSIGNED',
 ];
-const PAYMENT_FREQUENCY_ORDER: PaymentFrequency[] = [
-  'MONTHLY',
-  'QUARTERLY',
-  'YEARLY',
-  'CUSTOM',
-];
+const PAYMENT_FREQUENCY_ORDER: PaymentFrequency[] = [...PAYMENT_FREQUENCIES];
 
 const NO_CUSTOMER = 'Chưa có khách hàng';
 const NO_LAND = 'Chưa có khu đất';
@@ -314,6 +304,9 @@ export function buildContractRows(
       hasPayments: (contract.payments?.length ?? 0) > 0,
       payments: contract.payments,
       rentAmount: contract.rent_amount,
+      annualRentIncreasePercent: contract.annual_rent_increase_percent ?? 0,
+      rentYears: contract.rent_years ?? [],
+      rentYearBasis: contract.rent_year_basis ?? 'calendar',
       depositAmount: contract.deposit_amount,
       dueDay: contract.due_day,
       paymentDueDay: contract.payment_due_day,
@@ -909,7 +902,7 @@ export const SORT_RANKS: Record<string, Record<string, number>> = {
     SOLD: 2,
   },
   plotStatus: {AVAILABLE: 0, RENTED: 1, SOLD: 2, UNASSIGNED: 3},
-  paymentFrequency: {MONTHLY: 0, QUARTERLY: 1, YEARLY: 2, CUSTOM: 3},
+  paymentFrequency: Object.fromEntries([...PAYMENT_FREQUENCY_OPTIONS, 'CUSTOM'].map((frequency, index) => [frequency, index])),
 };
 
 export const PAGE_SIZE = 15;

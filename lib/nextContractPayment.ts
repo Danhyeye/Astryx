@@ -1,3 +1,4 @@
+import {PAYMENT_FREQUENCY_MONTHS} from './paymentFrequency.ts';
 import {contractDateFromParts, formatContractDate, parseContractDate, resolveContractEndDate} from './contractDates.ts';
 
 type Payment = {due_date: string; status: string; paid_at: string | null};
@@ -14,7 +15,7 @@ export function nextContractPayment(input: {
   const paid = new Set(payments.filter(row => row.paid_at || row.status.toUpperCase() === 'PAID').map(row => row.due_date));
   const inTerm = (date: string) => date >= input.startDate && (!end || date <= end);
   const recorded = payments.filter(row => !paid.has(row.due_date) && inTerm(row.due_date)).map(row => row.due_date);
-  const step = ({MONTHLY: 1, QUARTERLY: 3, YEARLY: 12} as Record<string, number>)[input.paymentFrequency];
+  const step = PAYMENT_FREQUENCY_MONTHS[input.paymentFrequency];
   if (step && input.dueDay != null && Number.isInteger(input.dueDay) && input.dueDay >= 1 && input.dueDay <= 31) {
     // At most one candidate per paid record plus the initial partial period.
     for (let index = 0; index <= paid.size + 1; index++) {

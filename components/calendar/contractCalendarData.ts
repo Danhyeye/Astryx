@@ -1,3 +1,5 @@
+import {contractRentOnDate} from '../../lib/contractRent.ts';
+import {PAYMENT_FREQUENCY_MONTHS} from '../../lib/paymentFrequency.ts';
 import type {Contract, PaymentFrequency} from '@/types/contract';
 import {
   contractDateFromParts,
@@ -23,12 +25,6 @@ export type ContractCalendarEvent = {
 export type ContractOption = {
   label: string;
   value: string;
-};
-
-const FREQUENCY_MONTH_STEP: Partial<Record<PaymentFrequency, number>> = {
-  MONTHLY: 1,
-  QUARTERLY: 3,
-  YEARLY: 12,
 };
 
 function first<T>(items: readonly T[] | null | undefined): T | null {
@@ -96,7 +92,7 @@ export function buildContractMonthEvents(
       date != null && date >= start && (!end || date <= end) &&
       date >= monthStart && date <= monthEnd;
     const dates = new Map<string, number>();
-    const step = FREQUENCY_MONTH_STEP[contract.payment_frequency];
+    const step = PAYMENT_FREQUENCY_MONTHS[contract.payment_frequency];
     if (step) {
       const offset = (year - start.getUTCFullYear()) * 12 + monthIndex - start.getUTCMonth();
       const day = dueDayOf(contract);
@@ -105,7 +101,7 @@ export function buildContractMonthEvents(
         if (valid(due)) {
           const key = formatContractDate(due);
           const payment = contract.payments?.find(payment => payment.due_date === key);
-          dates.set(key, payment?.amount ?? contract.rent_amount);
+          dates.set(key, payment?.amount ?? contractRentOnDate(contract, key));
         }
       }
     } else if (contract.payment_frequency === 'CUSTOM') {
@@ -115,7 +111,7 @@ export function buildContractMonthEvents(
       }
       if (!contract.payments?.length) {
         const due = parseContractDate(contract.next_payment_due_date);
-        if (valid(due)) dates.set(formatContractDate(due), contract.rent_amount);
+        if (valid(due)) dates.set(formatContractDate(due), contractRentOnDate(contract, formatContractDate(due)));
       }
     }
     for (const [date, amount] of dates) {

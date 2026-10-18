@@ -1,3 +1,4 @@
+import {PAYMENT_FREQUENCY_META, type PaymentFrequency} from '../paymentFrequency.ts';
 export type GoogleCalendarEnv = {
   clientId: string;
   clientSecret: string;
@@ -189,7 +190,7 @@ export function buildGoogleDueEvent(
       `Hợp đồng: ${event.contractLabel}`,
       `Khu đất / lô đất: ${event.targetLabel}`,
       `Số tiền: ${formatMoney(event.amount)}`,
-      `Chu kỳ: ${{MONTHLY: 'Hằng tháng', QUARTERLY: 'Hằng quý', YEARLY: 'Hằng năm', CUSTOM: 'Tùy chỉnh'}[event.frequency] ?? event.frequency}`,
+      `Chu kỳ: ${PAYMENT_FREQUENCY_META[event.frequency as PaymentFrequency]?.label ?? event.frequency}`,
       `Trạng thái: ${{PENDING: 'Chờ hiệu lực', ACTIVE: 'Đang hiệu lực', COMPLETED: 'Đã hoàn tất', CANCELLED: 'Đã hủy'}[event.status] ?? event.status}`,
       `Thời hạn: ${event.startDate} đến ${event.endDate || 'Chưa thiết lập'}`,
     ].join('\n'),

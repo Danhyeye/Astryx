@@ -12,6 +12,7 @@ type LandRow = Database["public"]["Tables"]["lands"]["Row"];
 type PlotRow = Database["public"]["Tables"]["plots"]["Row"];
 type LandImageRow = Database["public"]["Tables"]["land_images"]["Row"];
 export type ContractRowWithRelations = ContractRow & {
+  contract_rent_years: {year: number; increase_percent: number}[] | null;
   contract_payments: (Database['public']['Tables']['contract_payments']['Row'] & {invoices: Invoice[]})[] | null;
   customers: CustomerRow | null;
   lands: (LandRow & { land_images: LandImageRow[] | null }) | null;
@@ -19,6 +20,7 @@ export type ContractRowWithRelations = ContractRow & {
 };
 
 export const CONTRACT_SELECT = `*,
+  contract_rent_years (year, increase_percent),
   contract_payments (*, invoices (*)), customers (*),
   lands (*, land_images(*)),
   contract_plots (plots (*, land_images(*), lands(*)))`;
@@ -35,6 +37,9 @@ export function toContract(row: ContractRowWithRelations): Contract {
     id: c.id,
     deposit_amount: c.deposit_amount,
     rent_amount: c.rent_amount,
+    annual_rent_increase_percent: c.annual_rent_increase_percent ?? 0,
+    rent_year_basis: c.rent_year_basis ?? 'calendar',
+    rent_years: [...(row.contract_rent_years ?? [])].sort((a, b) => a.year - b.year),
     due_day: c.due_day,
     lease_duration_months: c.lease_duration_months ?? 0,
     payment_frequency: paymentFrequencyFromDatabase(c.payment_frequency),

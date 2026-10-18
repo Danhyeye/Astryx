@@ -97,6 +97,9 @@ export async function PATCH(
     plots: persisted.plot_ids.map(id => ({id})),
     deposit_amount: persisted.deposit_amount,
     rent_amount: persisted.rent_amount,
+    annual_rent_increase_percent: persisted.annual_rent_increase_percent ?? 0,
+    rent_years: persisted.contract_rent_years ?? [],
+    rent_year_basis: persisted.rent_year_basis ?? 'calendar',
     due_day: persisted.due_day,
     lease_duration_months: persisted.lease_duration_months,
     payment_frequency: paymentFrequencyFromDatabase(
@@ -137,7 +140,9 @@ export async function PATCH(
     updatePayload.plot_id = targetPatch.plot_id;
   }
   if (body.data.deposit_amount !== undefined) updatePayload.deposit_amount = body.data.deposit_amount;
+  if (body.data.rent_year_basis !== undefined) updatePayload.rent_year_basis = body.data.rent_year_basis;
   if (body.data.rent_amount !== undefined) updatePayload.rent_amount = body.data.rent_amount;
+  if (body.data.annual_rent_increase_percent !== undefined) updatePayload.annual_rent_increase_percent = body.data.annual_rent_increase_percent;
   if (body.data.due_day !== undefined) updatePayload.due_day = body.data.due_day;
   if (body.data.lease_duration_months !== undefined) updatePayload.lease_duration_months = body.data.lease_duration_months;
   if (body.data.payment_frequency !== undefined) {
@@ -157,14 +162,16 @@ export async function PATCH(
   if (body.data.notes !== undefined) updatePayload.notes = body.data.notes;
 
   const { error: updateError } = await supabase
-    .from("contracts")
-    .update(updatePayload)
-    .eq("id", id);
+    .rpc("save_contract_with_rent_years", {
+      p_contract_id: id,
+      p_contract: updatePayload,
+      p_rent_years: body.data.rent_years,
+    });
 
   if (updateError) {
     return NextResponse.json<ApiErrorResponse>(
-      { code: updateError.code === "23505" ? 409 : updateError.code === "23514" ? 400 : updateError.code === "PGRST116" ? 404 : 500, message: updateError.message, data: null },
-      { status: updateError.code === "23505" ? 409 : updateError.code === "23514" ? 400 : updateError.code === "PGRST116" ? 404 : 500 }
+      { code: updateError.code === "23505" ? 409 : updateError.code === "23514" ? 400 : (updateError.code === "PGRST116" || updateError.code === "P0002") ? 404 : 500, message: updateError.message, data: null },
+      { status: updateError.code === "23505" ? 409 : updateError.code === "23514" ? 400 : (updateError.code === "PGRST116" || updateError.code === "P0002") ? 404 : 500 }
     );
   }
 

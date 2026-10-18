@@ -1,3 +1,5 @@
+import {SavedContractFiles} from '@/components/contracts/SavedContractFiles';
+import {RentYearSummary} from './AnnualRentIncreaseInput';
 import type {ReactNode} from 'react';
 import {Button} from '@astryxdesign/core/Button';
 import {Badge} from '@astryxdesign/core/Badge';
@@ -15,12 +17,14 @@ import type {ContractFormState} from './entityForms';
 
 type Option = {value: string; label: string};
 
-export function ContractFormPreview({form, customerOptions, landOptions, plotOptions, files, nextDueDate, showPaymentDueDay = false, onEditStep}: {
+export function ContractFormPreview({form, customerOptions, landOptions, plotOptions, files, contractId, isDisabled = false, nextDueDate, showPaymentDueDay = false, onEditStep}: {
   form: ContractFormState;
   customerOptions: readonly Option[];
   landOptions: readonly Option[];
   plotOptions: readonly Option[];
   files: readonly File[];
+  contractId?: string;
+  isDisabled?: boolean;
   nextDueDate?: string | null;
   showPaymentDueDay?: boolean;
   onEditStep?: (step: number) => void;
@@ -55,7 +59,7 @@ export function ContractFormPreview({form, customerOptions, landOptions, plotOpt
       <Divider />
 
       <VStack gap={3}>
-        {sectionTitle('II. Tài sản cho thuê', 0)}
+        {sectionTitle('II. Tài sản cho thuê', 1)}
         <MetadataList columns="single" label={{position: 'start'}}>
           {field('Khu đất', selectedLabel(landOptions, form.landId))}
           {field('Phạm vi thuê', form.plotIds.length ? 'Các lô đất được liệt kê dưới đây' : 'Toàn bộ khu đất')}
@@ -68,10 +72,10 @@ export function ContractFormPreview({form, customerOptions, landOptions, plotOpt
       <Divider />
 
       <VStack gap={3}>
-        {sectionTitle('III. Thời hạn thuê', 0)}
+        {sectionTitle('III. Thời hạn thuê', 1)}
         <MetadataList columns="single" label={{position: 'start'}}>
           {field('Ngày bắt đầu', formatDate(form.startDate, true))}
-          {field('Số tháng thuê', form.leaseDurationMonths == null ? 'Không thời hạn' : `${formatNumber(form.leaseDurationMonths)} tháng`)}
+          {field('Thời hạn thuê', form.leaseDurationMonths == null ? 'Không thời hạn' : `${formatNumber(form.leaseDurationMonths / (form.leaseDurationUnit === 'years' ? 12 : 1))} ${form.leaseDurationUnit === 'years' ? 'năm' : 'tháng'}`)}
           {field('Ngày kết thúc (tự động)', form.endDate ? formatDate(form.endDate, true) : 'Không thời hạn')}
         </MetadataList>
       </VStack>
@@ -81,6 +85,8 @@ export function ContractFormPreview({form, customerOptions, landOptions, plotOpt
         {sectionTitle('IV. Tiền thuê và thanh toán', 1)}
         <MetadataList columns="single" label={{position: 'start'}}>
           {field('Tiền thuê mỗi kỳ', form.rentAmount == null ? 'Chưa thiết lập' : formatMoney(form.rentAmount))}
+          {form.rentYears.length > 0 && <MetadataListItem label="Tiền thuê theo năm"><RentYearSummary rows={form.rentYears} rentAmount={form.rentAmount ?? 0} startDate={form.startDate} endDate={form.endDate} basis={form.rentYearBasis} /></MetadataListItem>}
+          {!form.rentYears.length && form.annualRentIncreasePercent > 0 && field('Mức tăng hằng năm hiện có', `${form.annualRentIncreasePercent}% trên giá gốc`)}
           {field('Tiền đặt cọc', form.depositAmount == null ? 'Chưa thiết lập' : formatMoney(form.depositAmount))}
           {field('Chu kỳ thanh toán', PAYMENT_FREQUENCY_META[form.paymentFrequency].label)}
           {field('Ngày đến hạn trong tháng', form.dueDay == null ? 'Chưa thiết lập' : `Ngày ${form.dueDay}`)}
@@ -91,13 +97,15 @@ export function ContractFormPreview({form, customerOptions, landOptions, plotOpt
       <Divider />
 
       <VStack gap={3}>
-        {sectionTitle('V. Ghi chú và thỏa thuận bổ sung', 1)}
+        {sectionTitle('V. Ghi chú và thỏa thuận bổ sung', 2)}
         <Text className="whitespace-pre-wrap break-words" color={form.notes.trim() ? 'primary' : 'secondary'}>{form.notes.trim() ? form.notes : 'Không có ghi chú.'}</Text>
       </VStack>
       <Divider />
 
       <VStack gap={3}>
-        {sectionTitle('VI. Tài liệu đính kèm mới', 1)}
+        {sectionTitle('VI. Tài liệu đính kèm', 2)}
+        {contractId && <SavedContractFiles contractId={contractId} isDisabled={isDisabled} />}
+        <Text weight="semibold">Tệp mới sẽ tải lên khi lưu</Text>
         {files.length ? <List hasDividers>
           {files.map((file, index) => <ListItem key={`${file.name}:${index}`} label={`${index + 1}. ${file.name}`}
             description={`${formatNumber(Math.max(1, Math.ceil(file.size / 1024)))} KB · Tải lên khi lưu hợp đồng`} />)}

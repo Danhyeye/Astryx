@@ -1,10 +1,12 @@
+import type {ContractRentYear, RentYearBasis} from '../lib/contractRent';
+import type {PaymentFrequency} from '../lib/paymentFrequency';
 import type { ApiResponse } from "./api-response";
 import type { Customer } from "./customer";
 import type { Land } from "./land";
 import type { Plot } from "./plot";
 
 export type ContractStatus = "PENDING" | "ACTIVE" | "COMPLETED" | "CANCELLED";
-export type PaymentFrequency = "MONTHLY" | "QUARTERLY" | "YEARLY" | "CUSTOM";
+export type {PaymentFrequency} from '../lib/paymentFrequency';
 
 export type Invoice = {
   id: string;
@@ -28,6 +30,9 @@ export type Contract = {
   id: string;
   deposit_amount: number;
   rent_amount: number;
+  annual_rent_increase_percent?: number;
+  rent_years?: ContractRentYear[];
+  rent_year_basis?: RentYearBasis;
   due_day: number;
   lease_duration_months: number;
   payment_frequency: PaymentFrequency;
@@ -59,6 +64,9 @@ export type CreateContractPayload = {
   plots: {id: string}[];
   deposit_amount: number;
   rent_amount: number;
+  annual_rent_increase_percent?: number;
+  rent_years?: ContractRentYear[];
+  rent_year_basis?: RentYearBasis;
   due_day: number;
   lease_duration_months?: number | null;
   payment_frequency: PaymentFrequency;

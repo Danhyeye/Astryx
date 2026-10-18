@@ -1,3 +1,5 @@
+import {rentYearLimit, validRentYears} from '../contractRent.ts';
+import {PAYMENT_FREQUENCIES as paymentFrequencies} from '../paymentFrequency.ts';
 import {z} from 'zod';
 import {
   isValidISODate,
@@ -8,12 +10,7 @@ import {
 z.config(z.locales.vi());
 
 export const contractStatuses = ['PENDING', 'ACTIVE', 'COMPLETED', 'CANCELLED'] as const;
-export const paymentFrequencies = [
-  'MONTHLY',
-  'QUARTERLY',
-  'YEARLY',
-  'CUSTOM',
-] as const;
+export {PAYMENT_FREQUENCIES as paymentFrequencies} from '../paymentFrequency.ts';
 
 const relationRef = z.object({id: z.string().uuid()});
 const isoDate = z.string().refine(isValidISODate, {
@@ -29,6 +26,10 @@ const contractShape = {
   plots: z.array(relationRef).refine(plots => new Set(plots.map(plot => plot.id)).size === plots.length, {message: 'Không được chọn trùng lô đất.'}),
   deposit_amount: z.number().nonnegative(),
   rent_amount: z.number().nonnegative(),
+  annual_rent_increase_percent: z.number().nonnegative().optional(),
+  rent_year_basis: z.enum(['calendar', 'anniversary']).optional(),
+  rent_years: z.array(z.object({year: z.number().int().min(1).max(9999), increase_percent: z.number().nonnegative()}).strict())
+    .refine(validRentYears, {message: 'Mỗi năm chỉ được thiết lập một lần.'}).optional(),
   due_day: z.number().int().min(1).max(31),
   lease_duration_months: z.number().int().positive().nullable().optional(),
   payment_frequency: paymentFrequencySchema,
@@ -62,6 +63,10 @@ function contractSchemaWithContext({
       endDate,
       leaseDurationMonths: contract.lease_duration_months,
     });
+
+    if (!validRentYears(contract.rent_years ?? [], rentYearLimit(startDate, effectiveEndDate, contract.rent_year_basis))) {
+      context.addIssue({code: 'custom', path: ['rent_years'], message: 'Khoảng năm áp dụng không được vượt quá thời hạn hợp đồng.'});
+    }
 
     if (endDate != null && endDate < startDate) {
       context.addIssue({
