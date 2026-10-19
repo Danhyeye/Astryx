@@ -11,10 +11,8 @@ import {Divider} from '@astryxdesign/core/Divider';
 import {Heading} from '@astryxdesign/core/Heading';
 import {VStack} from '@astryxdesign/core/Layout';
 import {Text} from '@astryxdesign/core/Text';
-import {Theme} from '@astryxdesign/core/theme';
 import {InternationalizationProvider} from '@astryxdesign/core/i18n';
 import vi from '@astryxdesign/core/locales/vi-VN.json';
-import {matchaTheme} from '@/src/themes/matcha/matcha';
 
 function errorDescription(error: string) {
   if (error === 'AccessDenied') return 'Tài khoản này chưa được cho phép đăng nhập. Thử tài khoản Google khác hoặc liên hệ người quản lý.';
@@ -38,7 +36,6 @@ export function SignInScreen({destination, error}: {destination: string; error?:
   }
 
   return (
-    <Theme theme={matchaTheme} mode="system">
       <InternationalizationProvider locale="vi-VN" messages={{'vi-VN': vi}}>
         <Center role="main" minHeight="100svh" padding={5}>
           <Card maxWidth={440} width="100%" padding={8} elevation="low">
@@ -67,6 +64,5 @@ export function SignInScreen({destination, error}: {destination: string; error?:
           </Card>
         </Center>
       </InternationalizationProvider>
-    </Theme>
   );
 }

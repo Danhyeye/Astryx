@@ -1,7 +1,10 @@
 import {QueryProvider} from '@/components/providers/query-provider';
+import {AppThemeProvider} from '@/components/providers/theme-provider';
+import {cookies} from 'next/headers';
+import {resolveAppTheme, THEME_COOKIE} from '@/lib/themePreference';
 import type { Metadata } from "next";
 import type { ReactNode } from "react";
-import { Montserrat, JetBrains_Mono, Pacifico } from "next/font/google";
+import { Montserrat, JetBrains_Mono, Be_Vietnam_Pro } from "next/font/google";
 import "./globals.css";
 
 const montserrat = Montserrat({
@@ -14,9 +17,9 @@ const jetbrainsMono = JetBrains_Mono({
   subsets: ["latin", "vietnamese"],
 });
 
-const pacifico = Pacifico({
-  variable: "--font-pacifico",
-  weight: "400",
+const beVietnamPro = Be_Vietnam_Pro({
+  variable: "--font-be-vietnam-pro",
+  weight: ["400", "500", "600", "700"],
   subsets: ["latin", "vietnamese"],
 });
 
@@ -26,14 +29,16 @@ export const metadata: Metadata = {
   icons: {icon: {url: '/images/astryx-dark.svg', type: 'image/svg+xml'}},
 };
 
-export default function RootLayout({ children }: { children: ReactNode }) {
+export default async function RootLayout({ children }: { children: ReactNode }) {
+  const theme = resolveAppTheme((await cookies()).get(THEME_COOKIE)?.value);
   return (
     <html
       lang="vi"
-      data-astryx-theme="matcha"
-      className={`${montserrat.variable} ${jetbrainsMono.variable} ${pacifico.variable} h-full antialiased`}
+      suppressHydrationWarning
+      data-astryx-theme={theme}
+      className={`${montserrat.variable} ${jetbrainsMono.variable} ${beVietnamPro.variable} h-full antialiased`}
     >
-      <body className="min-h-full flex flex-col"><QueryProvider>{children}</QueryProvider></body>
+      <body className="min-h-full flex flex-col"><AppThemeProvider initialTheme={theme}><QueryProvider>{children}</QueryProvider></AppThemeProvider></body>
     </html>
   );
 }

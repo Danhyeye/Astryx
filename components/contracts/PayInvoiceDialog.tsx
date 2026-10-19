@@ -88,8 +88,8 @@ export function PayInvoiceDialog({contract, payment, onClose, onRecorded}: {
         {validation && <Text color="secondary" role="alert">{validation}</Text>}
       </VStack></form></LayoutContent>}
       footer={<LayoutFooter><VStack gap={2}>
-        <Button className="min-h-11" size="lg" width="100%" label="Ghi nhận thanh toán" variant="primary" type="submit" form="pay-invoice-form" isLoading={save.isPending} isDisabled={!!validation || save.isPending} />
-        <Button className="min-h-11" size="lg" width="100%" label="Hủy" variant="secondary" onClick={close} isDisabled={save.isPending} />
+        <Button size="lg" label="Ghi nhận thanh toán" variant="primary" type="submit" form="pay-invoice-form" isLoading={save.isPending} isDisabled={!!validation || save.isPending} />
+        <Button size="lg" label="Hủy" variant="secondary" onClick={close} isDisabled={save.isPending} />
       </VStack></LayoutFooter>} />
   </Dialog>;
 }

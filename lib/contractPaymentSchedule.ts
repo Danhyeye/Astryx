@@ -18,7 +18,7 @@ export function buildContractPaymentSchedule(contract: Contract, throughMonth: s
   }
   if (contract.payment_frequency === 'CUSTOM' && contract.status !== 'CANCELLED') {
     const due = contract.next_payment_due_date;
-    if (due && due >= contract.start_date && (!end || due <= end)) {
+    if (due && due >= contract.start_date && (!end || due <= end) && !contract.payments?.some(payment => payment.original_due_date === due && payment.due_date !== due)) {
       rows.set(due, {due_date: due, amount: contractRentOnDate(contract, due), invoices: []});
     }
   }

@@ -17,6 +17,7 @@ export type Invoice = {
 };
 export type ContractPayment = {
   id?: string;
+  original_due_date?: string | null;
   due_date: string;
   amount: number;
   paid_at: string | null;

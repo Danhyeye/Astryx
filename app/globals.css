@@ -2,6 +2,7 @@
 @import '@astryxdesign/core/reset.css';
 @import '@astryxdesign/core/astryx.css';
 @import '../src/themes/matcha/matcha.css';
+@import '../src/themes/neutral/neutral.css';
 @import '@astryxdesign/core/tailwind-theme.css';
 
 @theme inline {

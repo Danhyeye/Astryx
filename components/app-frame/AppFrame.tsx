@@ -20,8 +20,6 @@ import Image from 'next/image';
 import {LinkProvider} from '@astryxdesign/core/Link';
 import { usePathname } from 'next/navigation';
 
-import { Theme } from '@astryxdesign/core/theme';
-import { matchaTheme } from '@/src/themes/matcha/matcha';
 import { getAppNavItems, isAppRouteSelected } from './navigation';
 
 export function AppFrame({
@@ -36,7 +34,6 @@ export function AppFrame({
   const pathname = usePathname();
 
   return (
-    <Theme theme={matchaTheme} mode="system">
       <InternationalizationProvider locale="vi-VN" messages={{ 'vi-VN': vi }}>
         <LinkProvider component={NextLink}>
         <AppShell
@@ -86,6 +83,5 @@ export function AppFrame({
         </AppShell>
         </LinkProvider>
       </InternationalizationProvider>
-    </Theme>
   );
 }

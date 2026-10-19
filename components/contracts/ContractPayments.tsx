@@ -19,6 +19,7 @@ export function ContractPayments({contract}: {contract: Contract}) {
   const [futureYears, setFutureYears] = useState(1);
   const [selected, setSelected] = useState<{date: string; view: 'pay' | 'invoices'} | null>(null);
   const [recorded, setRecorded] = useState<{invoice: Invoice; date: string} | null>(null);
+  const [updatedDate, setUpdatedDate] = useState<string | null>(null);
   const today = contractToday();
   const todayYear = Number(today.slice(0, 4));
   const baseYear = Math.max(todayYear, Number(contract.start_date.slice(0, 4)));
@@ -33,8 +34,9 @@ export function ContractPayments({contract}: {contract: Contract}) {
   const selectedPayment = selected ? rows.find(row => row.due_date === selected.date) : undefined;
   return <VStack gap={4} className="min-w-0 w-full">
     <Heading level={2}>Lịch thanh toán</Heading>
+    {updatedDate && <Banner key={`updated-${updatedDate}`} status="success" title="Đã cập nhật kỳ thanh toán" description={`Ngày đến hạn ${formatDate(updatedDate, true)}`} isDismissable dismissLabel="Đóng thông báo" onDismiss={() => setUpdatedDate(null)} />}
     <PaymentBalanceNotes payments={rows} today={today} onSelect={payment => setSelected({date: payment.due_date, view: 'invoices'})} />
-    {recorded && <Banner key={recorded.invoice.id} status="success" title="Đã ghi nhận thanh toán"
+    {recorded && <Banner key={`recorded-${recorded.invoice.id}`} status="success" title="Đã ghi nhận thanh toán"
       // description={`${formatMoney(recorded.invoice.amount)} · Ngày nhận ${formatDate(recorded.invoice.payment_date, true)} · Kỳ đến hạn ${formatDate(recorded.date, true)}`}
       isDismissable dismissLabel="Đóng thông báo" onDismiss={() => setRecorded(null)}
       endContent={<Button label="Xem hóa đơn" onClick={() => setSelected({date: recorded.date, view: 'invoices'})} />} />}
@@ -51,7 +53,7 @@ export function ContractPayments({contract}: {contract: Contract}) {
       {!end && contract.status !== 'CANCELLED' && contract.payment_frequency !== 'CUSTOM' && <Button label="Xem thêm 12 tháng" variant="ghost" type="button"
         onClick={() => setFutureYears(years => years + 1)} />}
     </HStack>
-    {selectedPayment && selected?.view === 'pay' && <PayInvoiceDialog key={selected.date} contract={contract} payment={selectedPayment} onRecorded={invoice => {setRecorded({invoice, date: selected.date}); setSelected({date: selected.date, view: 'invoices'});}} onClose={() => setSelected({date: selected.date, view: 'invoices'})} />}
-    {selectedPayment && selected?.view === 'invoices' && <PaymentInvoicesDrawer key={selected.date} contract={contract} payment={selectedPayment} onClose={() => setSelected(null)} onRecordPayment={() => setSelected({date: selected.date, view: 'pay'})} />}
+    {selectedPayment && selected?.view === 'pay' && <PayInvoiceDialog key={`pay-${selected.date}`} contract={contract} payment={selectedPayment} onRecorded={invoice => {setRecorded({invoice, date: selected.date}); setSelected({date: selected.date, view: 'invoices'});}} onClose={() => setSelected({date: selected.date, view: 'invoices'})} />}
+    {selectedPayment && selected?.view === 'invoices' && <PaymentInvoicesDrawer key={`invoices-${selected.date}`} contract={contract} payment={selectedPayment} onClose={() => setSelected(null)} onRecordPayment={() => setSelected({date: selected.date, view: 'pay'})} onUpdated={date => {setUpdatedDate(date); setSelected({date, view: 'invoices'});}} />}
   </VStack>;
 }

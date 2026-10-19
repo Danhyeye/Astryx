@@ -9,9 +9,14 @@ import {Banner} from '@astryxdesign/core/Banner';
 import {Button} from '@astryxdesign/core/Button';
 import {Divider} from '@astryxdesign/core/Divider';
 import {Heading} from '@astryxdesign/core/Heading';
+import {Icon} from '@astryxdesign/core/Icon';
+import {Moon, Sun} from 'lucide-react';
 import {HStack, VStack, StackItem, Layout, LayoutHeader, LayoutContent} from '@astryxdesign/core/Layout';
 import {List, ListItem} from '@astryxdesign/core/List';
 import {Pagination} from '@astryxdesign/core/Pagination';
+import {RadioList, RadioListItem} from '@astryxdesign/core/RadioList';
+import {useAppTheme} from '@/components/providers/theme-provider';
+import {resolveAppTheme} from '@/lib/themePreference';
 import {StatusDot} from '@astryxdesign/core/StatusDot';
 import {Table, proportional, type TableColumn} from '@astryxdesign/core/Table';
 import {Text} from '@astryxdesign/core/Text';
@@ -30,6 +35,7 @@ function AccessStatus({active}: {active: boolean}) {
 }
 
 export function ProfileSettings({user}: {user: NonNullable<Session['user']>}) {
+  const {theme, setTheme, colorMode, setColorMode} = useAppTheme();
   const [page, setPage] = useState(1);
   const isWide = useMediaQuery('(min-width: 768px)');
   const query = useQuery({
@@ -63,6 +69,22 @@ export function ProfileSettings({user}: {user: NonNullable<Session['user']>}) {
           <Text color="secondary">Đăng nhập bằng Google</Text>
         </VStack></StackItem>
       </HStack>
+      <Divider />
+      <VStack gap={4}>
+        <HStack gap={3} hAlign="between" vAlign="center" wrap="wrap">
+          <VStack gap={1}>
+            <Heading level={2}>Giao diện</Heading>
+            <Text color="secondary">Chọn giao diện cho ứng dụng. Thay đổi áp dụng ngay và được lưu trên trình duyệt này.</Text>
+          </VStack>
+          <Button label={colorMode === undefined ? 'Chế độ sáng / tối' : colorMode === 'dark' ? 'Chuyển sang chế độ sáng' : 'Chuyển sang chế độ tối'}
+            icon={<Icon icon={colorMode === 'dark' ? Sun : Moon} />} variant="secondary"
+            isDisabled={colorMode === undefined} onClick={() => setColorMode(colorMode === 'dark' ? 'light' : 'dark')} />
+        </HStack>
+        <RadioList label="Chủ đề giao diện" value={theme} onChange={value => setTheme(resolveAppTheme(value))}>
+          <RadioListItem value="matcha" label="Matcha" description="Sắc xanh trà và nền kem dịu nhẹ." />
+          <RadioListItem value="neutral" label="Neutral" description="Tông màu trung tính, đơn giản và rõ ràng." />
+        </RadioList>
+      </VStack>
       <Divider />
       <VStack gap={4}>
         <HStack gap={3} hAlign="between" vAlign="center" wrap="wrap">

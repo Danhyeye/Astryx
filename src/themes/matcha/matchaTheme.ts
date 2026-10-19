@@ -3,11 +3,12 @@
  *
  * An earthy green theme inspired by matcha tea and natural botanicals.
  * Core palette: #3E481D, #707E46, #C0CBA9, #F0F0E0, #FFFFFF
- * Uses Pacifico for headings and Montserrat for body text.
+ * Uses Be Vietnam Pro for headings and Montserrat for body text.
  */
 
 import {defineTheme, defineSyntaxTheme} from '@astryxdesign/core/theme';
 import {matchaIconRegistry} from './icons';
+import {appLayoutTokens} from '../layoutTokens';
 
 /** Matcha syntax palette — earthy greens and warm tones. */
 const matchaSyntax = defineSyntaxTheme({
@@ -44,8 +45,8 @@ export const matchaTheme = defineTheme({
         '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif',
     },
     heading: {
-      family: 'var(--font-pacifico)',
-      fallbacks: 'Georgia, "Times New Roman", Times, serif',
+      family: 'var(--font-be-vietnam-pro)',
+      fallbacks: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif',
     },
     code: {
       family: 'var(--font-jetbrains-mono)',
@@ -58,6 +59,7 @@ export const matchaTheme = defineTheme({
   syntax: matchaSyntax,
 
   tokens: {
+    ...appLayoutTokens,
     // =========================================================================
     // Colors — earthy matcha palette
     // Core: #3E481D, #707E46, #C0CBA9, #F0F0E0, #FFFFFF
@@ -176,24 +178,6 @@ export const matchaTheme = defineTheme({
     '--color-text-yellow': ['#cc9200', '#ffd960'],
 
     // =========================================================================
-    // Spacing
-    // =========================================================================
-    '--spacing-0-5': '3px',
-    '--spacing-1': '6px',
-    '--spacing-1-5': '9px',
-    '--spacing-2': '12px',
-    '--spacing-3': '18px',
-    '--spacing-4': '24px',
-    '--spacing-5': '30px',
-    '--spacing-6': '36px',
-    '--spacing-7': '42px',
-    '--spacing-8': '48px',
-    '--spacing-9': '54px',
-    '--spacing-10': '60px',
-    '--spacing-11': '66px',
-    '--spacing-12': '72px',
-
-    // =========================================================================
     // Radius — soft and rounded
     // =========================================================================
     '--radius-inner': '6px',
@@ -203,13 +187,6 @@ export const matchaTheme = defineTheme({
 
     // No explicit --font-size-* overrides — font sizes come from
     // typography.scale above, keeping the scale the single source of truth.
-
-    // =========================================================================
-    // Element sizes
-    // =========================================================================
-    '--size-element-sm': '36px',
-    '--size-element-md': '40px',
-    '--size-element-lg': '44px',
 
     // =========================================================================
     // Shadows

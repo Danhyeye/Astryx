@@ -3,6 +3,7 @@ import type {Invoice} from '../types/contract';
 
 export type PaymentSource = {
   id?: string;
+  original_due_date?: string | null;
   due_date: string;
   amount: number;
   invoices?: Invoice[] | null;

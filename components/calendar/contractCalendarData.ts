@@ -114,6 +114,12 @@ export function buildContractMonthEvents(
         if (valid(due)) dates.set(formatContractDate(due), contractRentOnDate(contract, formatContractDate(due)));
       }
     }
+    for (const payment of contract.payments ?? []) {
+      if (payment.original_due_date && payment.original_due_date !== payment.due_date) dates.delete(payment.original_due_date);
+    }
+    for (const payment of contract.payments ?? []) {
+      if (valid(parseContractDate(payment.due_date))) dates.set(payment.due_date, payment.amount);
+    }
     for (const [date, amount] of dates) {
       events.push({
         id: `${contract.id}:${date}`, contractId: contract.id,

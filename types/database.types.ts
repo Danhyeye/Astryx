@@ -278,6 +278,7 @@ export type Database = {
       };
       contract_payments: {
         Row: {
+          original_due_date: string | null;
           id: string;
           contract_id: string;
           due_date: string;
@@ -288,6 +289,7 @@ export type Database = {
           updated_at: string;
         };
         Insert: {
+          original_due_date?: string | null;
           id?: string;
           contract_id: string;
           due_date: string;
@@ -298,6 +300,7 @@ export type Database = {
           updated_at?: string;
         };
         Update: {
+          original_due_date?: string | null;
           id?: string;
           contract_id?: string;
           due_date?: string;
@@ -479,6 +482,10 @@ export type Database = {
     };
     Views: Record<string, never>;
     Functions: {
+      edit_contract_payment: {
+        Args: {p_contract_id: string; p_original_date: string; p_due_date: string; p_amount: number; p_expected_amount: number};
+        Returns: Database['public']['Tables']['contract_payments']['Row'];
+      };
       save_contract_with_rent_years: {
         Args: {p_contract_id: string | null; p_contract: Json; p_rent_years?: Json};
         Returns: string;

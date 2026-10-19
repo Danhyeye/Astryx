@@ -11,15 +11,19 @@ colors:
 
 ## Overview
 
-The app uses the Astryx Matcha theme, installed with `astryx theme add matcha`. This replaces the custom workspace palette. Theme source: `src/themes/matcha/matchaTheme.ts`; generated stylesheet: `src/themes/matcha/matcha.css`.
+The app offers Astryx Matcha (default) and Neutral, installed with `astryx theme add`. Users switch themes in profile settings; a browser cookie persists the choice and the root layout restores it on the server. Sources live in `src/themes/matcha/` and `src/themes/neutral/`; build both themes after changing their sources.
 
 ## Colors
 
-Use Matcha semantic tokens for surfaces, actions, borders and statuses. System light/dark mode remains enabled. The old `theme/workspace.*` files are inactive reference files.
+Use the selected theme's semantic tokens for surfaces, actions, borders and statuses. Light/dark mode follows the device by default; a profile-settings toggle uses `next-themes` to persist an explicit choice in browser storage and passes the resolved mode to Astryx. The old `theme/workspace.*` files are inactive reference files.
 
 ## Typography
 
-Montserrat body text, Pacifico headings, and JetBrains Mono code are loaded with Next fonts and connected through CSS variables.
+Both themes use Montserrat body text, Be Vietnam Pro headings, and JetBrains Mono code, loaded with Next fonts and connected through CSS variables.
+
+Both themes use the same typography scale (base 16, ratio 1.25) to keep text sizes consistent when switching themes.
+
+Spacing and control sizes are shared through `src/themes/layoutTokens.ts` so padding, margins, gaps, and control heights stay consistent across themes.
 
 ## Layout
 
@@ -27,7 +31,7 @@ Preserve the existing mobile record lists, two-column details, compact calendar,
 
 ## Shapes
 
-Use the Matcha component defaults, including rounded buttons and cards.
+Use the selected theme's component defaults; Matcha includes rounded buttons and cards.
 
 ## Components
 
