@@ -57,6 +57,7 @@ export function AppFrame({
             <SideNav
               aria-label="Điều hướng chính"
               collapsible={{ hasButton: false }}
+              resizable={{defaultWidth: 260, minWidth: 220, maxWidth: 400, autoSaveId: 'astryx-sidenav'}}
               header={
                 <SideNavHeading
                   icon={<Image src="/images/astryx-dark.svg" alt="" width={100} height={100} className="size-6" />}
