@@ -8,6 +8,43 @@ A workspace for managing land, plots, customers, rental contracts, and payments.
 
 Built with a responsive interface and the Matcha theme: olive green, sage, and warm cream, with light and dark modes.
 
+Screenshots
+
+Contract Overview
+
+A dashboard providing insights into rental contracts, including contract statistics and key metrics.
+
+<p align="center">
+  <img src="public/demo/demo-1.png" alt="Contract statistics overview" width="100%" />
+</p>
+<p align="center">
+  <img src="public/demo/demo-2.png" alt="Contract statistics details" width="100%" />
+</p>
+
+Land, Plot and Customer Management
+
+Manage land records, organize plots, and maintain customer information in one place.
+
+<p align="center">
+  <img src="public/demo/demo-3.png" alt="Land, plot, and customer management" width="100%" />
+</p>
+
+Payment Schedule
+
+Track scheduled payments, monitor upcoming dues, and review payment statuses across rental contracts.
+
+<p align="center">
+  <img src="public/demo/demo-4.png" alt="Payment schedule overview" width="100%" />
+</p>
+
+Contract Payment Details
+
+View the payment schedule of an individual contract, including payment history, outstanding balances, and received payments.
+
+<p align="center">
+  <img src="public/demo/demo-5.png" alt="Contract payment schedule" width="100%" />
+</p>
+
 ## What you can do
 
 | Area | Features |
